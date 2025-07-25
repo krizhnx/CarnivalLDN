@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Mail, Phone, MapPin, ArrowRight, Instagram, Twitter, Linkedin } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 const Footer = () => {
   const quickLinks = [
