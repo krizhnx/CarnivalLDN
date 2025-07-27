@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin, Clock, Send, Instagram, Twitter, Linkedin } from '
 
 const Contact = () => {
   return (
-    <section id="contact" className="py-16 md:py-20 relative bg-gray-50">
+    <section id="contact" className="py-16 md:py-20 relative bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         {/* Section Header */}
         <motion.div
@@ -18,7 +18,7 @@ const Contact = () => {
               backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-900 via-gray-400 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent"
           >
             Get In Touch
           </motion.h2>
@@ -117,12 +117,12 @@ const Contact = () => {
           >
             {/* Contact Details */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm">
-              <motion.h3
+                            <motion.h3
                 animate={{
                   backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
                 }}
                 transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center lg:text-left bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
+                className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center lg:text-left bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
               >
                 Contact Information
               </motion.h3>
@@ -171,12 +171,12 @@ const Contact = () => {
 
             {/* Social Media */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm">
-              <motion.h3
+                            <motion.h3
                 animate={{
                   backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
                 }}
                 transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center lg:text-left bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
+                className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-center lg:text-left bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
               >
                 Follow Us
               </motion.h3>

@@ -33,7 +33,7 @@ const Hero = () => {
   ]
 
   return (
-    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 md:pt-48 pb-16 md:pb-24 px-4">
+    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-32 md:pt-56 pb-16 md:pb-24 px-4">
       {/* Floating Icons - Hidden on small mobile */}
       {floatingIcons.map(({ Icon, delay, color }, index) => (
         <motion.div
@@ -73,7 +73,7 @@ const Hero = () => {
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold bg-gradient-to-r from-gray-900 via-gray-400 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent leading-none"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent leading-none mt-4 sm:mt-0"
             >
               CARNIVAL LDN
             </motion.div>
@@ -86,7 +86,7 @@ const Hero = () => {
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-light max-w-4xl mx-auto leading-relaxed px-2 bg-gradient-to-r from-gray-700 via-gray-500 to-gray-700 bg-[length:200%_200%] bg-clip-text text-transparent"
+              className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-light max-w-4xl mx-auto leading-relaxed px-2 text-gray-900"
             >
               London's Most Professional Events Experience
             </motion.h2>
@@ -95,7 +95,7 @@ const Hero = () => {
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mx-auto leading-relaxed px-2 bg-gradient-to-r from-gray-600 via-gray-400 to-gray-600 bg-[length:200%_200%] bg-clip-text text-transparent"
+              className="text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mx-auto leading-relaxed px-2 bg-gradient-to-r from-gray-700 via-gray-500 to-gray-700 bg-[length:200%_200%] bg-clip-text text-transparent"
             >
               From corporate events to cultural celebrations,
               from exclusive parties to memorable occasions

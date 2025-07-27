@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,10 +17,10 @@ const Navbar = () => {
   }, [])
 
   const navItems = [
-    { name: 'Home', href: '#home' },
-    { name: 'Events', href: '#events' },
-    { name: 'About', href: '#about' },
-    { name: 'Contact', href: '#contact' },
+    { name: 'Home', href: location.pathname === '/' ? '#home' : '/#home' },
+    { name: 'Events', href: location.pathname === '/' ? '#events' : '/events' },
+    { name: 'About', href: location.pathname === '/' ? '#about' : '/#about' },
+    { name: 'Contact', href: location.pathname === '/' ? '#contact' : '/#contact' },
   ]
 
   return (

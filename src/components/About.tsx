@@ -46,7 +46,7 @@ const About = () => {
               backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-900 via-gray-400 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent"
           >
             About Carnival LDN
           </motion.h2>
@@ -56,31 +56,31 @@ const About = () => {
         </motion.div>
 
         {/* Story Section */}
-        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center mb-16 md:mb-20">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-stretch mb-16 md:mb-20">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="space-y-6 text-center lg:text-left"
+            className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg p-6 md:p-8 space-y-6 text-center lg:text-left flex flex-col"
           >
             <motion.h3
               animate={{
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
+              className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
             >
               Our Story
             </motion.h3>
             <div className="space-y-4 text-gray-600 leading-relaxed">
-              <p>
+              <p className="text-sm md:text-base">
                 Founded with a vision to transform the events industry, Carnival LDN has grown from a boutique planning service to London's most trusted name in professional event management.
               </p>
-              <p>
+              <p className="text-sm md:text-base">
                 Our team of experienced professionals brings together decades of expertise in corporate events, cultural celebrations, and premium hospitality to deliver experiences that exceed expectations.
               </p>
-              <p>
+              <p className="text-sm md:text-base">
                 From intimate board meetings to large-scale conferences, every event we create reflects our commitment to excellence, innovation, and the highest standards of professional service.
               </p>
             </div>
@@ -91,15 +91,15 @@ const About = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative"
+            className="relative flex flex-col"
           >
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 md:p-8 space-y-6">
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 md:p-8 space-y-6 flex-1 flex flex-col">
               <motion.h4
                 animate={{
                   backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
                 }}
                 transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="text-xl md:text-2xl font-bold text-center md:text-left bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
+                className="text-xl md:text-2xl font-bold text-center md:text-left bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
               >
                 Why Choose Us?
               </motion.h4>
@@ -171,7 +171,7 @@ const About = () => {
               backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
             }}
             transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-            className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
+            className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
           >
             Our Values
           </motion.h3>
@@ -210,7 +210,7 @@ const About = () => {
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="text-xl md:text-2xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-gray-800 via-gray-600 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
+              className="text-xl md:text-2xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 bg-[length:200%_200%] bg-clip-text text-transparent"
             >
               Ready to Create Excellence Together?
             </motion.h3>

@@ -14,7 +14,10 @@
     "react-dom": "^18.2.0",
     "framer-motion": "^10.16.4",
     "lucide-react": "^0.294.0",
-    "react-router-dom": "^6.20.1"
+    "react-router-dom": "^6.20.1",
+    "react-hook-form": "^7.48.2",
+    "zustand": "^4.4.7",
+    "date-fns": "^2.30.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",
