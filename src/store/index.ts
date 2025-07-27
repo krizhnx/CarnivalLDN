@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Event, User, AuthState, EventFormData } from '../types';
+import { Event, AuthState, EventFormData } from '../types';
 
 interface AppState extends AuthState {
   events: Event[];

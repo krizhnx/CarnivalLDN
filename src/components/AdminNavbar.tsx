@@ -1,11 +1,8 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
 
 const AdminNavbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAppStore();
 
