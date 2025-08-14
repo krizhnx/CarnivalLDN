@@ -28,7 +28,7 @@ function HomePage() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAppStore();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/admin/carnivalldn" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/admin" replace />;
 }
 
 function App() {
@@ -37,7 +37,7 @@ function App() {
       <Routes>
                 <Route path="/" element={<HomePage />} />
         <Route path="/events" element={<EventsPage />} />
-        <Route path="/admin/carnivalldn" element={<Login />} />
+        <Route path="/admin" element={<Login />} />
         <Route
           path="/admin/dashboard"
           element={
