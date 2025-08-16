@@ -1,13 +1,17 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('Stripe secret key not configured');
+      return res.status(500).json({ error: 'Server not configured for payments' });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
     const { eventId, tickets, customerInfo, totalAmount } = req.body;
 
     // Validate input
