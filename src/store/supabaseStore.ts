@@ -1,11 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
-import { Event, AuthState, EventFormData } from '../types'
+import { Event, AuthState, EventFormData, Order } from '../types'
 import toast from 'react-hot-toast'
 
 interface AppState extends AuthState {
   events: Event[]
+  orders: any[]
   isLoading: boolean
   // Auth actions
   login: (email: string, password: string) => Promise<boolean>
@@ -14,8 +15,11 @@ interface AppState extends AuthState {
   addEvent: (eventData: EventFormData) => Promise<void>
   updateEvent: (id: string, eventData: EventFormData) => Promise<void>
   deleteEvent: (id: string) => Promise<void>
+  archiveEvent: (id: string, isArchived: boolean) => Promise<void>
   getEvents: () => Promise<void>
   subscribeToEvents: () => any
+  // Order actions
+  getOrders: () => Promise<void>
 }
 
 // Hardcoded admin credentials
@@ -32,6 +36,7 @@ export const useAppStore = create<AppState>()(
       isAuthenticated: false,
       isLoading: false,
       events: [],
+      orders: [],
 
       // Auth actions - SIMPLIFIED (hardcoded)
       login: async (email: string, password: string) => {
@@ -78,14 +83,49 @@ export const useAppStore = create<AppState>()(
         set({ isLoading: true })
         
         try {
-          const { data, error } = await supabase
+          // First, fetch all events
+          const { data: eventsData, error: eventsError } = await supabase
             .from('events')
             .select('*')
             .order('created_at', { ascending: false })
 
-          if (error) throw error
+          if (eventsError) throw eventsError
 
-          set({ events: data || [], isLoading: false })
+          // Then, fetch ticket tiers for all events (include inactive to keep showing manually sold-out tiers)
+          const { data: tiersData, error: tiersError } = await supabase
+            .from('ticket_tiers')
+            .select('*')
+
+          if (tiersError) {
+            console.error('Error fetching ticket tiers:', tiersError)
+            // Don't throw, just log the error
+          }
+
+          // Combine events with their ticket tiers
+          const eventsWithTiers = (eventsData || []).map(event => {
+            const eventTiers = (tiersData || []).filter(tier => tier.event_id === event.id)
+            return {
+              ...event,
+              isArchived: event.is_archived ?? false,
+              ticketTiers: eventTiers.map(tier => ({
+                id: tier.id,
+                eventId: tier.event_id,
+                name: tier.name,
+                price: tier.price,
+                originalPrice: tier.original_price,
+                capacity: tier.capacity,
+                soldCount: tier.sold_count,
+                availableFrom: tier.available_from,
+                availableUntil: tier.available_until,
+                description: tier.description,
+                benefits: tier.benefits,
+                isActive: tier.is_active,
+              }))
+            }
+          })
+
+          console.log('Events with tiers:', eventsWithTiers)
+          set({ events: eventsWithTiers, isLoading: false })
         } catch (error) {
           console.error('Error fetching events:', error)
           toast.error('Failed to load events')
@@ -93,7 +133,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      addEvent: async (eventData: EventFormData) => {
+      addEvent: async (eventData: EventFormData & { ticketTiers?: any[] }) => {
         try {
           // Only include fields that exist in the database
           const newEvent = {
@@ -107,23 +147,62 @@ export const useAppStore = create<AppState>()(
             image: eventData.image,
             tags: eventData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
             gradient: eventData.gradient,
+            is_archived: false,
             // Remove rating - let the database use the default
             // Remove created_at and updated_at - let the database handle them
           }
 
           console.log('Adding new event:', newEvent)
 
-          const { error } = await supabase
+          // First, insert the event
+          const { data: eventResult, error: eventError } = await supabase
             .from('events')
             .insert([newEvent])
+            .select()
+            .single()
 
-          if (error) {
-            console.error('Supabase insert error:', error)
-            throw error
+          if (eventError) {
+            console.error('Supabase insert error:', eventError)
+            throw eventError
           }
 
-          console.log('Event added successfully')
-          toast.success('Event added successfully!')
+          console.log('Event added successfully, now adding ticket tiers')
+
+          // If there are ticket tiers, save them to the ticket_tiers table
+          if (eventData.ticketTiers && eventData.ticketTiers.length > 0) {
+            const ticketTiersToInsert = eventData.ticketTiers.map(tier => ({
+              id: tier.id,
+              event_id: eventResult.id, // Use the actual event ID from the database
+              name: tier.name,
+              price: tier.price,
+              original_price: tier.originalPrice || null,
+              capacity: tier.capacity,
+              sold_count: tier.soldCount || 0,
+              available_from: tier.availableFrom ? new Date(tier.availableFrom).toISOString() : null,
+              available_until: tier.availableUntil ? new Date(tier.availableUntil).toISOString() : null,
+              description: tier.description || null,
+              benefits: tier.benefits || [],
+              is_active: tier.isActive !== false, // Default to true if not specified
+            }))
+
+            console.log('Inserting ticket tiers:', ticketTiersToInsert)
+
+            console.log('About to insert ticket tiers into database:', ticketTiersToInsert)
+            
+            const { data: tiersResult, error: tiersError } = await supabase
+              .from('ticket_tiers')
+              .insert(ticketTiersToInsert)
+              .select()
+
+            if (tiersError) {
+              console.error('Error inserting ticket tiers:', tiersError)
+              console.error('Error details:', tiersError.details, tiersError.hint, tiersError.message)
+              // Don't throw here, just log the error
+            } else {
+              console.log('Ticket tiers added successfully:', tiersResult)
+            }
+          }
+
           // Refresh events
           await get().getEvents()
         } catch (error) {
@@ -132,7 +211,7 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      updateEvent: async (id: string, eventData: EventFormData) => {
+      updateEvent: async (id: string, eventData: EventFormData & { ticketTiers?: any[] }) => {
         try {
           // Only include fields that exist in the database
           const updatedEvent = {
@@ -161,8 +240,50 @@ export const useAppStore = create<AppState>()(
             throw error
           }
 
+          // Handle ticket tiers update
+          if (eventData.ticketTiers) {
+            // First, delete existing ticket tiers for this event
+            const { error: deleteError } = await supabase
+              .from('ticket_tiers')
+              .delete()
+              .eq('event_id', id)
+
+            if (deleteError) {
+              console.error('Error deleting existing ticket tiers:', deleteError)
+            }
+
+            // Then, insert the new ticket tiers
+            if (eventData.ticketTiers.length > 0) {
+              const ticketTiersToInsert = eventData.ticketTiers.map(tier => ({
+                id: tier.id,
+                event_id: id,
+                name: tier.name,
+                price: tier.price,
+                original_price: tier.originalPrice,
+                capacity: tier.capacity,
+                sold_count: tier.soldCount,
+                available_from: tier.availableFrom,
+                available_until: tier.availableUntil,
+                description: tier.description,
+                benefits: tier.benefits,
+                is_active: tier.isActive,
+              }))
+
+              console.log('Updating ticket tiers:', ticketTiersToInsert)
+
+              const { error: tiersError } = await supabase
+                .from('ticket_tiers')
+                .insert(ticketTiersToInsert)
+
+              if (tiersError) {
+                console.error('Error updating ticket tiers:', tiersError)
+              } else {
+                console.log('Ticket tiers updated successfully')
+              }
+            }
+          }
+
           console.log('Event updated successfully')
-          toast.success('Event updated successfully!')
           // Refresh events
           await get().getEvents()
         } catch (error) {
@@ -173,6 +294,86 @@ export const useAppStore = create<AppState>()(
 
       deleteEvent: async (id: string) => {
         try {
+          // Check archive status first
+          const { data: eventRow, error: eventFetchError } = await supabase
+            .from('events')
+            .select('is_archived')
+            .eq('id', id)
+            .single()
+
+          if (eventFetchError) {
+            console.error('Error fetching event before delete:', eventFetchError)
+          }
+
+          const isArchived = (eventRow as any)?.is_archived === true
+
+          // Prevent deleting events that have orders
+          if (!isArchived) {
+            const { data: eventOrders, error: eventOrdersError } = await supabase
+              .from('orders')
+              .select('id')
+              .eq('event_id', id)
+
+            if (eventOrdersError) {
+              console.error('Error checking event orders before delete:', eventOrdersError)
+            }
+
+            if ((eventOrders || []).length > 0) {
+              const error: any = new Error('Event has associated orders and cannot be deleted without handling dependencies')
+              error.code = 'EVENT_HAS_ORDERS'
+              throw error
+            }
+          }
+
+          // If archived, hard-delete dependent data first to avoid FK conflicts
+          if (isArchived) {
+            // Collect order ids for this event
+            const { data: ordersToDelete, error: ordersToDeleteError } = await supabase
+              .from('orders')
+              .select('id')
+              .eq('event_id', id)
+
+            if (ordersToDeleteError) {
+              console.error('Error fetching orders to delete:', ordersToDeleteError)
+            }
+
+            const orderIds = (ordersToDelete || []).map(o => o.id)
+
+            if (orderIds.length > 0) {
+              // Delete order_tickets referencing those orders
+              const { error: otDeleteError } = await supabase
+                .from('order_tickets')
+                .delete()
+                .in('order_id', orderIds)
+
+              if (otDeleteError) {
+                console.error('Error deleting order_tickets for event:', otDeleteError)
+              }
+
+              // Delete orders for the event
+              const { error: ordersDeleteError } = await supabase
+                .from('orders')
+                .delete()
+                .eq('event_id', id)
+
+              if (ordersDeleteError) {
+                console.error('Error deleting orders for event:', ordersDeleteError)
+              }
+            }
+          }
+
+          // Then, delete all ticket tiers for this event
+          const { error: tiersError } = await supabase
+            .from('ticket_tiers')
+            .delete()
+            .eq('event_id', id)
+
+          if (tiersError) {
+            console.error('Error deleting ticket tiers:', tiersError)
+            // Don't throw, just log the error
+          }
+
+          // Then delete the event
           const { error } = await supabase
             .from('events')
             .delete()
@@ -180,12 +381,32 @@ export const useAppStore = create<AppState>()(
 
           if (error) throw error
 
-          toast.success('Event deleted successfully!')
           // Refresh events
           await get().getEvents()
         } catch (error) {
           console.error('Error deleting event:', error)
-          toast.error('Failed to delete event')
+          // @ts-ignore - error shape at runtime
+          if ((error as any)?.code === 'EVENT_HAS_ORDERS') {
+            toast.error('Cannot delete: this event has existing orders. Consider archiving it or enabling cascade deletes in Supabase.')
+          } else {
+            toast.error('Failed to delete event')
+          }
+        }
+      },
+
+      archiveEvent: async (id: string, isArchived: boolean) => {
+        try {
+          const { error } = await supabase
+            .from('events')
+            .update({ is_archived: isArchived })
+            .eq('id', id)
+
+          if (error) throw error
+
+          await get().getEvents()
+        } catch (error) {
+          console.error('Error archiving event:', error)
+          toast.error('Failed to update archive status. Ensure `is_archived boolean default false` exists on events table.')
         }
       },
 
@@ -206,6 +427,66 @@ export const useAppStore = create<AppState>()(
           })
 
         return subscription
+      },
+
+      getOrders: async () => {
+        try {
+          console.log('🔄 Fetching orders with tickets...')
+
+          // Fetch orders
+          const { data: ordersData, error: ordersError } = await supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+          if (ordersError) throw ordersError
+
+          // For each order, fetch its tickets and map to frontend shape
+          const mappedOrders: Order[] = await Promise.all(
+            (ordersData || []).map(async (orderRow: any) => {
+              const { data: ticketsData, error: ticketsError } = await supabase
+                .from('order_tickets')
+                .select('*')
+                .eq('order_id', orderRow.id)
+
+              if (ticketsError) {
+                console.error('Error fetching tickets for order:', orderRow.id, ticketsError)
+              }
+
+              const tickets = (ticketsData || []).map((t: any) => ({
+                id: t.id,
+                orderId: t.order_id,
+                ticketTierId: t.ticket_tier_id,
+                quantity: t.quantity,
+                unitPrice: t.unit_price,
+                totalPrice: t.total_price,
+              }))
+
+              const mapped: Order = {
+                id: orderRow.id,
+                eventId: orderRow.event_id,
+                userId: orderRow.user_id,
+                stripePaymentIntentId: orderRow.stripe_payment_intent_id,
+                status: orderRow.status,
+                totalAmount: orderRow.total_amount,
+                currency: orderRow.currency,
+                tickets,
+                customerEmail: orderRow.customer_email,
+                customerName: orderRow.customer_name,
+                createdAt: orderRow.created_at,
+                updatedAt: orderRow.updated_at,
+              }
+
+              return mapped
+            })
+          )
+
+          console.log('📦 Orders with tickets (mapped):', mappedOrders)
+          set({ orders: mappedOrders })
+        } catch (error) {
+          console.error('Error fetching orders:', error)
+          set({ orders: [] })
+        }
       }
     }),
     {

@@ -14,6 +14,55 @@ export interface Event {
   bookingUrl: string;
   createdAt: Date;
   updatedAt: Date;
+  ticketTiers: TicketTier[];
+  isArchived?: boolean;
+}
+
+export interface TicketTier {
+  id: string;
+  eventId: string; // Link to the event
+  name: string; // e.g., "Early Bird", "VIP", "Student"
+  price: number; // in pence/cents
+  originalPrice?: number; // for showing discounts
+  capacity: number;
+  soldCount: number;
+  availableFrom: Date;
+  availableUntil: Date;
+  description?: string;
+  benefits?: string[]; // e.g., ["VIP seating", "Free drinks"]
+  isActive: boolean;
+}
+
+export interface Order {
+  id: string;
+  eventId: string;
+  userId: string;
+  stripePaymentIntentId: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  totalAmount: number;
+  currency: string;
+  tickets: OrderTicket[];
+  customerEmail: string;
+  customerName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderTicket {
+  id: string;
+  orderId: string;
+  ticketTierId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface PaymentIntent {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  client_secret: string;
 }
 
 export interface User {

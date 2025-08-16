@@ -1,0 +1,44 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51OyBk9IgkIAGwv6wlVQzyWVfwJGw73Jdf0i4k3VrT4DBWi8EUpyJpZqGkLhrGqKf18E5XlpVo9UOuwQVUFJ6Lfie00lQ80w5Fa', {
+  apiVersion: '2023-10-16',
+});
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { eventId, tickets, customerInfo, totalAmount } = req.body;
+
+    // Validate input
+    if (!eventId || !tickets || !customerInfo || !totalAmount) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalAmount,
+      currency: 'gbp',
+      metadata: {
+        eventId,
+        customerName: customerInfo.name,
+        customerEmail: customerInfo.email,
+        ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(500).json({ error: 'Failed to create payment intent' });
+  }
+}
