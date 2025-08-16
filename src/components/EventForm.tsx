@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, MapPin, DollarSign, Users, Tag } from 'lucide-react';
-import { useAppStore } from '../store';
+import { useAppStore } from '../store/supabaseStore';
 import { Event, EventFormData } from '../types';
 
 interface EventFormProps {

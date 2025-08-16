@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
-import { useAppStore } from '../store';
+import { useAppStore } from '../store/supabaseStore';
 import { LoginFormData } from '../types';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -23,9 +24,11 @@ const Login = () => {
     const success = await login(data.email, data.password);
 
     if (success) {
+      toast.success('Welcome back, Admin!');
       navigate('/admin/dashboard');
     } else {
       setError('Invalid email or password');
+      toast.error('Invalid email or password');
     }
   };
 

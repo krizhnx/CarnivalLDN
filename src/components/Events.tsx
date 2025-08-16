@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Calendar, MapPin, Users, Clock, Star, ArrowRight } from 'lucide-react'
-import { useAppStore } from '../store'
+import { useAppStore } from '../store/supabaseStore'
 import { Link } from 'react-router-dom'
 
 const Events = () => {
