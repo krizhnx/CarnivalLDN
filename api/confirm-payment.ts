@@ -1,6 +1,6 @@
 const Stripe = require('stripe');
 
-export default async function handler(req: any, res: any) {
+module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -41,7 +41,7 @@ export default async function handler(req: any, res: any) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Extract metadata from payment intent
-    const { eventId, ticketTierId, quantity, ticketTierName } = paymentIntent.metadata;
+    const { eventId, ticketTierId, quantity } = paymentIntent.metadata;
 
     // Create order
     const { data: order, error: orderError } = await supabase
