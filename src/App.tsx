@@ -15,7 +15,7 @@ import EventsPage from './components/EventsPage'
 import { useAppStore } from './store/supabaseStore'
 
 function HomePage() {
-  const { events, getEvents, subscribeToEvents } = useAppStore()
+  const { getEvents, subscribeToEvents } = useAppStore()
 
   useEffect(() => {
     // Load events on mount

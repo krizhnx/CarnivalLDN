@@ -12,7 +12,6 @@ import { useAppStore } from '../store/supabaseStore';
 import { Event } from '../types';
 import EventForm from './EventForm';
 import AdminNavbar from './AdminNavbar';
-import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [showEventForm, setShowEventForm] = useState(false);
