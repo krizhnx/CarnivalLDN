@@ -32,7 +32,7 @@ Create a `.env.local` file in your project root:
 
 ```bash
 # Stripe Keys (Test Mode)
-STRIPE_SECRET_KEY=sk_test_51OyBk9IgkIAGwv6wlVQzyWVfwJGw73Jdf0i4k3VrT4DBWi8EUpyJpZqGkLhrGqKf18E5XlpVo9UOuwQVUFJ6Lfie00lQ80w5Fa
+STRIPE_SECRET_KEY=sk_test_your_key_here
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51OyBk9IgkIAGwv6wTnbqfLaivBQ0wYCltGf0gS4yeEZpxkD1f5jKEwarmr294R0LXNEzEMNxHuCKLRpMH8DYgaWD00g8BPRDAG
 
 # Supabase (if using separate backend)

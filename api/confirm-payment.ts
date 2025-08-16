@@ -2,13 +2,13 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51OyBk9IgkIAGwv6wlVQzyWVfwJGw73Jdf0i4k3VrT4DBWi8EUpyJpZqGkLhrGqKf18E5XlpVo9UOuwQVUFJ6Lfie00lQ80w5Fa', {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2023-10-16',
 });
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -65,16 +65,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to create order tickets' });
     }
 
-    // Update ticket tier sold counts
+    // Update ticket tier sold counts (increment)
     for (const ticket of tickets) {
+      const { data: currentTier } = await supabase
+        .from('ticket_tiers')
+        .select('sold_count')
+        .eq('id', ticket.tierId)
+        .single();
+
+      const newSold = (currentTier?.sold_count || 0) + ticket.quantity;
       const { error: updateError } = await supabase
         .from('ticket_tiers')
-        .update({ 
-          sold_count: supabase.rpc('increment', { 
-            row_id: ticket.tierId, 
-            x: ticket.quantity 
-          })
-        })
+        .update({ sold_count: newSold })
         .eq('id', ticket.tierId);
 
       if (updateError) {
