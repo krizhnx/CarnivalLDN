@@ -46,6 +46,7 @@ export const useAppStore = create<AppState>()(
           description: 'An elegant corporate networking event with fine dining and professional entertainment.',
           capacity: '200',
           rating: '4.9',
+          ticketTiers: [],
           tags: ['Corporate', 'Networking', 'Formal'],
           gradient: 'from-gray-600 to-gray-800',
           bookingUrl: 'https://example.com/book/corporate-gala',
@@ -63,6 +64,7 @@ export const useAppStore = create<AppState>()(
           description: 'Celebrate diverse cultural heritage with traditional performances and exhibitions.',
           capacity: '1500',
           rating: '5.0',
+          ticketTiers: [],
           tags: ['Cultural', 'Festival', 'Heritage'],
           gradient: 'from-gray-700 to-gray-900',
           bookingUrl: 'https://example.com/book/cultural-festival',
@@ -80,6 +82,7 @@ export const useAppStore = create<AppState>()(
           description: 'Professional New Year celebration with networking and premium hospitality.',
           capacity: '300',
           rating: '4.8',
+          ticketTiers: [],
           tags: ['New Year', 'Corporate', 'Premium'],
           gradient: 'from-gray-800 to-black',
           bookingUrl: 'https://example.com/book/new-year-reception',
@@ -124,6 +127,7 @@ export const useAppStore = create<AppState>()(
           rating: '4.5',
           createdAt: new Date(),
           updatedAt: new Date(),
+          ticketTiers: [],
         };
 
         set(state => ({

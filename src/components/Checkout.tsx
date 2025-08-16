@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, CreditCard, Lock, CheckCircle, Loader2 } from 'lucide-react';
+import { X, Lock, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Event, TicketTier, Order } from '../types';
-import { formatPrice } from '../lib/stripe';
+// import { formatPrice } from '../lib/stripe';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OyBk9IgkIAGwv6wTnbqfLaivBQ0wYCltGf0gS4yeEZpxkD1f5jKEwarmr294R0LXNEzEMNxHuCKLRpMH8DYgaWD00g8BPRDAG');
 
@@ -20,7 +20,7 @@ interface TicketSelection {
   quantity: number;
 }
 
-const CheckoutForm = ({ event, onClose, onSuccess }: CheckoutProps) => {
+const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const [ticketSelections, setTicketSelections] = useState<TicketSelection[]>([]);
@@ -30,8 +30,8 @@ const CheckoutForm = ({ event, onClose, onSuccess }: CheckoutProps) => {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<'tickets' | 'customer' | 'payment' | 'processing'>('tickets');
-  const [progress, setProgress] = useState(0);
+  // const [currentStep, setCurrentStep] = useState<'tickets' | 'customer' | 'payment' | 'processing'>('tickets');
+  // const [progress, setProgress] = useState(0);
 
   // Initialize ticket selections with all tiers so sold-out/disabled still display
   useEffect(() => {
