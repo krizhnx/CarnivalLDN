@@ -7,14 +7,19 @@ module.exports = async function handler(req: any, res: any) {
 
   try {
     console.log('Request body:', req.body);
-    const { eventId, ticketTierId, quantity } = req.body;
+    const { eventId, tickets, customerInfo, totalAmount } = req.body;
 
-    if (!eventId || !ticketTierId || !quantity) {
-      console.log('Missing fields:', { eventId, ticketTierId, quantity });
+    if (!eventId || !tickets || !customerInfo || !totalAmount) {
+      console.log('Missing fields:', { eventId, tickets, customerInfo, totalAmount });
       return res.status(400).json({ 
         error: 'Missing required fields',
-        received: { eventId, ticketTierId, quantity }
+        received: { eventId, tickets, customerInfo, totalAmount }
       });
+    }
+
+    // Validate tickets array
+    if (!Array.isArray(tickets) || tickets.length === 0) {
+      return res.status(400).json({ error: 'Invalid tickets array' });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -38,36 +43,40 @@ module.exports = async function handler(req: any, res: any) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: ticketTier, error: tierError } = await supabase
-      .from('ticket_tiers')
-      .select('*')
-      .eq('id', ticketTierId)
-      .single();
+    // Validate all ticket tiers and check availability
+    for (const ticket of tickets) {
+      const { data: ticketTier, error: tierError } = await supabase
+        .from('ticket_tiers')
+        .select('*')
+        .eq('id', ticket.tierId)
+        .single();
 
-    if (tierError || !ticketTier) {
-      console.log('Ticket tier error:', tierError);
-      return res.status(400).json({ error: 'Invalid ticket tier' });
+      if (tierError || !ticketTier) {
+        console.log('Ticket tier error:', tierError);
+        return res.status(400).json({ error: `Invalid ticket tier: ${ticket.tierId}` });
+      }
+
+      if (ticketTier.sold_count + ticket.quantity > ticketTier.capacity) {
+        return res.status(400).json({ error: `Not enough tickets available for ${ticketTier.name}` });
+      }
     }
 
-    if (ticketTier.sold_count + quantity > ticketTier.capacity) {
-      return res.status(400).json({ error: 'Not enough tickets available' });
-    }
-
-    const amount = ticketTier.price * quantity;
-
+    // Create payment intent with the total amount
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,
+      amount: totalAmount,
       currency: 'gbp',
       metadata: {
         eventId,
-        ticketTierId,
-        quantity: quantity.toString(),
-        ticketTierName: ticketTier.name
+        customerName: customerInfo.name,
+        customerEmail: customerInfo.email,
+        ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
+        tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity })))
       }
     });
 
     res.status(200).json({
-      clientSecret: paymentIntent.client_secret
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
     });
   } catch (error) {
     console.error('Error creating payment intent:', error);

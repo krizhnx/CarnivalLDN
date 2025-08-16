@@ -41,7 +41,8 @@ module.exports = async function handler(req: any, res: any) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Extract metadata from payment intent
-    const { eventId, ticketTierId, quantity } = paymentIntent.metadata;
+    const { eventId, tickets: ticketsMetadata } = paymentIntent.metadata;
+    const tickets = JSON.parse(ticketsMetadata);
 
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -63,31 +64,33 @@ module.exports = async function handler(req: any, res: any) {
       return res.status(500).json({ error: 'Failed to create order' });
     }
 
-    // Create order ticket
-    const { error: ticketError } = await supabase
-      .from('order_tickets')
-      .insert({
-        order_id: order.id,
-        ticket_tier_id: ticketTierId,
-        quantity: parseInt(quantity),
-        unit_price: paymentIntent.amount / parseInt(quantity),
-        total_price: paymentIntent.amount
-      });
+    // Create order tickets for each ticket tier
+    for (const ticket of tickets) {
+      const { error: ticketError } = await supabase
+        .from('order_tickets')
+        .insert({
+          order_id: order.id,
+          ticket_tier_id: ticket.tierId,
+          quantity: parseInt(ticket.quantity),
+          unit_price: paymentIntent.amount / tickets.reduce((sum: number, t: any) => sum + parseInt(t.quantity), 0),
+          total_price: (paymentIntent.amount / tickets.reduce((sum: number, t: any) => sum + parseInt(t.quantity), 0)) * parseInt(ticket.quantity)
+        });
 
-    if (ticketError) {
-      console.error('Error creating order ticket:', ticketError);
-      return res.status(500).json({ error: 'Failed to create order ticket' });
-    }
+      if (ticketError) {
+        console.error('Error creating order ticket:', ticketError);
+        return res.status(500).json({ error: 'Failed to create order ticket' });
+      }
 
-    // Update ticket tier sold count
-    const { error: updateError } = await supabase
-      .from('ticket_tiers')
-      .update({ sold_count: supabase.rpc('increment_sold_count', { tier_id: ticketTierId, increment: parseInt(quantity) }) })
-      .eq('id', ticketTierId);
+      // Update ticket tier sold count
+      const { error: updateError } = await supabase
+        .from('ticket_tiers')
+        .update({ sold_count: supabase.rpc('increment_sold_count', { tier_id: ticket.tierId, increment: parseInt(ticket.quantity) }) })
+        .eq('id', ticket.tierId);
 
-    if (updateError) {
-      console.error('Error updating ticket tier:', updateError);
-      // Don't fail the whole request if this fails
+      if (updateError) {
+        console.error('Error updating ticket tier:', updateError);
+        // Don't fail the whole request if this fails
+      }
     }
 
     res.status(200).json({
