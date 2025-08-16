@@ -12,8 +12,5 @@
     "api/confirm-payment.ts": {
       "runtime": "nodejs18.x"
     }
-  },
-  "env": {
-    "STRIPE_SECRET_KEY": "@stripe-secret-key"
   }
 } 
