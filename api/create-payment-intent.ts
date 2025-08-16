@@ -1,4 +1,4 @@
-const Stripe = require('stripe');
+const StripePaymentSDK = require('stripe');
 
 module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -6,10 +6,15 @@ module.exports = async function handler(req: any, res: any) {
   }
 
   try {
+    console.log('Request body:', req.body);
     const { eventId, ticketTierId, quantity } = req.body;
 
     if (!eventId || !ticketTierId || !quantity) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      console.log('Missing fields:', { eventId, ticketTierId, quantity });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        received: { eventId, ticketTierId, quantity }
+      });
     }
 
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -18,7 +23,7 @@ module.exports = async function handler(req: any, res: any) {
       return res.status(500).json({ error: 'Stripe configuration error' });
     }
 
-    const stripe = new Stripe(stripeSecretKey);
+    const stripe = new StripePaymentSDK(stripeSecretKey);
 
     // Get ticket tier details from Supabase
     const { createClient } = require('@supabase/supabase-js');
@@ -40,6 +45,7 @@ module.exports = async function handler(req: any, res: any) {
       .single();
 
     if (tierError || !ticketTier) {
+      console.log('Ticket tier error:', tierError);
       return res.status(400).json({ error: 'Invalid ticket tier' });
     }
 
