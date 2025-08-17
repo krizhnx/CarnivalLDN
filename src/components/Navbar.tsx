@@ -35,14 +35,15 @@ const Navbar = () => {
         }`}
       >
       <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <div className="flex items-center justify-between h-18 md:h-20 relative">
+                 <div className="flex items-center justify-between h-14 md:h-16 relative">
           {/* Text - Left (Desktop only) */}
           <div className="hidden md:flex items-center z-10">
-            <span className={`text-xl md:text-2xl font-bold transition-colors duration-300 ${
-              isScrolled ? 'text-gray-900' : 'text-white drop-shadow-lg'
-            }`}>
-              Carnival LDN
-            </span>
+                         <img
+               src="/carntext-b.svg"
+               alt="Carnival LDN"
+               className="h-6 md:h-8 w-auto max-w-[120px] md:max-w-[220px] object-contain transition-all duration-300"
+               style={{ filter: isScrolled ? 'none' : 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}
+             />
           </div>
 
           {/* Logo - Left on mobile, centered on desktop */}
