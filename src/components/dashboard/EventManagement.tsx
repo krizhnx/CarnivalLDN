@@ -17,37 +17,7 @@ const EventManagement = ({
   onArchiveToggle,
   onDeleteEvent
 }: EventManagementProps) => {
-  // Helper function to parse event dates
-  const parseEventDate = (dateStr?: string | null): Date | null => {
-    if (!dateStr) return null;
-    let s = String(dateStr).trim();
-    // If begins with weekday, remove it: e.g., "Sunday, 20 October 2024" -> "20 October 2024"
-    const weekdayMatch = s.match(/^[A-Za-z]+,\s*(.*)$/);
-    if (weekdayMatch) s = weekdayMatch[1];
 
-    // Try native parse first
-    let d = new Date(s);
-    if (!isNaN(d.getTime())) return d;
-
-    // Try "DD Month YYYY" -> "Month DD, YYYY"
-    const dmyMatch = s.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
-    if (dmyMatch) {
-      const [, dd, mon, yyyy] = dmyMatch;
-      d = new Date(`${mon} ${dd}, ${yyyy}`);
-      if (!isNaN(d.getTime())) return d;
-    }
-
-    // Try "DD/MM/YYYY" or "DD-MM-YYYY"
-    const slashMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (slashMatch) {
-      const [, dd, mm, yyyy] = slashMatch;
-      const pad = (n: string) => n.padStart(2, '0');
-      d = new Date(`${yyyy}-${pad(mm)}-${pad(dd)}`);
-      if (!isNaN(d.getTime())) return d;
-    }
-
-    return null;
-  };
 
   const renderEventTable = (events: Event[], isArchived: boolean = false) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

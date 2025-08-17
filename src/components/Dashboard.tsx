@@ -486,7 +486,6 @@ const Dashboard = () => {
                 events={events || []}
                 orders={orders || []}
                 selectedEvent={selectedEvent}
-                onEventChange={setSelectedEvent}
                 onExportEventData={handleExportEventData}
               />
             ) : (

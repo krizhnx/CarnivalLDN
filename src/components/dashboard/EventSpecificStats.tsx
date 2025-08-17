@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Star, ChevronLeft, ChevronRight, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, MapPin, Star, ChevronLeft, ChevronRight, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Event, Order } from '../../types';
 
@@ -7,11 +7,10 @@ interface EventSpecificStatsProps {
   events: Event[];
   orders: Order[];
   selectedEvent: string;
-  onEventChange: (eventId: string) => void;
   onExportEventData: (eventId: string) => void;
 }
 
-const EventSpecificStats = ({ events, orders, selectedEvent, onEventChange, onExportEventData }: EventSpecificStatsProps) => {
+const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }: EventSpecificStatsProps) => {
   const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
   const [currentWeek, setCurrentWeek] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
