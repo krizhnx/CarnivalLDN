@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Users, Clock, Star, ArrowRight, Ticket, X } from 'lucide-react';
+import { Calendar, MapPin, Clock, ArrowRight, X } from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
 import { useState, useEffect, useRef } from 'react';
 import { Event, Order } from '../types';

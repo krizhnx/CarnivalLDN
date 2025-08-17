@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import { Calendar, MapPin, Users, Clock, ArrowRight } from 'lucide-react'
+import { Calendar, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/supabaseStore'
 import { useNavigate } from 'react-router-dom'
 import { Event } from '../types'
 
 const Events = () => {
-  const { events, getEvents } = useAppStore();
+  const { events } = useAppStore();
   const navigate = useNavigate();
 
   // Glitch effect for title
