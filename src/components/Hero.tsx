@@ -1,7 +1,20 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Star, Zap, Heart } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
+// Simple subtitle component
+const SubtitleText = () => {
+  return (
+    <span className="inline-block px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20">
+      London's Most Professional Events Experience
+    </span>
+  )
+}
 
 const Hero = () => {
+  const glitchRef = useRef<HTMLHeadingElement>(null)
+  const [isGlitching, setIsGlitching] = useState(false)
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -26,38 +39,53 @@ const Hero = () => {
     },
   }
 
-  const floatingIcons = [
-    { Icon: Star, delay: 0, color: 'text-gray-400' },
-    { Icon: Zap, delay: 2, color: 'text-gray-500' },
-    { Icon: Heart, delay: 4, color: 'text-gray-600' },
-  ]
+  // Random glitch effect
+  useEffect(() => {
+    const triggerRandomGlitch = () => {
+      if (glitchRef.current) {
+        setIsGlitching(true)
+        
+        // Remove the glitch class after the animation duration (0.2s)
+        setTimeout(() => {
+          setIsGlitching(false)
+        }, 200)
+        
+        // Schedule next glitch at random interval between 0-1 seconds
+        const nextGlitchDelay = Math.random() * 1000
+        setTimeout(triggerRandomGlitch, nextGlitchDelay)
+      }
+    }
+
+    // Start the first glitch after a short delay
+    const initialDelay = setTimeout(() => {
+      triggerRandomGlitch()
+    }, 100) // 2 second initial delay to let the page load
+
+    return () => {
+      clearTimeout(initialDelay)
+    }
+  }, [])
+
+
 
   return (
-    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-32 md:pt-56 pb-16 md:pb-24 px-4">
-      {/* Floating Icons - Hidden on small mobile */}
-      {floatingIcons.map(({ Icon, delay, color }, index) => (
-        <motion.div
-          key={index}
-          className={`absolute ${color} opacity-10 md:opacity-20 hidden sm:block`}
-          style={{
-            left: `${20 + index * 30}%`,
-            top: `${30 + index * 20}%`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            rotate: [0, 360],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            delay: delay,
-            ease: "easeInOut",
-          }}
+    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 md:pt-32 pb-16 md:pb-24 px-4">
+      {/* Video Background */}
+      <div className="absolute inset-0 w-full h-full">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
         >
-          <Icon size={40} className="md:w-15 md:h-15" />
-        </motion.div>
-      ))}
+          <source src="/vid.mp4" type="video/mp4" />
+        </video>
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
+
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 text-center relative z-10">
         <motion.div
@@ -66,55 +94,40 @@ const Hero = () => {
           animate="visible"
           className="space-y-6 md:space-y-8"
         >
-          {/* Main Heading - Better mobile sizing */}
+          {/* Main Heading with Glitch Effect */}
           <motion.div variants={itemVariants}>
-            <motion.div
-              animate={{
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+            <h1
+              ref={glitchRef}
+              className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl glitch-text ${
+                isGlitching ? 'glitch-active' : ''
+              }`}
+              data-text="CARNIVAL LDN"
+              style={{
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
               }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent leading-none mt-4 sm:mt-0"
             >
               CARNIVAL LDN
-            </motion.div>
+            </h1>
           </motion.div>
 
           {/* Subtitle - Better mobile spacing */}
-          <motion.div variants={itemVariants} className="space-y-3 md:space-y-4">
+          <motion.div variants={itemVariants} className="space-y-3 md:space-y-7">
             <motion.h2
-              animate={{
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-              }}
-              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-light max-w-4xl mx-auto leading-relaxed px-2 text-gray-900"
+              className="text-lg sm:text-xl md:text-2xl lg:text-2xl font-light max-w-4xl mx-auto leading-relaxed px-2 text-white drop-shadow-lg"
             >
-              London's Most Professional Events Experience
+                             <SubtitleText />
             </motion.h2>
             <motion.p
               animate={{
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mx-auto leading-relaxed px-2 bg-gradient-to-r from-gray-700 via-gray-500 to-gray-700 bg-[length:200%_200%] bg-clip-text text-transparent"
+                             className="text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mx-auto leading-relaxed px-2 bg-gradient-to-r from-gray-200 via-white to-gray-200 bg-[length:200%_200%] bg-clip-text text-transparent drop-shadow-lg"
             >
               From corporate events to cultural celebrations,
               from exclusive parties to memorable occasions
             </motion.p>
-          </motion.div>
-
-          {/* Feature Tags - Better mobile layout */}
-          <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-2 md:gap-4 py-6 md:py-8 px-2">
-            {['Corporate Events', 'Cultural Celebrations', 'Private Parties', 'Special Occasions'].map((tag, index) => (
-              <motion.span
-                key={tag}
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 1 + index * 0.2, type: "spring" }}
-                className="bg-white border border-gray-200 shadow-sm px-3 py-2 md:px-6 md:py-3 text-xs sm:text-sm md:text-base font-medium text-gray-700 hover:text-gray-900 hover:shadow-md transition-all cursor-default rounded-full"
-              >
-                {tag}
-              </motion.span>
-            ))}
           </motion.div>
 
           {/* CTA Buttons - Mobile-first design */}
@@ -122,7 +135,7 @@ const Hero = () => {
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
               whileTap={{ scale: 0.95 }}
-              className="bg-gray-900 hover:bg-gray-800 text-white font-bold text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-lg group w-full sm:w-auto flex items-center justify-center space-x-2 transition-all"
+                             className="bg-white/90 hover:bg-white text-gray-900 font-bold text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-lg group w-full sm:w-auto flex items-center justify-center space-x-2 transition-all shadow-lg backdrop-blur-sm border border-white/30"
             >
               <span>Explore Events</span>
               <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
@@ -131,31 +144,10 @@ const Hero = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="bg-transparent hover:bg-gray-900 text-gray-900 hover:text-white px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-semibold rounded-lg border-2 border-gray-900 w-full sm:w-auto transition-all"
+                             className="bg-transparent hover:bg-white/90 text-white hover:text-gray-900 px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-full sm:w-auto transition-all backdrop-blur-sm"
             >
               Book Private Event
             </motion.button>
-          </motion.div>
-
-          {/* Stats - Better mobile grid */}
-          <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3 md:gap-6 pt-12 md:pt-16 max-w-3xl mx-auto px-4">
-            {[
-              { number: '500+', label: 'Events Hosted' },
-              { number: '50K+', label: 'Happy Clients' },
-              { number: '5★', label: 'Average Rating' },
-            ].map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 2 + index * 0.2, type: "spring" }}
-                whileHover={{ scale: 1.05, y: -5 }}
-                className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg p-4 md:p-6 text-center group hover:shadow-xl transition-all"
-              >
-                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">{stat.number}</div>
-                <div className="text-xs sm:text-sm md:text-base text-gray-600 font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
           </motion.div>
         </motion.div>
       </div>

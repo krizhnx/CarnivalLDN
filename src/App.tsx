@@ -52,9 +52,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/admin" element={<Login />} />
+                       <Route path="/" element={<HomePage />} />
+               <Route path="/events" element={<EventsPage />} />
+               <Route path="/admin" element={<Login />} />
         <Route
           path="/admin/dashboard"
           element={
@@ -63,6 +63,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
       </Routes>
       <Analytics />
       <Toaster

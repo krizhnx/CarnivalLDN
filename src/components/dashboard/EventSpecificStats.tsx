@@ -254,7 +254,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
             Active Sales
           </span>
           <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getUtilizationColor(eventStats.utilizationRate)}`}>
-            {formatPercentage(eventStats.utilizationRate)}% Capacity Used
+            {formatPercentage(eventStats.utilizationRate)} Capacity Used
           </span>
           <span className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full border border-blue-200">
             {eventStats.totalOrders} Orders
@@ -364,9 +364,9 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
                       <span className="text-sm font-medium text-gray-900">{tier.name}</span>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-gray-500">{tier.sold}/{tier.capacity} tickets</span>
-                        <span className={`px-2 py-1 text-xs rounded-full border ${getUtilizationColor(tier.utilizationRate)}`}>
-                          {formatPercentage(tier.utilizationRate)}% full
-                        </span>
+                                                 <span className={`px-2 py-1 text-xs rounded-full border ${getUtilizationColor(tier.utilizationRate)}`}>
+                           {formatPercentage(tier.utilizationRate)} full
+                         </span>
                       </div>
                     </div>
                   </div>
