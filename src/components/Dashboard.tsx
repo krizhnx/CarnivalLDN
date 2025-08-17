@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  Users, 
-  Ticket, 
-  DollarSign, 
-  BarChart3, 
-  RefreshCw,
-  ArrowUpRight,
-  Star
-} from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
-import { Event, Order, OrderTicket } from '../types';
+import { Event, Order } from '../types';
 import EventForm from './EventForm';
 import toast from 'react-hot-toast';
+import {
+  DashboardHeader,
+  DashboardStats,
+  DashboardCharts,
+  RecentOrdersTable,
+  QuickEventCreation,
+  EventManagement,
+  OrdersTable,
+  ConfirmationModal,
+  EventSpecificStats
+} from './dashboard/index';
+import { exportCustomerData, exportEventData } from './dashboard/CSVExport';
 
 interface DashboardStats {
   totalRevenue: number;
@@ -24,7 +25,7 @@ interface DashboardStats {
   topPerformingEvent: string;
   recentOrders: Order[];
   revenueByEvent: { event: string; revenue: number }[];
-  ticketSalesByTier: { tier: string; sold: number }[];
+  ticketSalesByTier: { tier: string; sold: number; revenue: number; capacity: number }[];
   dailyRevenue: { date: string; revenue: number }[];
 }
 
@@ -312,13 +313,27 @@ const Dashboard = () => {
     // Revenue by event
     const revenueByEvent = eventRevenue.filter(e => e.revenue > 0);
 
-    // Ticket sales by tier
-    const ticketSalesByTier: { tier: string; sold: number }[] = [];
+    // Ticket sales by tier with enhanced data
+    const ticketSalesByTier: { tier: string; sold: number; revenue: number; capacity: number }[] = [];
     events.forEach(event => {
       event.ticketTiers?.forEach(tier => {
+        const tierOrders = filteredOrders.filter((order: any) => 
+          order.tickets?.some((ticket: any) => ticket.ticketTierId === tier.id)
+        );
+        const tierRevenue = tierOrders.reduce((sum: number, order: any) => {
+          const tierTickets = order.tickets?.filter((ticket: any) => ticket.ticketTierId === tier.id) || [];
+          return sum + tierTickets.reduce((tSum: number, ticket: any) => tSum + (ticket.totalPrice || 0), 0);
+        }, 0);
+        const tierSold = tierOrders.reduce((sum: number, order: any) => {
+          const tierTickets = order.tickets?.filter((ticket: any) => ticket.ticketTierId === tier.id) || [];
+          return sum + tierTickets.reduce((tSum: number, ticket: any) => tSum + (ticket.quantity || 0), 0);
+        }, 0);
+        
         ticketSalesByTier.push({
           tier: `${event.title} - ${tier.name}`,
-          sold: tier.soldCount || 0
+          sold: tierSold,
+          revenue: tierRevenue,
+          capacity: tier.capacity || 0
         });
       });
     });
@@ -352,8 +367,21 @@ const Dashboard = () => {
     };
   };
 
-  const formatCurrency = (amount: number) => `£${(amount / 100).toFixed(2)}`;
-  const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
+  // CSV Export handlers
+  const handleExportCustomerData = () => {
+    if (events && orders) {
+      exportCustomerData(orders, events, selectedTimeframe);
+      toast.success('Customer data exported successfully!');
+    }
+  };
+
+  const handleExportEventData = (eventId: string) => {
+    const event = events?.find(e => e.id === eventId);
+    if (event && orders) {
+      exportEventData(event, orders, selectedTimeframe);
+      toast.success(`${event.title} data exported successfully!`);
+    }
+  };
 
   // Helpers for Event Management segmentation
   const parseEventDate = (dateStr?: string | null): Date | null => {
@@ -398,8 +426,6 @@ const Dashboard = () => {
     return da.getTime() - db.getTime();
   });
 
-  // Removed completedEvents view per request
-
   const archivedEvents = (events || []).filter(ev => ev.isArchived).sort((a, b) => {
     const da = parseEventDate(a.date);
     const db = parseEventDate(b.date);
@@ -435,482 +461,66 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Manage analytics, events, and orders</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <select
-                value={selectedTimeframe}
-                onChange={(e) => setSelectedTimeframe(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
-              <select
-                value={selectedEvent}
-                onChange={(e) => setSelectedEvent(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="all">All Events</option>
-                {events?.map(event => (
-                  <option key={event.id} value={event.id}>{event.title}</option>
-                ))}
-              </select>
-              <button
-                onClick={loadDashboardData}
-                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <RefreshCw className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-          {/* Tabs */}
-          <div className="mt-6 flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'analytics' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-            >
-              Analytics
-            </button>
-            <button
-              onClick={() => setActiveTab('events')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'events' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-            >
-              Event Management
-            </button>
-            <button
-              onClick={() => setActiveTab('orders')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'orders' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-            >
-              Orders
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        selectedTimeframe={selectedTimeframe}
+        selectedEvent={selectedEvent}
+        events={events || []}
+        activeTab={activeTab}
+        onTimeframeChange={setSelectedTimeframe}
+        onEventChange={setSelectedEvent}
+        onTabChange={setActiveTab}
+        onRefresh={loadDashboardData}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'analytics' && (
         <>
-        {/* Quick Event Creation Buttons (moved here to avoid nav distortion) */}
-        <div className="flex items-center justify-end mb-6 gap-2">
-          <button
-            onClick={() => createTestEvent('sundowner')}
-            disabled={creatingEvents.includes('sundowner')}
-            className="px-3 py-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-sm font-medium rounded-lg hover:from-orange-500 hover:to-red-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {creatingEvents.includes('sundowner') ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Creating...
-              </>
+            <QuickEventCreation
+              creatingEvents={creatingEvents}
+              onCreateEvent={createTestEvent}
+            />
+
+            {/* Show event-specific stats when an event is selected */}
+            {selectedEvent !== 'all' ? (
+              <EventSpecificStats
+                events={events || []}
+                orders={orders || []}
+                selectedEvent={selectedEvent}
+                onEventChange={setSelectedEvent}
+                onExportEventData={handleExportEventData}
+              />
             ) : (
-              <>🌅 Add Sundowner</>
-            )}
-          </button>
-          <button
-            onClick={() => createTestEvent('bollywood')}
-            disabled={creatingEvents.includes('bollywood')}
-            className="px-3 py-2 bg-gradient-to-r from-purple-400 to-pink-500 text-white text-sm font-medium rounded-lg hover:from-purple-500 hover:to-pink-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {creatingEvents.includes('bollywood') ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Creating...
+                <DashboardStats 
+                  stats={stats} 
+                  onExportAll={handleExportCustomerData}
+                />
+                <DashboardCharts stats={stats} />
+                <RecentOrdersTable 
+                  orders={stats?.recentOrders || []} 
+                  events={events || []} 
+                />
               </>
-            ) : (
-              <>🎭 Add Bollywood Night</>
             )}
-          </button>
-          <button
-            onClick={() => createTestEvent('carnival')}
-            disabled={creatingEvents.includes('carnival')}
-            className="px-3 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white text-sm font-medium rounded-lg hover:from-green-500 hover:to-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {creatingEvents.includes('carnival') ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Creating...
-              </>
-            ) : (
-              <>🎪 Add Carnival</>
-            )}
-          </button>
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats?.totalRevenue || 0)}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-4 text-sm">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-600 font-medium">+12.5%</span>
-              <span className="text-gray-500 ml-1">from last period</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.totalOrders || 0}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Ticket className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-4 text-sm">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-600 font-medium">+8.2%</span>
-              <span className="text-gray-500 ml-1">from last period</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Tickets Sold</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.totalTickets || 0}</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Users className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-4 text-sm">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-600 font-medium">+15.3%</span>
-              <span className="text-gray-500 ml-1">from last period</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-                <p className="text-3xl font-bold text-gray-900">{formatPercentage(stats?.conversionRate || 0)}</p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-full">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-            <div className="flex items-center mt-4 text-sm">
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-600 font-medium">+2.1%</span>
-              <span className="text-gray-500 ml-1">from last period</span>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Charts and Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Revenue Chart */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
-              <BarChart3 className="h-5 w-5 text-gray-400" />
-            </div>
-            <div className="space-y-3">
-              {stats?.dailyRevenue.map((day, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{day.date}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(day.revenue / Math.max(1, Math.max(...stats.dailyRevenue.map(d => d.revenue)))) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-gray-900 w-16 text-right">
-                      {formatCurrency(day.revenue)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Top Performing Events */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Top Performing Events</h3>
-              <Star className="h-5 w-5 text-gray-400" />
-            </div>
-            <div className="space-y-4">
-              {stats?.revenueByEvent.slice(0, 5).map((event, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                      index === 1 ? 'bg-gray-100 text-gray-800' :
-                      index === 2 ? 'bg-orange-100 text-orange-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">{event.event}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(event.revenue)}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Recent Orders */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-100"
-        >
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {stats?.recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900 font-mono">
-                        {order.id?.slice(0, 8)}...
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                        <div className="text-sm text-gray-500">{order.customerEmail}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">
-                        {events?.find(e => e.id === order.eventId)?.title || 'Unknown Event'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(order.totalAmount || 0)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
         </>
         )}
 
         {activeTab === 'events' && (
-          <div className="space-y-10">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Manage Events</h3>
-              <button
-                onClick={handleAddEventClick}
-                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-md text-sm"
-              >
-                Add Event
-              </button>
-            </div>
-
-            {/* Current Events */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-md font-semibold text-gray-800">Current Events</h4>
-                <span className="text-sm text-gray-500">{currentEvents.length} events</span>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiers</th>
-                        <th className="px-6 py-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {currentEvents.map((ev) => (
-                        <tr key={ev.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{ev.title}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ev.date}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[180px]">{ev.venue}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ev.ticketTiers?.length || 0}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                            <button onClick={() => handleEditEventClick(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">Edit</button>
-                            <button onClick={() => handleArchiveToggle(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">Archive</button>
-                            <button onClick={() => handleDeleteEventClick(ev)} className="px-3 py-1 rounded-md border border-red-200 text-red-700 hover:bg-red-50">Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Completed Events removed */}
-
-            {/* Archived Events */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-md font-semibold text-gray-800">Archived Events</h4>
-                <span className="text-sm text-gray-500">{archivedEvents.length} events</span>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Venue</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiers</th>
-                        <th className="px-6 py-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {archivedEvents.map((ev) => (
-                        <tr key={ev.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{ev.title}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ev.date}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[180px]">{ev.venue}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ev.ticketTiers?.length || 0}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                            <button onClick={() => handleArchiveToggle(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">Unarchive</button>
-                            <button onClick={() => handleDeleteEventClick(ev)} className="px-3 py-1 rounded-md border border-red-200 text-red-700 hover:bg-red-50">Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+          <EventManagement
+            currentEvents={currentEvents}
+            archivedEvents={archivedEvents}
+            onAddEvent={handleAddEventClick}
+            onEditEvent={handleEditEventClick}
+            onArchiveToggle={handleArchiveToggle}
+            onDeleteEvent={handleDeleteEventClick}
+          />
         )}
 
         {activeTab === 'orders' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">All Orders</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tickets</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {orders?.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900 font-mono">{order.id?.slice(0, 8)}...</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                          <div className="text-sm text-gray-500">{order.customerEmail}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{events?.find(e => e.id === order.eventId)?.title || 'Unknown Event'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{order.tickets?.reduce((sum: number, ticket: OrderTicket) => sum + (ticket.quantity || 0), 0) || 0}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{formatCurrency(order.totalAmount || 0)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>{order.status}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(order.createdAt as any).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <OrdersTable orders={orders || []} events={events || []} />
         )}
       </div>
+
       {isEventFormOpen && (
         <EventForm
           event={editingEvent}
@@ -922,46 +532,21 @@ const Dashboard = () => {
           }}
         />
       )}
-      {confirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setConfirm(null)}>
-          <div className="bg-white rounded-xl w-full max-w-md p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {confirm.type === 'delete' ? 'Delete Event' : confirm.event.isArchived ? 'Unarchive Event' : 'Archive Event'}
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              {confirm.type === 'delete'
-                ? 'This will permanently delete the event and related data (if archived). This action cannot be undone.'
-                : confirm.event.isArchived
-                  ? 'This will unarchive the event and make it visible again.'
-                  : 'This will archive the event and hide it from public view.'}
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <button onClick={() => setConfirm(null)} className="px-4 py-2 rounded-md border text-gray-700">Cancel</button>
-              {confirm.type === 'delete' ? (
-                <button
-                  onClick={async () => {
+
+      <ConfirmationModal
+        confirm={confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          if (!confirm) return;
+          
+          if (confirm.type === 'delete') {
                     await deleteEvent(confirm.event.id);
-                    setConfirm(null);
-                  }}
-                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              ) : (
-                <button
-                  onClick={async () => {
+          } else {
                     await archiveEvent(confirm.event.id, !confirm.event.isArchived);
+          }
                     setConfirm(null);
                   }}
-                  className="px-4 py-2 rounded-md bg-gray-900 text-white hover:bg-gray-800"
-                >
-                  {confirm.event.isArchived ? 'Unarchive' : 'Archive'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      />
     </div>
   );
 };
