@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion'
 import { Award, Heart, Users, Sparkles, Building, Calendar } from 'lucide-react'
+import { useGlitchEffect } from '../hooks/useGlitchEffect'
 
 const About = () => {
+  const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
+
   const stats = [
     { icon: Calendar, number: '500+', label: 'Events Delivered', color: 'text-gray-600' },
     { icon: Users, number: '50K+', label: 'Professional Clients', color: 'text-gray-700' },
@@ -41,13 +44,11 @@ const About = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 md:mb-16"
         >
-          <motion.h2
-            animate={{
-              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-[length:200%_200%] bg-clip-text text-transparent"
-          >
+                     <motion.h2
+             ref={glitchRef}
+             data-text="About Carnival LDN"
+             className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 glitch-text text-black ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
+           >
             About Carnival LDN
           </motion.h2>
           <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-2">

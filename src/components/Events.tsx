@@ -1,37 +1,16 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect, useRef } from 'react'
 import { Calendar, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/supabaseStore'
 import { useNavigate } from 'react-router-dom'
 import { Event } from '../types'
+import { useGlitchEffect } from '../hooks/useGlitchEffect'
 
 const Events = () => {
   const { events } = useAppStore();
   const navigate = useNavigate();
 
   // Glitch effect for title
-  const glitchRef = useRef<HTMLHeadingElement>(null);
-  const [isGlitching, setIsGlitching] = useState(false);
-
-  useEffect(() => {
-    const triggerRandomGlitch = () => {
-      setIsGlitching(true);
-      setTimeout(() => {
-        setIsGlitching(false);
-      }, 200);
-
-      // Schedule next glitch at random interval (0-1000ms)
-      const nextGlitch = Math.random() * 1500;
-      setTimeout(triggerRandomGlitch, nextGlitch);
-    };
-
-    // Start the glitch cycle
-    triggerRandomGlitch();
-
-    return () => {
-      // Cleanup timeouts if component unmounts
-    };
-  }, []);
+  const { glitchRef, isGlitching, glitchType } = useGlitchEffect();
 
   const handleEventClick = (event: Event) => {
     // Navigate to events page with event ID to open modal
@@ -71,10 +50,14 @@ const Events = () => {
               backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 pb-1 glitch-text ${isGlitching ? 'glitch-active' : ''}`}
-            data-text="Upcoming Events"
+            className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 pb-1 glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
+            data-text="EVENTS"
+            style={{
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em'
+            }}
           >
-            Upcoming Events
+            EVENTS
           </motion.h2>
           <motion.p
             className="text-base sm:text-lg md:text-lg text-white max-w-fit mx-auto leading-relaxed px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20"

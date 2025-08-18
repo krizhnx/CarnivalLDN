@@ -1,13 +1,14 @@
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, Clock, ArrowRight, X } from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Event, Order } from '../types';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useSearchParams } from 'react-router-dom';
 import Checkout from './Checkout';
 import PaymentSuccess from './PaymentSuccess';
+import { useGlitchEffect } from '../hooks/useGlitchEffect';
 
 const EventsPage = () => {
   const { events, getEvents, isLoading } = useAppStore();
@@ -20,28 +21,7 @@ const EventsPage = () => {
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
 
   // Glitch effect for title
-  const glitchRef = useRef<HTMLHeadingElement>(null);
-  const [isGlitching, setIsGlitching] = useState(false);
-
-  useEffect(() => {
-    const triggerRandomGlitch = () => {
-      setIsGlitching(true);
-      setTimeout(() => {
-        setIsGlitching(false);
-      }, 200);
-
-      // Schedule next glitch at random interval (0-1000ms)
-      const nextGlitch = Math.random() * 1500;
-      setTimeout(triggerRandomGlitch, nextGlitch);
-    };
-
-    // Start the glitch cycle
-    triggerRandomGlitch();
-
-    return () => {
-      // Cleanup timeouts if component unmounts
-    };
-  }, []);
+  const { glitchRef, isGlitching, glitchType } = useGlitchEffect();
 
   // Load events when component mounts
   useEffect(() => {
@@ -122,21 +102,21 @@ const EventsPage = () => {
             className="space-y-4 md:space-y-6 lg:space-y-8"
           >
             {/* Main Heading with Glitch Effect */}
-            <motion.h1
-              ref={glitchRef}
-              animate={{
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-              }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className={`text-6xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-8xl 2xl:text-8xl glitch-text ${
-                isGlitching ? 'glitch-active' : ''
-              }`}
-              data-text="EVENTS"
-              style={{
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
+                         <motion.h1
+               ref={glitchRef}
+               animate={{
+                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+               }}
+               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+               className={`text-6xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-8xl 2xl:text-8xl glitch-text ${
+                 isGlitching ? `glitch-active glitch-${glitchType}` : ''
+               }`}
+               data-text="EVENTS"
+               style={{
+                 textTransform: 'uppercase',
+                 letterSpacing: '0.1em'
+               }}
+             >
               EVENTS
             </motion.h1>
 
@@ -284,14 +264,14 @@ const EventsPage = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-12 md:mb-16"
           >
-            <motion.h2
-              className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white glitch-text ${isGlitching ? 'glitch-active' : ''}`}
-              data-text="WHAT'S ON"
-              style={{
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
+                         <motion.h2
+               className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
+               data-text="WHAT'S ON"
+               style={{
+                 textTransform: 'uppercase',
+                 letterSpacing: '0.1em'
+               }}
+             >
               WHAT'S ON
             </motion.h2>
             <div className="flex justify-center">

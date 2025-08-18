@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useGlitchEffect } from '../hooks/useGlitchEffect'
 
 // Simple subtitle component
 const SubtitleText = () => {
@@ -32,8 +32,7 @@ const SubtitleText = () => {
 }
 
 const Hero = () => {
-  const glitchRef = useRef<HTMLHeadingElement>(null)
-  const [isGlitching, setIsGlitching] = useState(false)
+  const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
   const navigate = useNavigate()
 
   const containerVariants = {
@@ -60,32 +59,7 @@ const Hero = () => {
     },
   }
 
-  // Random glitch effect
-  useEffect(() => {
-    const triggerRandomGlitch = () => {
-      if (glitchRef.current) {
-        setIsGlitching(true)
 
-        // Remove the glitch class after the animation duration (0.2s)
-        setTimeout(() => {
-          setIsGlitching(false)
-        }, 200)
-
-        // Schedule next glitch at random interval between 0-1 seconds
-        const nextGlitchDelay = Math.random() * 1000
-        setTimeout(triggerRandomGlitch, nextGlitchDelay)
-      }
-    }
-
-    // Start the first glitch after a short delay
-    const initialDelay = setTimeout(() => {
-      triggerRandomGlitch()
-    }, 100) // 2 second initial delay to let the page load
-
-    return () => {
-      clearTimeout(initialDelay)
-    }
-  }, [])
 
   const handleExploreEvents = () => {
     navigate('/events')
@@ -128,17 +102,17 @@ const Hero = () => {
         >
           {/* Main Heading with Glitch Effect */}
           <motion.div variants={itemVariants}>
-            <h1
-              ref={glitchRef}
-              className={`text-6xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl glitch-text ${
-                isGlitching ? 'glitch-active' : ''
-              }`}
-              data-text="CARNIVAL LDN"
-              style={{
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
+                         <h1
+               ref={glitchRef}
+               className={`text-6xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl glitch-text ${
+                 isGlitching ? `glitch-active glitch-${glitchType}` : ''
+               }`}
+               data-text="CARNIVAL LDN"
+               style={{
+                 textTransform: 'uppercase',
+                 letterSpacing: '0.1em'
+               }}
+             >
               CARNIVAL LDN
             </h1>
           </motion.div>
