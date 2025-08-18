@@ -41,7 +41,7 @@ export const useAppStore = create<AppState>()(
       // Auth actions - SIMPLIFIED (hardcoded)
       login: async (email: string, password: string) => {
         set({ isLoading: true })
-        
+
         try {
           // Simple hardcoded check
           if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
@@ -53,7 +53,7 @@ export const useAppStore = create<AppState>()(
               role: 'admin' as const,
               createdAt: new Date(),
             };
-            
+
             set({
               user: mockUser,
               isAuthenticated: true,
@@ -81,7 +81,7 @@ export const useAppStore = create<AppState>()(
       // Event actions - KEEP Supabase for events
       getEvents: async () => {
         set({ isLoading: true })
-        
+
         try {
           // First, fetch all events
           const { data: eventsData, error: eventsError } = await supabase
@@ -188,7 +188,7 @@ export const useAppStore = create<AppState>()(
             console.log('Inserting ticket tiers:', ticketTiersToInsert)
 
             console.log('About to insert ticket tiers into database:', ticketTiersToInsert)
-            
+
             const { data: tiersResult, error: tiersError } = await supabase
               .from('ticket_tiers')
               .insert(ticketTiersToInsert)
@@ -414,8 +414,8 @@ export const useAppStore = create<AppState>()(
         // Real-time subscription
         const subscription = supabase
           .channel('events')
-          .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'events' }, 
+          .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'events' },
             (payload) => {
               console.log('Database change detected:', payload)
               // Refresh events when database changes
@@ -497,4 +497,4 @@ export const useAppStore = create<AppState>()(
       }),
     }
   )
-) 
+)

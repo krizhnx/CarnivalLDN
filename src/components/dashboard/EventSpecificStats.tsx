@@ -11,11 +11,9 @@ interface EventSpecificStatsProps {
 }
 
 const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }: EventSpecificStatsProps) => {
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
-  const [currentWeek, setCurrentWeek] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(5);
-  
+
   const formatCurrency = (amount: number) => `£${(amount / 100).toFixed(2)}`;
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
@@ -24,22 +22,22 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
 
   // Filter orders for this specific event
   const eventOrders = orders.filter(order => order.eventId === selectedEvent);
-  
+
   // Calculate event-specific stats
   const eventStats = {
     totalRevenue: eventOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
     totalOrders: eventOrders.length,
-    totalTickets: eventOrders.reduce((sum, order) => 
+    totalTickets: eventOrders.reduce((sum, order) =>
       sum + (order.tickets?.reduce((tSum, ticket) => tSum + (ticket.quantity || 0), 0) || 0), 0),
     capacity: parseInt(event.capacity || '0'),
-    utilizationRate: parseInt(event.capacity || '0') > 0 ? 
-      (eventOrders.reduce((sum, order) => 
+    utilizationRate: parseInt(event.capacity || '0') > 0 ?
+      (eventOrders.reduce((sum, order) =>
         sum + (order.tickets?.reduce((tSum, ticket) => tSum + (ticket.quantity || 0), 0) || 0), 0) / parseInt(event.capacity || '0')) * 100 : 0
   };
 
   // Calculate tier performance for this event
   const tierPerformance = event.ticketTiers?.map(tier => {
-      const tierOrders = eventOrders.filter(order => 
+      const tierOrders = eventOrders.filter(order =>
       order.tickets?.some(ticket => ticket.ticketTierId === tier.id)
       );
       const tierRevenue = tierOrders.reduce((sum, order) => {
@@ -50,7 +48,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
       const tierTickets = order.tickets?.filter(ticket => ticket.ticketTierId === tier.id) || [];
       return sum + tierTickets.reduce((tSum, ticket) => tSum + (ticket.quantity || 0), 0);
       }, 0);
-      
+
       return {
       name: tier.name,
       sold: tierSold,
@@ -61,98 +59,42 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
       };
   }).sort((a, b) => b.revenue - a.revenue) || [];
 
-  // Generate daily revenue data for this event (last 30 days)
-  const generateDailyRevenue = () => {
-    const dailyData = [];
-    const today = new Date();
-    
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      const dayOrders = eventOrders.filter(order => {
-        const orderDate = new Date(order.createdAt);
-        return orderDate.toDateString() === date.toDateString();
-      });
-      
-      const revenue = dayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-      
-      dailyData.push({
-        date: date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }),
-        revenue: revenue || Math.floor(Math.random() * 2000), // Fallback for demo
-        fullDate: date
-      });
-    }
-    return dailyData;
-  };
-
-  // Generate weekly data by grouping daily data
-  const generateWeeklyData = () => {
-    const dailyData = generateDailyRevenue();
-    const weeklyData = [];
-    
-    for (let i = 0; i < dailyData.length; i += 7) {
-      const weekData = dailyData.slice(i, i + 7);
-      const weekRevenue = weekData.reduce((sum, day) => sum + day.revenue, 0);
-      const weekStart = weekData[0]?.fullDate;
-      
-      weeklyData.push({
-        date: `Week ${Math.floor(i / 7) + 1}`,
-        revenue: weekRevenue,
-        startDate: weekStart
-      });
-    }
-    
-    return weeklyData;
-  };
-
-  const dailyData = generateDailyRevenue();
-  const weeklyData = generateWeeklyData();
-  
-  // Get current period data based on viewMode and currentWeek
-  const getCurrentPeriodData = () => {
-    if (viewMode === 'daily') {
-      const startIndex = currentWeek * 7;
-      return dailyData.slice(startIndex, startIndex + 7);
-    } else {
-      return weeklyData.slice(currentWeek, currentWeek + 1);
-    }
-  };
-
-  const currentPeriodData = getCurrentPeriodData();
-
   const getUtilizationColor = (rate: number) => {
     if (rate >= 80) return 'bg-green-100 text-green-800 border-green-200';
     if (rate >= 50) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-red-800 border-red-200';
   };
 
-  const getRevenueTrend = (revenue: number) => {
-    if (revenue >= 10000) return 'bg-green-100 text-green-800 border-green-200';
-    if (revenue >= 5000) return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (revenue >= 1000) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Calculate peak sales day from event orders
+  const getPeakSalesDay = () => {
+    if (eventOrders.length === 0) return { date: 'N/A', revenue: 0 };
+
+    const dailyRevenue = eventOrders.reduce((acc, order) => {
+      const date = new Date(order.createdAt).toDateString();
+      acc[date] = (acc[date] || 0) + (order.totalAmount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const peakDay = Object.entries(dailyRevenue).reduce((max, [date, revenue]) =>
+      revenue > max.revenue ? { date, revenue } : max,
+      { date: '', revenue: 0 }
+    );
+
+    return {
+      date: peakDay.date ? new Date(peakDay.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) : 'N/A',
+      revenue: peakDay.revenue
+    };
   };
 
-  const navigatePeriod = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentWeek > 0) {
-      setCurrentWeek(currentWeek - 1);
-    } else if (direction === 'next' && currentWeek < Math.floor(dailyData.length / 7) - 1) {
-      setCurrentWeek(currentWeek + 1);
-    }
-  };
+  // Calculate active days count
+  const getActiveDaysCount = () => {
+    if (eventOrders.length === 0) return 0;
 
-  const getPeriodLabel = () => {
-    if (viewMode === 'daily') {
-      const startDate = dailyData[currentWeek * 7]?.fullDate;
-      const endDate = dailyData[Math.min(currentWeek * 7 + 6, dailyData.length - 1)]?.fullDate;
-      if (startDate && endDate) {
-        return `${startDate.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}`;
-      }
-      return `Week ${currentWeek + 1}`;
-    } else {
-      return `Week ${currentWeek + 1}`;
-    }
+    const uniqueDays = new Set(
+      eventOrders.map(order => new Date(order.createdAt).toDateString())
+    );
+
+    return uniqueDays.size;
   };
 
   // Pagination for orders table
@@ -195,7 +137,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
     if (salesData.length > 0) {
       const csvContent = [
         'Order ID,Customer Name,Customer Email,Ticket Tier,Quantity,Unit Price,Total Price,Order Status,Order Date,Order Time',
-        ...salesData.map(row => 
+        ...salesData.map(row =>
           `${row['Order ID']},${row['Customer Name']},${row['Customer Email']},${row['Ticket Tier']},${row['Quantity']},${row['Unit Price']},${row['Total Price']},${row['Order Status']},${row['Order Date']},${row['Order Time']}`
         )
       ].join('\n');
@@ -401,7 +343,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
               </span>
             </div>
           </div>
-          
+
           {/* Key Metrics */}
           <div className="space-y-4">
             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
@@ -459,10 +401,10 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-purple-900">
-                    {dailyData.reduce((max, day) => day.revenue > max.revenue ? day : max, dailyData[0]).date}
+                    {getPeakSalesDay().date}
                   </p>
                   <p className="text-xs text-purple-600">
-                    {formatCurrency(dailyData.reduce((max, day) => day.revenue > max.revenue ? day : max, dailyData[0]).revenue)}
+                    {formatCurrency(getPeakSalesDay().revenue)}
                   </p>
                 </div>
               </div>
@@ -473,12 +415,12 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
           <div className="mt-6 pt-4 border-t border-gray-100">
             <div className="flex gap-2 justify-center">
               <span className={`px-3 py-1 text-xs font-medium rounded-full border ${
-                dailyData.filter(d => d.revenue > 0).length >= 20 ? 'bg-green-100 text-green-800 border-green-200' :
-                dailyData.filter(d => d.revenue > 0).length >= 15 ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                dailyData.filter(d => d.revenue > 0).length >= 10 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                getActiveDaysCount() >= 20 ? 'bg-green-100 text-green-800 border-green-200' :
+                getActiveDaysCount() >= 15 ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                getActiveDaysCount() >= 10 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
                 'bg-red-100 text-red-800 border-red-200'
               }`}>
-                {dailyData.filter(d => d.revenue > 0).length}/30 Active Days
+                {getActiveDaysCount()} Active Days
               </span>
               <span className="px-3 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full border border-orange-200">
                 {tierPerformance.filter(t => t.revenue > 0).length} Active Tiers
@@ -488,103 +430,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
         </motion.div>
       </div>
 
-      {/* Revenue Trend Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Weekly Revenue Trend</h3>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setViewMode('daily')}
-              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
-                viewMode === 'daily' 
-                  ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                  : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-              }`}
-            >
-              Daily
-            </button>
-            <button 
-              onClick={() => setViewMode('weekly')}
-              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
-                viewMode === 'weekly' 
-                  ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                  : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-              }`}
-            >
-              Weekly
-            </button>
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => navigatePeriod('prev')}
-              disabled={currentWeek === 0}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full border border-green-200">
-              {getPeriodLabel()}
-            </span>
-            <button 
-              onClick={() => navigatePeriod('next')}
-              disabled={currentWeek >= Math.floor(dailyData.length / 7) - 1}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          {currentPeriodData.map((day, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 w-20">{day.date}</span>
-              <div className="flex items-center gap-2 flex-1 mx-4">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(day.revenue / Math.max(1, Math.max(...currentPeriodData.map(d => d.revenue)))) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <span className="text-sm font-medium text-gray-900 w-20 text-right">
-                {formatCurrency(day.revenue)}
-              </span>
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Period Revenue</span>
-            <span className="font-semibold text-gray-900">
-              {formatCurrency(currentPeriodData.reduce((sum, d) => sum + d.revenue, 0))}
-            </span>
-          </div>
-          
-          {/* Revenue Performance Pills */}
-          <div className="flex gap-2 mt-3">
-            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${
-              getRevenueTrend(currentPeriodData.reduce((sum, d) => sum + d.revenue, 0))
-            }`}>
-              {currentPeriodData.reduce((sum, d) => sum + d.revenue, 0) >= 10000 ? 'High Performance' :
-               currentPeriodData.reduce((sum, d) => sum + d.revenue, 0) >= 5000 ? 'Good Performance' :
-               currentPeriodData.reduce((sum, d) => sum + d.revenue, 0) >= 1000 ? 'Moderate Performance' : 'Low Performance'}
-            </span>
-            <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full border border-purple-200">
-              {currentPeriodData.filter(d => d.revenue > 0).length} Active {viewMode === 'daily' ? 'Days' : 'Weeks'}
-            </span>
-          </div>
-            </div>
-          </motion.div>
 
       {/* Event Orders Table */}
       <motion.div

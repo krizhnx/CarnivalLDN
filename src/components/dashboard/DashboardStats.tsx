@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  Users, 
-  Ticket, 
-  DollarSign, 
+import {
+  TrendingUp,
+  Users,
+  Ticket,
+  DollarSign,
   ArrowUpRight,
   Download
 } from 'lucide-react';
@@ -21,9 +21,10 @@ interface DashboardStatsProps {
     dailyRevenue: { date: string; revenue: number }[];
   } | null;
   onExportAll: () => void;
+  quickEventButtons?: React.ReactNode;
 }
 
-const DashboardStats = ({ stats, onExportAll }: DashboardStatsProps) => {
+const DashboardStats = ({ stats, onExportAll, quickEventButtons }: DashboardStatsProps) => {
   const formatCurrency = (amount: number) => `£${(amount / 100).toFixed(2)}`;
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
@@ -68,8 +69,11 @@ const DashboardStats = ({ stats, onExportAll }: DashboardStatsProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Export Button */}
-      <div className="flex justify-end">
+      {/* Export Button and Quick Event Buttons */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {quickEventButtons}
+        </div>
         <button
           onClick={onExportAll}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"

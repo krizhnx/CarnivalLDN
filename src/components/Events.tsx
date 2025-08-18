@@ -52,7 +52,7 @@ const Events = () => {
           <source src="/vid-ev.mp4" type="video/mp4" />
         </video>
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gray-900/90"></div>
+        <div className="absolute inset-0 bg-gray-900/70"></div>
       </div>
 
       {/* Content */}
@@ -71,14 +71,34 @@ const Events = () => {
               backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className={`text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 pb-1 glitch-text ${isGlitching ? 'glitch-active' : ''}`}
+            className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 pb-1 glitch-text ${isGlitching ? 'glitch-active' : ''}`}
             data-text="Upcoming Events"
           >
             Upcoming Events
           </motion.h2>
-          <p className="text-base sm:text-lg md:text-lg text-white max-w-fit mx-auto leading-relaxed px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20">
-            ⚡ From rooftop raves to underground vibes - events that hit different ⚡
-          </p>
+          <motion.p
+            className="text-base sm:text-lg md:text-lg text-white max-w-fit mx-auto leading-relaxed px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20"
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
+              borderColor: "rgba(255, 255, 255, 0.5)"
+            }}
+            animate={{
+              boxShadow: [
+                "0 0 10px rgba(255, 255, 255, 0.1)",
+                "0 0 20px rgba(255, 255, 255, 0.2)",
+                "0 0 10px rgba(255, 255, 255, 0.1)"
+              ]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <span className="block sm:hidden">⚡ Events that hit different ⚡</span>
+            <span className="hidden sm:block">⚡ From rooftop raves to underground vibes - events that hit different ⚡</span>
+          </motion.p>
         </motion.div>
 
         {/* Events Grid - Better mobile layout */}
@@ -109,10 +129,10 @@ const Events = () => {
                     target.src = `https://via.placeholder.com/400x300/6B7280/FFFFFF?text=${encodeURIComponent(event.title)}`;
                   }}
                 />
-                
+
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                
+
                 {/* Top Badges */}
                 <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                   {event.tags.slice(0, 2).map((tag) => (
@@ -121,7 +141,7 @@ const Events = () => {
                     </span>
                   ))}
                 </div>
-                
+
                 {/* Event Title Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
                   <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-lg">
@@ -144,13 +164,13 @@ const Events = () => {
                     <Calendar className="w-4 h-4 text-gray-600 flex-shrink-0" />
                     <span className="text-sm font-semibold text-gray-900">{event.date}</span>
                   </div>
-                  
+
                   {/* Time */}
                   <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
                     <Clock className="w-4 h-4 text-gray-600 flex-shrink-0" />
                     <span className="text-sm font-semibold text-gray-900">{event.time}</span>
                   </div>
-                  
+
                   {/* Location */}
                   <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
                     <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0" />

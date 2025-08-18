@@ -5,7 +5,7 @@ interface QuickEventCreationProps {
 
 const QuickEventCreation = ({ creatingEvents, onCreateEvent }: QuickEventCreationProps) => {
   return (
-    <div className="flex items-center justify-end mb-6 gap-2">
+    <>
       <button
         onClick={() => onCreateEvent('sundowner')}
         disabled={creatingEvents.includes('sundowner')}
@@ -48,7 +48,7 @@ const QuickEventCreation = ({ creatingEvents, onCreateEvent }: QuickEventCreatio
           <>🎪 Add Carnival</>
         )}
       </button>
-    </div>
+    </>
   );
 };
 

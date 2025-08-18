@@ -55,18 +55,18 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     console.log('🔄 Loading dashboard data...');
     setIsLoading(true);
-    
+
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       console.log('⏰ Loading timeout - forcing completion');
       setIsLoading(false);
     }, 10000); // 10 second timeout
-    
+
     try {
       console.log('📡 Fetching events and orders...');
       await Promise.all([getEvents(), getOrders()]);
       console.log('✅ Data fetched successfully');
-      
+
       // Calculate comprehensive stats
       const calculatedStats = calculateStats();
       setStats(calculatedStats);
@@ -100,12 +100,12 @@ const Dashboard = () => {
 
   const createTestEvent = async (type: 'sundowner' | 'bollywood' | 'carnival') => {
     setCreatingEvents(prev => [...prev, type]);
-    
+
     const now = new Date();
     const eventDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-    
+
     let eventData: any;
-    
+
     switch (type) {
       case 'sundowner':
         eventData = {
@@ -156,7 +156,7 @@ const Dashboard = () => {
           ]
         };
         break;
-        
+
       case 'bollywood':
         eventData = {
           title: 'Bollywood Night - Carnival LDN',
@@ -206,7 +206,7 @@ const Dashboard = () => {
           ]
         };
         break;
-        
+
       case 'carnival':
         eventData = {
           title: 'Carnival LDN Street Festival',
@@ -257,7 +257,7 @@ const Dashboard = () => {
         };
         break;
     }
-    
+
     try {
       await addEvent(eventData);
       toast.success(`${eventData.title} created successfully!`);
@@ -286,11 +286,11 @@ const Dashboard = () => {
 
     const filteredOrders = orders.filter(order => {
       if (selectedEvent !== 'all' && order.eventId !== selectedEvent) return false;
-      
+
       const orderDate = new Date(order.createdAt);
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - (selectedTimeframe === '7d' ? 7 : selectedTimeframe === '30d' ? 30 : 90));
-      
+
       return orderDate >= cutoffDate;
     });
 
@@ -317,7 +317,7 @@ const Dashboard = () => {
     const ticketSalesByTier: { tier: string; sold: number; revenue: number; capacity: number }[] = [];
     events.forEach(event => {
       event.ticketTiers?.forEach(tier => {
-        const tierOrders = filteredOrders.filter((order: any) => 
+        const tierOrders = filteredOrders.filter((order: any) =>
           order.tickets?.some((ticket: any) => ticket.ticketTierId === tier.id)
         );
         const tierRevenue = tierOrders.reduce((sum: number, order: any) => {
@@ -328,7 +328,7 @@ const Dashboard = () => {
           const tierTickets = order.tickets?.filter((ticket: any) => ticket.ticketTierId === tier.id) || [];
           return sum + tierTickets.reduce((tSum: number, ticket: any) => tSum + (ticket.quantity || 0), 0);
         }, 0);
-        
+
         ticketSalesByTier.push({
           tier: `${event.title} - ${tier.name}`,
           sold: tierSold,
@@ -338,20 +338,23 @@ const Dashboard = () => {
       });
     });
 
-    // Daily revenue (last 7 days)
-    const dailyRevenue = Array.from({ length: 7 }, (_, i) => {
+    // Daily revenue (last 30 days with proper data aggregation)
+    const dailyRevenue = Array.from({ length: 30 }, (_, i) => {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      date.setDate(date.getDate() - (29 - i)); // Start from 30 days ago, go to today
+
       const dayOrders = filteredOrders.filter(order => {
         const orderDate = new Date(order.createdAt);
         return orderDate.toDateString() === date.toDateString();
       });
+
       const revenue = dayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
       return {
         date: date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }),
         revenue
       };
-    }).reverse();
+    });
 
     return {
       totalRevenue,
@@ -442,7 +445,7 @@ const Dashboard = () => {
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-xl font-semibold text-gray-700">Loading Dashboard...</p>
           <p className="text-sm text-gray-500 mt-2">This may take a few seconds...</p>
-          
+
           {/* Fallback button if loading takes too long */}
           <button
             onClick={() => {
@@ -475,11 +478,6 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'analytics' && (
         <>
-            <QuickEventCreation
-              creatingEvents={creatingEvents}
-              onCreateEvent={createTestEvent}
-            />
-
             {/* Show event-specific stats when an event is selected */}
             {selectedEvent !== 'all' ? (
               <EventSpecificStats
@@ -490,14 +488,20 @@ const Dashboard = () => {
               />
             ) : (
               <>
-                <DashboardStats 
-                  stats={stats} 
+                <DashboardStats
+                  stats={stats}
                   onExportAll={handleExportCustomerData}
+                  quickEventButtons={
+                    <QuickEventCreation
+                      creatingEvents={creatingEvents}
+                      onCreateEvent={createTestEvent}
+                    />
+                  }
                 />
-                <DashboardCharts stats={stats} />
-                <RecentOrdersTable 
-                  orders={stats?.recentOrders || []} 
-                  events={events || []} 
+                <DashboardCharts stats={stats} events={events || []} />
+                <RecentOrdersTable
+                  orders={stats?.recentOrders || []}
+                  events={events || []}
                 />
               </>
             )}
@@ -537,7 +541,7 @@ const Dashboard = () => {
         onClose={() => setConfirm(null)}
         onConfirm={async () => {
           if (!confirm) return;
-          
+
           if (confirm.type === 'delete') {
                     await deleteEvent(confirm.event.id);
           } else {

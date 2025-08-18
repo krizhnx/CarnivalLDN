@@ -49,7 +49,7 @@ const Navbar = () => {
           {/* Logo - Left on mobile, centered on desktop */}
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-10"
+            className="pl-2 md:pl-0 md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-10"
           >
             <div className="relative">
               <img
@@ -67,8 +67,8 @@ const Navbar = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsOpen(!isOpen)}
               className={`p-4 transition-colors rounded-lg ${
-                isScrolled 
-                  ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100' 
+                isScrolled
+                  ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                   : 'text-white hover:text-gray-200 hover:bg-white/10'
               }`}
             >
@@ -98,8 +98,8 @@ const Navbar = () => {
                       transition={{ delay: index * 0.1 }}
                       onClick={() => setIsOpen(false)}
                       className={`block text-center text-lg font-medium transition-colors py-3 rounded-lg ${
-                        isScrolled 
-                          ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-50' 
+                        isScrolled
+                          ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                           : 'text-white hover:text-gray-200 hover:bg-white/10'
                       }`}
                     >
@@ -117,8 +117,8 @@ const Navbar = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: navItems.length * 0.1 }}
                   className={`w-full py-3 rounded-lg font-medium transition-colors text-base mt-4 ${
-                    isScrolled 
-                      ? 'bg-gray-900 hover:bg-gray-800 text-white' 
+                    isScrolled
+                      ? 'bg-gray-900 hover:bg-gray-800 text-white'
                       : 'bg-white/90 hover:bg-white text-gray-900'
                   }`}
                 >

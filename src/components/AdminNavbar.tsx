@@ -1,6 +1,6 @@
 import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../store';
+import { useAppStore } from '../store/supabaseStore';
 
 const AdminNavbar = () => {
   const navigate = useNavigate();
@@ -8,7 +8,7 @@ const AdminNavbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/carnivalldn');
+    navigate('/admin');
   };
 
   return (

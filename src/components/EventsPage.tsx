@@ -17,6 +17,7 @@ const EventsPage = () => {
   const [searchParams] = useSearchParams();
   const [showCheckout, setShowCheckout] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
 
   // Glitch effect for title
   const glitchRef = useRef<HTMLHeadingElement>(null);
@@ -56,7 +57,7 @@ const EventsPage = () => {
     loadEvents();
   }, [getEvents]);
 
-  // Check for event ID in URL and highlight event automatically
+    // Check for event ID in URL and highlight event automatically
   useEffect(() => {
     if (events.length > 0) {
       const eventId = searchParams.get('event');
@@ -65,10 +66,10 @@ const EventsPage = () => {
         if (event) {
           // Highlight the event instead of opening modal
           setHighlightedEvent(eventId);
-          
+
           // Scroll to events section
           setTimeout(() => {
-            document.getElementById('events-grid')?.scrollIntoView({ 
+            document.getElementById('events-grid')?.scrollIntoView({
               behavior: 'smooth',
               block: 'start'
             });
@@ -78,12 +79,24 @@ const EventsPage = () => {
     }
   }, [events, searchParams]);
 
+  // Hide scroll indicator when user scrolls
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setShowScrollIndicator(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       <Navbar />
 
       {/* Hero Section with Video Background */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 md:pt-32 pb-16 md:pb-24">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
         {/* Video Background */}
         <div className="absolute inset-0 w-full h-full">
           <video
@@ -106,7 +119,7 @@ const EventsPage = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="space-y-6 md:space-y-8"
+            className="space-y-4 md:space-y-6 lg:space-y-8"
           >
             {/* Main Heading with Glitch Effect */}
             <motion.h1
@@ -115,7 +128,7 @@ const EventsPage = () => {
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl glitch-text ${
+              className={`text-6xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-8xl 2xl:text-8xl glitch-text ${
                 isGlitching ? 'glitch-active' : ''
               }`}
               data-text="EVENTS"
@@ -128,17 +141,37 @@ const EventsPage = () => {
             </motion.h1>
 
             {/* Subtitle */}
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg sm:text-xl md:text-2xl lg:text-xl font-light max-w-4xl mx-auto leading-relaxed px-2 text-white drop-shadow-lg"
+              className="text-base sm:text-lg md:text-xl lg:text-xl font-light max-w-4xl mx-auto leading-relaxed px-2 text-white drop-shadow-lg"
             >
-              <span className="inline-block px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20">
-                ⚡From rooftop raves to underground vibes - events that hit different⚡
-              </span>
-            </motion.p>
+              <motion.span
+                className="inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg"
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
+                  borderColor: "rgba(255, 255, 255, 0.5)"
+                }}
+                animate={{
+                  boxShadow: [
+                    "0 0 10px rgba(255, 255, 255, 0.1)",
+                    "0 0 20px rgba(255, 255, 255, 0.2)",
+                    "0 0 10px rgba(255, 255, 255, 0.1)"
+                  ]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <span className="block sm:hidden">⚡ Events that hit different ⚡</span>
+                <span className="hidden sm:block">⚡ From rooftop raves to underground vibes - events that hit different ⚡</span>
+              </motion.span>
+            </motion.div>
 
             {/* Events Count */}
             <motion.div
@@ -146,7 +179,7 @@ const EventsPage = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="text-white/80 text-lg md:text-xl"
+              className="text-white/80 text-base sm:text-lg md:text-xl"
             >
               {isLoading ? (
                 <span>Loading events...</span>
@@ -155,31 +188,73 @@ const EventsPage = () => {
               )}
             </motion.div>
 
-            {/* CTA Button */}
+                        {/* CTA Button */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="pt-6 md:pt-8"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 justify-center items-center pt-4 sm:pt-6 md:pt-8 px-2 sm:px-4"
             >
               <motion.button
                 onClick={() => {
-                  document.getElementById('events-grid')?.scrollIntoView({ 
+                  document.getElementById('events-grid')?.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
                   });
                 }}
                 whileHover={{ scale: 1.05, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-transparent mx-auto hover:bg-white/90 text-white hover:text-gray-900 px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-full sm:w-auto transition-all backdrop-blur-sm group flex items-center justify-center gap-3"
+                className="bg-transparent hover:bg-white/90 text-white hover:text-gray-900 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-3/4 sm:w-auto transition-all backdrop-blur-sm group flex items-center justify-center gap-3"
               >
                 <span>Get Tickets</span>
-                <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
               </motion.button>
             </motion.div>
           </motion.div>
         </div>
+
+        {/* Scroll Down Indicator */}
+        {showScrollIndicator && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 w-full flex justify-center"
+          >
+            <motion.div
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="flex flex-col items-center space-y-2 cursor-pointer"
+              onClick={() => {
+                document.getElementById('events-grid')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start'
+                });
+              }}
+            >
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center"
+              >
+                <motion.div
+                  animate={{ y: [0, 12, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="w-1 h-3 bg-white/70 rounded-full mt-2"
+                />
+              </motion.div>
+              <motion.p
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                className="text-white/70 text-xs font-medium"
+              >
+                Scroll to explore
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
       </section>
 
       {/* Events Grid Section */}
@@ -196,7 +271,7 @@ const EventsPage = () => {
             <source src="/vid-ev.mp4" type="video/mp4" />
           </video>
           {/* Overlay for better text readability */}
-          <div className="absolute inset-0 bg-gray-800/90"></div>
+          <div className="absolute inset-0 bg-gray-900/70"></div>
         </div>
 
         {/* Content */}
@@ -210,7 +285,7 @@ const EventsPage = () => {
             className="text-center mb-12 md:mb-16"
           >
             <motion.h2
-              className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white glitch-text ${isGlitching ? 'glitch-active' : ''}`}
+              className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white glitch-text ${isGlitching ? 'glitch-active' : ''}`}
               data-text="WHAT'S ON"
               style={{
                 textTransform: 'uppercase',
@@ -219,9 +294,30 @@ const EventsPage = () => {
             >
               WHAT'S ON
             </motion.h2>
-            <p className="text-base sm:text-lg md:text-lg text-white/80 max-w-fit mx-auto leading-relaxed px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20">
-              Check out our upcoming events
-            </p>
+            <div className="flex justify-center">
+              <motion.span
+                className="inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg text-white/80"
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
+                  borderColor: "rgba(255, 255, 255, 0.5)"
+                }}
+                animate={{
+                  boxShadow: [
+                    "0 0 10px rgba(255, 255, 255, 0.1)",
+                    "0 0 20px rgba(255, 255, 255, 0.2)",
+                    "0 0 10px rgba(255, 255, 255, 0.1)"
+                  ]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                🎭  Check out our upcoming events  🎭
+              </motion.span>
+            </div>
           </motion.div>
 
           {/* Loading State */}
@@ -242,23 +338,27 @@ const EventsPage = () => {
             </div>
           ) : (
             /* Events Grid */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className={`grid gap-6 md:gap-8 ${
+              events.filter(e => !e.isArchived).length === 1
+                ? 'grid-cols-1 max-w-md mx-auto'
+                : events.filter(e => !e.isArchived).length === 2
+                ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto'
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+            }`}>
               {events.filter(e => !e.isArchived).map((event, index) => (
                 <motion.div
                   key={event.id}
-                  initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{
                     duration: 0.6,
-                    delay: highlightedEvent === event.id ? 0.2 : index * 0.1,
-                    type: "spring",
-                    stiffness: 100
+                    delay: highlightedEvent === event.id ? 0.2 : index * 0.1
                   }}
-                  whileHover={{ y: -8, scale: 1.02 }}
+                  whileHover={{ y: -4 }}
                   className={`group relative bg-gradient-to-br from-white via-gray-50 to-white border rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer backdrop-blur-sm ${
-                    highlightedEvent === event.id 
-                      ? 'border-blue-500 shadow-blue-500/25 scale-105 ring-2 ring-blue-500/20' 
+                    highlightedEvent === event.id
+                      ? 'border-blue-500 shadow-blue-500/25 scale-105 ring-2 ring-blue-500/20'
                       : 'border-gray-100'
                   }`}
                 >
@@ -270,7 +370,7 @@ const EventsPage = () => {
                         ⭐ Featured Event
                       </div>
                     )}
-                    
+
                     <img
                       src={event.image}
                       alt={event.title}
@@ -280,10 +380,10 @@ const EventsPage = () => {
                         target.src = `https://via.placeholder.com/400x300/6B7280/FFFFFF?text=${encodeURIComponent(event.title)}`;
                       }}
                     />
-                    
+
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    
+
                     {/* Top Badges */}
                     <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                       {event.tags.slice(0, 2).map((tag) => (
@@ -292,14 +392,14 @@ const EventsPage = () => {
                         </span>
                       ))}
                     </div>
-                    
+
                     {/* Sold-out Badge */}
                     {event.ticketTiers && event.ticketTiers.length > 0 && event.ticketTiers.every(t => (t.capacity - t.soldCount) <= 0 || t.isActive === false) && (
                       <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                         Sold Out
                       </div>
                     )}
-                    
+
                     {/* Event Title Overlay */}
                     <div className="absolute bottom-0 left-0 right-0 p-4">
                       <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-lg">
@@ -322,13 +422,13 @@ const EventsPage = () => {
                         <Calendar className="w-4 h-4 text-gray-600 flex-shrink-0" />
                         <span className="text-sm font-semibold text-gray-900">{event.date}</span>
                       </div>
-                      
+
                       {/* Time */}
                       <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
                         <Clock className="w-4 h-4 text-gray-600 flex-shrink-0" />
                         <span className="text-sm font-semibold text-gray-900">{event.time}</span>
                       </div>
-                      
+
                       {/* Location */}
                       <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
                         <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -345,7 +445,7 @@ const EventsPage = () => {
                             From £{(Math.min(...event.ticketTiers.map(t => t.price)) / 100).toFixed(2)}
                           </span>
                         </div>
-                        
+
                         <div className="space-y-1.5">
                           {event.ticketTiers.slice(0, 2).map((tier) => (
                             <div key={tier.id} className="flex items-center justify-between p-2.5 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100">
@@ -365,7 +465,7 @@ const EventsPage = () => {
                               </div>
                             </div>
                           ))}
-                          
+
                           {event.ticketTiers.length > 2 && (
                             <div className="text-center">
                               <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
@@ -446,8 +546,8 @@ const EventsPage = () => {
                 </div>
               )}
               <button
-                onClick={() => { 
-                  setShowDetails(false); 
+                onClick={() => {
+                  setShowDetails(false);
                   setSelectedEvent(selectedEvent);
                   setShowCheckout(true);
                 }}
