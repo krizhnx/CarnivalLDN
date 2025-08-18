@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, PartyPopper } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
 
@@ -26,7 +26,9 @@ const SubtitleText = () => {
         ease: "easeInOut"
       }}
     >
-      London's Most Professional Events Experience
+                           <PartyPopper className="hidden md:inline-block mr-2 w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
+        London's Most Professional Events Experience
+        <PartyPopper className="hidden md:inline-block ml-2 w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
     </motion.span>
   )
 }

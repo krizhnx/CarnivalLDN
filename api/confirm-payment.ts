@@ -83,12 +83,13 @@ module.exports = async function handler(req: any, res: any) {
 
       // Update ticket tier sold count
       const { error: updateError } = await supabase
-        .from('ticket_tiers')
-        .update({ sold_count: supabase.rpc('increment_sold_count', { tier_id: ticket.tierId, increment: parseInt(ticket.quantity) }) })
-        .eq('id', ticket.tierId);
+        .rpc('increment_sold_count', { 
+          tier_id: ticket.tierId, 
+          quantity: parseInt(ticket.quantity) 
+        });
 
       if (updateError) {
-        console.error('Error updating ticket tier:', updateError);
+        console.error('Error updating ticket tier sold count:', updateError);
         // Don't fail the whole request if this fails
       }
     }
