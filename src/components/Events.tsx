@@ -102,20 +102,24 @@ const Events = () => {
         </motion.div>
 
         {/* Events Grid - Better mobile layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className={`grid gap-6 md:gap-8 ${
+          events.filter(e => !e.isArchived).slice(0, 3).length === 1
+            ? 'grid-cols-1 max-w-md mx-auto'
+            : events.filter(e => !e.isArchived).slice(0, 3).length === 2
+            ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto'
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+        }`}>
           {events.filter(e => !e.isArchived).slice(0, 3).map((event, index) => (
             <motion.div
               key={event.id}
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{
                 duration: 0.6,
-                delay: index * 0.1,
-                type: "spring",
-                stiffness: 100
+                delay: index * 0.1
               }}
-              whileHover={{ y: -8, scale: 1.02 }}
+              whileHover={{ y: -4 }}
               className="group relative bg-gradient-to-br from-white via-gray-50 to-white border border-gray-100 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer backdrop-blur-sm"
             >
               {/* Event Image with Overlay */}
