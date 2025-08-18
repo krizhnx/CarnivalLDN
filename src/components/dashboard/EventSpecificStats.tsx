@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Star, ChevronLeft, ChevronRight, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Calendar, MapPin, Star, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Event, Order } from '../../types';
 

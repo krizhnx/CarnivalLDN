@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, ChevronLeft, ChevronRight, Calendar, Star, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { TrendingUp, Users, Calendar, Star, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 interface DashboardChartsProps {
   stats: {
@@ -95,15 +94,7 @@ const DashboardCharts = ({ stats, events }: DashboardChartsProps) => {
   const topSellingTier = getTopSellingTier();
   const eventHealth = getEventHealthScore();
 
-  const getHealthColor = (color: string) => {
-    switch (color) {
-      case 'green': return 'text-green-600 bg-green-100 border-green-200';
-      case 'blue': return 'text-blue-600 bg-blue-100 border-blue-200';
-      case 'yellow': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-      case 'red': return 'text-red-600 bg-red-100 border-red-200';
-      default: return 'text-gray-600 bg-gray-100 border-gray-200';
-    }
-  };
+
 
   const getHealthIcon = (color: string) => {
     switch (color) {
