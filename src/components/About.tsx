@@ -75,7 +75,8 @@ const About = () => {
               ease: "easeInOut"
             }}
           >
-            We make London's most unforgettable nights happen
+            <span className="block sm:hidden">Creating epic nights since 2018</span>
+            <span className="hidden sm:block">We make London's most unforgettable nights happen</span>
           </motion.p>
         </motion.div>
 
@@ -90,11 +91,11 @@ const About = () => {
             className="bg-white/5 border border-white/20 rounded-2xl p-8 md:p-12 backdrop-blur-sm shadow-2xl hover:shadow-white/10 transition-all duration-500 flex flex-col justify-center"
           >
             <motion.h3
-              className="text-3xl md:text-4xl font-bold mb-6 md:mb-8 text-white"
+              className="text-3xl md:text-4xl font-bold mb-6 md:mb-8 text-white text-center md:text-left"
             >
               Our Story
             </motion.h3>
-            <div className="space-y-6 text-gray-300 leading-relaxed">
+            <div className="space-y-6 text-gray-300 leading-relaxed text-center md:text-left">
               <p className="text-lg md:text-xl">
                 Born from the underground scene, Carnival LDN started as a passion project for people who believed London deserved better parties.
               </p>
