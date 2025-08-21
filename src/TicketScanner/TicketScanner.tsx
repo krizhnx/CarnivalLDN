@@ -20,7 +20,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
   const [notes, setNotes] = useState<string>('');
   const [scanType, setScanType] = useState<'entry' | 'exit'>('entry');
   
-  const { events, validateTicket, recordTicketScan } = useAppStore();
+  const { events, validateTicket, recordTicketScan, debugTicketData } = useAppStore();
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const qrContainerRef = useRef<HTMLDivElement>(null);
 
@@ -54,11 +54,18 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
     setIsScanning(false);
     
     try {
+      console.log('🔍 Raw QR code data:', decodedText);
+      
       // Parse QR code data
       const qrData: QRCodeData = JSON.parse(decodedText);
+      console.log('🔍 Parsed QR data:', qrData);
+      
+      // Debug: Check database state
+      await debugTicketData(qrData.orderId, qrData.ticketTierId);
       
       // Validate ticket
       const validation = await validateTicket(qrData.orderId, qrData.ticketTierId, qrData.customer);
+      console.log('🔍 Validation result:', validation);
       
       if (validation.isValid) {
         // Record the scan

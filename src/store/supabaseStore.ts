@@ -23,6 +23,7 @@ interface AppState extends AuthState {
   // Ticket scanning actions
   validateTicket: (orderId: string, ticketTierId: string, customerEmail: string) => Promise<TicketValidationResult>
   recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
+  debugTicketData: (orderId: string, ticketTierId: string) => Promise<void>
 }
 
 // Hardcoded admin credentials
@@ -495,52 +496,44 @@ export const useAppStore = create<AppState>()(
       // Ticket scanning actions
       validateTicket: async (orderId: string, ticketTierId: string, customerEmail: string): Promise<TicketValidationResult> => {
         try {
+          console.log('🔍 Validating ticket:', { orderId, ticketTierId, customerEmail });
+
           // First, check if this ticket has already been scanned for entry
           const { data: existingScans, error: scanError } = await supabase
             .from('ticket_scans')
             .select('*')
             .eq('order_id', orderId)
             .eq('ticket_tier_id', ticketTierId)
-            .eq('scan_type', 'entry')
+            .eq('scan_type', 'entry');
 
           if (scanError) {
-            console.error('Error checking existing scans:', scanError)
-            return {
-              isValid: false,
-              message: 'Failed to check ticket status',
-              orderStatus: 'unknown',
-              eventDate: 'unknown',
-              customerName: 'unknown',
-              customerEmail: customerEmail
-            }
+            console.error('Error checking existing scans:', scanError);
           }
 
           // If already scanned for entry, check if it's a valid exit scan
           if (existingScans && existingScans.length > 0) {
-            const lastScan = existingScans[0]
+            console.log('✅ Ticket already scanned for entry, allowing exit');
             return {
               isValid: true,
               message: 'Ticket already scanned for entry, valid for exit',
               orderStatus: 'completed',
-              eventDate: lastScan.event_date || 'unknown',
-              customerName: lastScan.customer_name || 'unknown',
+              eventDate: 'unknown',
+              customerName: 'unknown',
               customerEmail: customerEmail,
-              eventId: lastScan.event_id
-            }
+              eventId: existingScans[0].event_id
+            };
           }
 
-          // Check if the order and ticket are valid
+          // Check if the order exists and get basic order info
           const { data: orderData, error: orderError } = await supabase
             .from('orders')
-            .select(`
-              *,
-              events!inner(*)
-            `)
+            .select('*')
             .eq('id', orderId)
             .eq('customer_email', customerEmail)
-            .single()
+            .single();
 
           if (orderError || !orderData) {
+            console.log('❌ Order not found:', orderError);
             return {
               isValid: false,
               message: 'Order not found or invalid customer email',
@@ -548,24 +541,49 @@ export const useAppStore = create<AppState>()(
               eventDate: 'unknown',
               customerName: 'unknown',
               customerEmail: customerEmail
-            }
+            };
           }
+
+          console.log('✅ Order found:', orderData);
 
           // Check if payment is completed
           if (orderData.status !== 'completed') {
+            console.log('❌ Payment not completed:', orderData.status);
             return {
               isValid: false,
               message: 'Payment not completed',
               orderStatus: orderData.status,
-              eventDate: orderData.events?.date || 'unknown',
+              eventDate: 'unknown',
               customerName: orderData.customer_name || 'unknown',
               customerEmail: customerEmail
-            }
+            };
           }
 
+          // Get event details
+          const { data: eventData, error: eventError } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', orderData.event_id)
+            .single();
+
+          if (eventError || !eventData) {
+            console.log('❌ Event not found:', eventError);
+            return {
+              isValid: false,
+              message: 'Event not found',
+              orderStatus: orderData.status,
+              eventDate: 'unknown',
+              customerName: orderData.customer_name || 'unknown',
+              customerEmail: customerEmail
+            };
+          }
+
+          console.log('✅ Event found:', eventData);
+
           // Check if event date hasn't passed
-          const eventDate = orderData.events?.date
+          const eventDate = eventData.date;
           if (eventDate && new Date(eventDate) < new Date()) {
+            console.log('❌ Event has passed:', eventDate);
             return {
               isValid: false,
               message: 'Event has passed',
@@ -573,7 +591,7 @@ export const useAppStore = create<AppState>()(
               eventDate: eventDate,
               customerName: orderData.customer_name || 'unknown',
               customerEmail: customerEmail
-            }
+            };
           }
 
           // Check if ticket tier exists and is active
@@ -582,9 +600,10 @@ export const useAppStore = create<AppState>()(
             .select('*')
             .eq('id', ticketTierId)
             .eq('event_id', orderData.event_id)
-            .single()
+            .single();
 
           if (tierError || !tierData) {
+            console.log('❌ Ticket tier not found:', { ticketTierId, eventId: orderData.event_id, error: tierError });
             return {
               isValid: false,
               message: 'Ticket tier not found',
@@ -592,10 +611,13 @@ export const useAppStore = create<AppState>()(
               eventDate: eventDate || 'unknown',
               customerName: orderData.customer_name || 'unknown',
               customerEmail: customerEmail
-            }
+            };
           }
 
+          console.log('✅ Ticket tier found:', tierData);
+
           if (!tierData.is_active) {
+            console.log('❌ Ticket tier is inactive');
             return {
               isValid: false,
               message: 'Ticket tier is inactive',
@@ -603,10 +625,11 @@ export const useAppStore = create<AppState>()(
               eventDate: eventDate || 'unknown',
               customerName: orderData.customer_name || 'unknown',
               customerEmail: customerEmail
-            }
+            };
           }
 
           // All validations passed
+          console.log('✅ Ticket validation successful');
           return {
             isValid: true,
             message: 'Ticket is valid for entry',
@@ -615,12 +638,12 @@ export const useAppStore = create<AppState>()(
             customerName: orderData.customer_name || 'unknown',
             customerEmail: customerEmail,
             eventId: orderData.event_id,
-            eventTitle: orderData.events?.title,
+            eventTitle: eventData.title,
             ticketTierName: tierData.name
-          }
+          };
 
         } catch (error) {
-          console.error('Error validating ticket:', error)
+          console.error('❌ Error validating ticket:', error);
           return {
             isValid: false,
             message: 'Failed to validate ticket',
@@ -628,7 +651,7 @@ export const useAppStore = create<AppState>()(
             eventDate: 'unknown',
             customerName: 'unknown',
             customerEmail: customerEmail
-          }
+          };
         }
       },
 
@@ -646,15 +669,64 @@ export const useAppStore = create<AppState>()(
               location: scanData.location,
               notes: scanData.notes,
               scanned_at: new Date().toISOString()
-            })
+            });
 
           if (error) {
-            console.error('Error recording ticket scan:', error)
-            throw error
+            console.error('Error recording ticket scan:', error);
+            throw error;
           }
         } catch (error) {
-          console.error('Error recording ticket scan:', error)
-          throw error
+          console.error('Error recording ticket scan:', error);
+          throw error;
+        }
+      },
+
+      // Debug function to check database state
+      debugTicketData: async (orderId: string, ticketTierId: string) => {
+        try {
+          console.log('🔍 Debug: Checking database for:', { orderId, ticketTierId });
+          
+          // Check order
+          const { data: order, error: orderError } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('id', orderId)
+            .single();
+          
+          console.log('🔍 Order data:', order, 'Error:', orderError);
+          
+          // Check ticket tier
+          const { data: tier, error: tierError } = await supabase
+            .from('ticket_tiers')
+            .select('*')
+            .eq('id', ticketTierId)
+            .single();
+          
+          console.log('🔍 Ticket tier data:', tier, 'Error:', tierError);
+          
+          // Check event
+          if (order?.event_id) {
+            const { data: event, error: eventError } = await supabase
+              .from('events')
+              .select('*')
+              .eq('id', order.event_id)
+              .single();
+            
+            console.log('🔍 Event data:', event, 'Error:', eventError);
+          }
+          
+          // Check all ticket tiers for this event
+          if (order?.event_id) {
+            const { data: allTiers, error: tiersError } = await supabase
+              .from('ticket_tiers')
+              .select('*')
+              .eq('event_id', order.event_id);
+            
+            console.log('🔍 All ticket tiers for event:', allTiers, 'Error:', tiersError);
+          }
+          
+        } catch (error) {
+          console.error('Debug error:', error);
         }
       }
     }),
