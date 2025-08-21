@@ -5,7 +5,8 @@ import {
   Ticket,
   DollarSign,
   ArrowUpRight,
-  Download
+  Download,
+  QrCode
 } from 'lucide-react';
 
 interface DashboardStatsProps {
@@ -74,13 +75,22 @@ const DashboardStats = ({ stats, onExportAll, quickEventButtons }: DashboardStat
         <div className="flex items-center gap-2">
           {quickEventButtons}
         </div>
-        <button
-          onClick={onExportAll}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <Download className="h-4 w-4" />
-          Export Customer Data
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.location.href = '/scanner'}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors shadow-sm"
+          >
+            <QrCode className="h-4 w-4" />
+            Ticket Scanner
+          </button>
+          <button
+            onClick={onExportAll}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            Export Customer Data
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}

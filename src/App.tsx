@@ -12,6 +12,7 @@ import ParticleBackground from './components/ParticleBackground'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import EventsPage from './components/EventsPage'
+import ScannerPage from './pages/ScannerPage'
 import { useAppStore } from './store/supabaseStore'
 
 function HomePage() {
@@ -62,6 +63,10 @@ function App() {
               <Dashboard />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/scanner"
+          element={<ScannerPage />}
         />
 
       </Routes>

@@ -21,9 +21,9 @@ interface AppState extends AuthState {
   // Order actions
   getOrders: () => Promise<void>
   // Ticket scanning actions
-  validateTicket: (orderId: string, ticketTierId: string, customerEmail: string) => Promise<TicketValidationResult>
+  validateTicket: (orderId: string, ticketTierId: string, customerEmail: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
   recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
-  debugTicketData: (orderId: string, ticketTierId: string) => Promise<void>
+  debugTicketData: (orderId: string, ticketTierId: string) => Promise<string>
 }
 
 // Hardcoded admin credentials
@@ -494,34 +494,88 @@ export const useAppStore = create<AppState>()(
       },
 
       // Ticket scanning actions
-      validateTicket: async (orderId: string, ticketTierId: string, customerEmail: string): Promise<TicketValidationResult> => {
+      validateTicket: async (orderId: string, ticketTierId: string, customerEmail: string, scanType: 'entry' | 'exit' = 'entry'): Promise<TicketValidationResult> => {
         try {
           console.log('🔍 Validating ticket:', { orderId, ticketTierId, customerEmail });
 
-          // First, check if this ticket has already been scanned for entry
-          const { data: existingScans, error: scanError } = await supabase
-            .from('ticket_scans')
-            .select('*')
-            .eq('order_id', orderId)
-            .eq('ticket_tier_id', ticketTierId)
-            .eq('scan_type', 'entry');
+          // Check existing scans based on scan type
+          if (scanType === 'entry') {
+            // For entry scans, check if already scanned for entry
+            const { data: existingEntryScans, error: scanError } = await supabase
+              .from('ticket_scans')
+              .select('*')
+              .eq('order_id', orderId)
+              .eq('ticket_tier_id', ticketTierId)
+              .eq('scan_type', 'entry');
 
-          if (scanError) {
-            console.error('Error checking existing scans:', scanError);
-          }
+            if (scanError) {
+              console.error('Error checking existing entry scans:', scanError);
+            }
 
-          // If already scanned for entry, check if it's a valid exit scan
-          if (existingScans && existingScans.length > 0) {
-            console.log('✅ Ticket already scanned for entry, allowing exit');
-            return {
-              isValid: true,
-              message: 'Ticket already scanned for entry, valid for exit',
-              orderStatus: 'completed',
-              eventDate: 'unknown',
-              customerName: 'unknown',
-              customerEmail: customerEmail,
-              eventId: existingScans[0].event_id
-            };
+            // If already scanned for entry, return error
+            if (existingEntryScans && existingEntryScans.length > 0) {
+              console.log('❌ Ticket already scanned for entry');
+              return {
+                isValid: false,
+                message: 'Ticket already scanned for entry',
+                orderStatus: 'completed',
+                eventDate: 'unknown',
+                customerName: 'unknown',
+                customerEmail: customerEmail,
+                eventId: existingEntryScans[0].event_id
+              };
+            }
+          } else if (scanType === 'exit') {
+            // For exit scans, check if already scanned for entry (required for exit)
+            const { data: existingEntryScans, error: scanError } = await supabase
+              .from('ticket_scans')
+              .select('*')
+              .eq('order_id', orderId)
+              .eq('ticket_tier_id', ticketTierId)
+              .eq('scan_type', 'entry');
+
+            if (scanError) {
+              console.error('Error checking existing entry scans for exit:', scanError);
+            }
+
+            // Must have entry scan before exit scan
+            if (!existingEntryScans || existingEntryScans.length === 0) {
+              console.log('❌ Cannot exit without entry scan');
+              return {
+                isValid: false,
+                message: 'Cannot exit without entry scan',
+                orderStatus: 'completed',
+                eventDate: 'unknown',
+                customerName: 'unknown',
+                customerEmail: customerEmail
+              };
+            }
+
+            // Check if already scanned for exit
+            const { data: existingExitScans, error: exitScanError } = await supabase
+              .from('ticket_scans')
+              .select('*')
+              .eq('order_id', orderId)
+              .eq('ticket_tier_id', ticketTierId)
+              .eq('scan_type', 'exit');
+
+            if (exitScanError) {
+              console.error('Error checking existing exit scans:', exitScanError);
+            }
+
+            // If already scanned for exit, return error
+            if (existingExitScans && existingExitScans.length > 0) {
+              console.log('❌ Ticket already scanned for exit');
+              return {
+                isValid: false,
+                message: 'Ticket already scanned for exit',
+                orderStatus: 'completed',
+                eventDate: 'unknown',
+                customerName: 'unknown',
+                customerEmail: customerEmail,
+                eventId: existingEntryScans[0].event_id
+              };
+            }
           }
 
           // Check if the order exists and get basic order info
@@ -533,10 +587,33 @@ export const useAppStore = create<AppState>()(
             .single();
 
           if (orderError || !orderData) {
-            console.log('❌ Order not found:', orderError);
+            console.log('❌ Order not found:', { orderError, orderId, customerEmail });
+            
+            // Try to find the order without email constraint to debug
+            const { data: orderWithoutEmail } = await supabase
+              .from('orders')
+              .select('*')
+              .eq('id', orderId)
+              .single();
+            
+            if (orderWithoutEmail) {
+              console.log('🔍 Order found but email mismatch:', { 
+                orderEmail: orderWithoutEmail.customer_email, 
+                scannedEmail: customerEmail 
+              });
+              return {
+                isValid: false,
+                message: 'Customer email does not match order',
+                orderStatus: orderWithoutEmail.status || 'unknown',
+                eventDate: 'unknown',
+                customerName: orderWithoutEmail.customer_name || 'unknown',
+                customerEmail: customerEmail
+              };
+            }
+            
             return {
               isValid: false,
-              message: 'Order not found or invalid customer email',
+              message: 'Order not found',
               orderStatus: 'unknown',
               eventDate: 'unknown',
               customerName: 'unknown',
@@ -595,18 +672,48 @@ export const useAppStore = create<AppState>()(
           }
 
           // Check if ticket tier exists and is active
+          console.log('🔍 Looking for ticket tier:', { ticketTierId, orderEventId: orderData.event_id });
+          
           const { data: tierData, error: tierError } = await supabase
             .from('ticket_tiers')
             .select('*')
             .eq('id', ticketTierId)
-            .eq('event_id', orderData.event_id)
             .single();
 
           if (tierError || !tierData) {
-            console.log('❌ Ticket tier not found:', { ticketTierId, eventId: orderData.event_id, error: tierError });
+            console.log('❌ Ticket tier not found:', { ticketTierId, error: tierError });
+            
+            // Try to find any ticket tiers for this event to debug
+            const { data: allTiersForEvent, error: allTiersError } = await supabase
+              .from('ticket_tiers')
+              .select('*')
+              .eq('event_id', orderData.event_id);
+            
+            console.log('🔍 All ticket tiers for this event:', { 
+              eventId: orderData.event_id, 
+              tiers: allTiersForEvent, 
+              error: allTiersError 
+            });
+            
             return {
               isValid: false,
               message: 'Ticket tier not found',
+              orderStatus: orderData.status,
+              eventDate: eventDate || 'unknown',
+              customerName: orderData.customer_name || 'unknown',
+              customerEmail: customerEmail
+            };
+          }
+
+          // Verify the ticket tier belongs to the correct event
+          if (tierData.event_id !== orderData.event_id) {
+            console.log('❌ Ticket tier does not belong to this event:', { 
+              tierEventId: tierData.event_id, 
+              orderEventId: orderData.event_id 
+            });
+            return {
+              isValid: false,
+              message: 'Ticket tier does not belong to this event',
               orderStatus: orderData.status,
               eventDate: eventDate || 'unknown',
               customerName: orderData.customer_name || 'unknown',
@@ -632,7 +739,7 @@ export const useAppStore = create<AppState>()(
           console.log('✅ Ticket validation successful');
           return {
             isValid: true,
-            message: 'Ticket is valid for entry',
+            message: `Ticket is valid for ${scanType}`,
             orderStatus: orderData.status,
             eventDate: eventDate || 'unknown',
             customerName: orderData.customer_name || 'unknown',
@@ -682,9 +789,9 @@ export const useAppStore = create<AppState>()(
       },
 
       // Debug function to check database state
-      debugTicketData: async (orderId: string, ticketTierId: string) => {
+      debugTicketData: async (orderId: string, ticketTierId: string): Promise<string> => {
         try {
-          console.log('🔍 Debug: Checking database for:', { orderId, ticketTierId });
+          let debugOutput = `🔍 Debug: Checking database for:\nOrder ID: ${orderId}\nTicket Tier ID: ${ticketTierId}\n\n`;
           
           // Check order
           const { data: order, error: orderError } = await supabase
@@ -693,7 +800,13 @@ export const useAppStore = create<AppState>()(
             .eq('id', orderId)
             .single();
           
-          console.log('🔍 Order data:', order, 'Error:', orderError);
+          if (orderError) {
+            debugOutput += `❌ Order Error: ${orderError.message}\n`;
+          } else if (order) {
+            debugOutput += `✅ Order Found:\n- Status: ${order.status}\n- Customer: ${order.customer_name}\n- Email: ${order.customer_email}\n- Event ID: ${order.event_id}\n\n`;
+          } else {
+            debugOutput += `❌ Order Not Found\n\n`;
+          }
           
           // Check ticket tier
           const { data: tier, error: tierError } = await supabase
@@ -702,7 +815,13 @@ export const useAppStore = create<AppState>()(
             .eq('id', ticketTierId)
             .single();
           
-          console.log('🔍 Ticket tier data:', tier, 'Error:', tierError);
+          if (tierError) {
+            debugOutput += `❌ Ticket Tier Error: ${tierError.message}\n`;
+          } else if (tier) {
+            debugOutput += `✅ Ticket Tier Found:\n- Name: ${tier.name}\n- Event ID: ${tier.event_id}\n- Active: ${tier.is_active}\n\n`;
+          } else {
+            debugOutput += `❌ Ticket Tier Not Found\n\n`;
+          }
           
           // Check event
           if (order?.event_id) {
@@ -712,7 +831,13 @@ export const useAppStore = create<AppState>()(
               .eq('id', order.event_id)
               .single();
             
-            console.log('🔍 Event data:', event, 'Error:', eventError);
+            if (eventError) {
+              debugOutput += `❌ Event Error: ${eventError.message}\n`;
+            } else if (event) {
+              debugOutput += `✅ Event Found:\n- Title: ${event.title}\n- Date: ${event.date}\n\n`;
+            } else {
+              debugOutput += `❌ Event Not Found\n\n`;
+            }
           }
           
           // Check all ticket tiers for this event
@@ -722,11 +847,37 @@ export const useAppStore = create<AppState>()(
               .select('*')
               .eq('event_id', order.event_id);
             
-            console.log('🔍 All ticket tiers for event:', allTiers, 'Error:', tiersError);
+            if (tiersError) {
+              debugOutput += `❌ Event Tiers Error: ${tiersError.message}\n`;
+            } else if (allTiers && allTiers.length > 0) {
+              debugOutput += `✅ Event Ticket Tiers (${allTiers.length}):\n`;
+              allTiers.forEach(t => debugOutput += `- ${t.id}: ${t.name}\n`);
+              debugOutput += '\n';
+            } else {
+              debugOutput += `❌ No Ticket Tiers Found for Event\n\n`;
+            }
           }
           
+          // Check ALL ticket tiers in the database
+          const { data: allTiersInDB, error: allTiersError } = await supabase
+            .from('ticket_tiers')
+            .select('*');
+          
+          if (allTiersError) {
+            debugOutput += `❌ All Tiers Error: ${allTiersError.message}\n`;
+          } else if (allTiersInDB && allTiersInDB.length > 0) {
+            debugOutput += `📊 Total Ticket Tiers in DB: ${allTiersInDB.length}\n`;
+            allTiersInDB.slice(0, 5).forEach(t => debugOutput += `- ${t.id}: ${t.name}\n`);
+            if (allTiersInDB.length > 5) debugOutput += `... and ${allTiersInDB.length - 5} more\n`;
+            debugOutput += '\n';
+          } else {
+            debugOutput += `❌ No Ticket Tiers in Database\n\n`;
+          }
+          
+          return debugOutput;
+          
         } catch (error) {
-          console.error('Debug error:', error);
+          return `❌ Debug Error: ${error}\n`;
         }
       }
     }),

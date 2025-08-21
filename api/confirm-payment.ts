@@ -155,6 +155,7 @@ module.exports = async function handler(req: any, res: any) {
           tickets: tickets.map((ticket: TicketMetadata) => {
             const tier: TicketTier | undefined = ticketTiers.find((tt: TicketTier) => tt.id === ticket.tierId);
             return {
+              tierId: ticket.tierId, // Add tierId for QR code generation
               tierName: tier?.name || 'Unknown Tier',
               quantity: parseInt(ticket.quantity.toString()),
               unitPrice: tier?.price || 0,

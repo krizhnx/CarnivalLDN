@@ -1,31 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, XCircle, AlertTriangle, Camera, RotateCcw, User, Calendar, MapPin, Ticket } from 'lucide-react';
+import { CheckCircle, XCircle, User, Calendar, MapPin, Ticket, ArrowLeft } from 'lucide-react';
 import { TicketValidationResult, QRCodeData } from '../types';
 import { useAppStore } from '../store/supabaseStore';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-interface TicketScannerProps {
-  onClose?: () => void;
-}
-
-const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
-  const [isScanning, setIsScanning] = useState(true);
+const TicketScanner: React.FC = () => {
+  const navigate = useNavigate();
   const [scanResult, setScanResult] = useState<TicketValidationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanHistory, setScanHistory] = useState<TicketValidationResult[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<string>('all');
-  const [location, setLocation] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
-  const [scanType, setScanType] = useState<'entry' | 'exit'>('entry');
+
   
-  const { events, validateTicket, recordTicketScan, debugTicketData } = useAppStore();
+  const { validateTicket, recordTicketScan } = useAppStore();
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const qrContainerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScannedRef = useRef<string>('');
+  const processingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (isScanning && qrContainerRef.current) {
+    if (qrContainerRef.current) {
       // Initialize scanner
       scannerRef.current = new Html5QrcodeScanner(
         "qr-reader",
@@ -43,15 +40,32 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
         if (scannerRef.current) {
           scannerRef.current.clear();
         }
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
       };
     }
-  }, [isScanning]);
+  }, []);
 
   const handleScan = async (decodedText: string) => {
-    if (isProcessing) return;
+    // Prevent duplicate scans of the same QR code
+    if (lastScannedRef.current === decodedText) {
+      console.log('🚫 Duplicate QR code detected, ignoring');
+      toast.error('Duplicate scan detected - please wait');
+      return;
+    }
     
+    // Prevent multiple simultaneous processing
+    if (processingRef.current || isProcessing) {
+      console.log('🚫 Already processing, ignoring scan');
+      toast.error('Already processing - please wait');
+      return;
+    }
+    
+    // Set processing flags
+    processingRef.current = true;
     setIsProcessing(true);
-    setIsScanning(false);
+    lastScannedRef.current = decodedText;
     
     try {
       console.log('🔍 Raw QR code data:', decodedText);
@@ -60,32 +74,49 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
       const qrData: QRCodeData = JSON.parse(decodedText);
       console.log('🔍 Parsed QR data:', qrData);
       
-      // Debug: Check database state
-      await debugTicketData(qrData.orderId, qrData.ticketTierId);
-      
-      // Validate ticket
-      const validation = await validateTicket(qrData.orderId, qrData.ticketTierId, qrData.customer);
+      // Validate ticket (entry only)
+      const validation = await validateTicket(qrData.orderId, qrData.ticketTierId, qrData.customer, 'entry');
       console.log('🔍 Validation result:', validation);
       
       if (validation.isValid) {
-        // Record the scan
+        // Ticket is valid and not already scanned
         await recordTicketScan({
           orderId: qrData.orderId,
           ticketTierId: qrData.ticketTierId,
           customerEmail: qrData.customer,
           eventId: validation.eventId || '',
-          scanType,
-          location,
-          notes
+          scanType: 'entry',
+          location: '',
+          notes: ''
         });
         
-        toast.success('Ticket scanned successfully!');
+        toast.success('Ticket scanned successfully for entry!');
+        
+        // Add to scan history
+        const scanWithMetadata = {
+          ...validation,
+          scanType: 'entry',
+          timestamp: new Date().toISOString()
+        };
+        setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
       } else {
-        toast.error(validation.message);
+        // Invalid ticket or already scanned - show error
+        if (validation.message.includes('already scanned')) {
+          toast.error('Ticket already scanned for entry');
+        } else {
+          toast.error(validation.message);
+        }
       }
       
       setScanResult(validation);
-      setScanHistory(prev => [validation, ...prev.slice(0, 9)]); // Keep last 10 scans
+      
+      // Auto-hide result after 5 seconds
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        setScanResult(null);
+      }, 5000);
       
     } catch (error) {
       console.error('Scan error:', error);
@@ -98,8 +129,22 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
         customerName: 'unknown',
         customerEmail: 'unknown'
       });
+      
+      // Auto-hide error result after 5 seconds
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        setScanResult(null);
+      }, 5000);
     } finally {
       setIsProcessing(false);
+      processingRef.current = false;
+      
+      // Clear the last scanned reference after a delay to allow for testing
+      setTimeout(() => {
+        lastScannedRef.current = '';
+      }, 5000);
     }
   };
 
@@ -108,239 +153,192 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onClose }) => {
     // Don't show error toast for every scan attempt
   };
 
-  const resetScanner = () => {
-    setIsScanning(true);
-    setScanResult(null);
-    setLocation('');
-    setNotes('');
-    
-    // Clear and reinitialize scanner
-    if (scannerRef.current) {
-      scannerRef.current.clear();
+  const closeOverlay = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
+    setScanResult(null);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
+      <div className="max-w-2xl mx-auto">
         {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 text-center">
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Ticket Scanner</h1>
+            <p className="text-gray-600 text-lg">Scan QR codes to validate tickets and record entry</p>
+          </div>
+          
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center gap-2 px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors mx-auto text-lg font-medium"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Back to Dashboard
+          </button>
+        </div>
+
+                {/* Scanner */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Ticket Scanner</h1>
-              <p className="text-gray-600">Scan QR codes to validate tickets and record entry/exit</p>
-            </div>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Close
-              </button>
-            )}
-          </div>
-
-          {/* Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Event Filter</label>
-              <select
-                value={selectedEvent}
-                onChange={(e) => setSelectedEvent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Events</option>
-                {events?.map(event => (
-                  <option key={event.id} value={event.id}>{event.title}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Scan Type</label>
-              <select
-                value={scanType}
-                onChange={(e) => setScanType(e.target.value as 'entry' | 'exit')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="entry">Entry</option>
-                <option value="exit">Exit</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., Main Gate, VIP Entry"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional notes"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">QR Code Scanner</h2>
+          <div className="relative">
+            <div 
+              id="qr-reader" 
+              ref={qrContainerRef}
+              className="w-full max-w-sm mx-auto"
+            />
+            <div className="text-center mt-6 space-y-2">
+              <p className="text-gray-600 text-lg font-medium">
+                📱 Position QR code within the frame
+              </p>
+              <p className="text-sm text-gray-500">
+                Hold steady for best results
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Scanner */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">QR Code Scanner</h2>
-              <button
-                onClick={resetScanner}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </button>
+        {/* Processing Overlay */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-lg font-medium text-gray-900">Processing ticket...</p>
+              <p className="text-sm text-gray-600">Please wait</p>
             </div>
-
-            {isScanning ? (
-              <div className="relative">
-                <div 
-                  id="qr-reader" 
-                  ref={qrContainerRef}
-                  className="w-full max-w-sm mx-auto"
-                />
-                <p className="text-center text-sm text-gray-600 mt-4">
-                  Position QR code within the frame
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">Scanner paused</p>
-                <button
-                  onClick={resetScanner}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Resume Scanning
-                </button>
-              </div>
-            )}
           </div>
+        )}
 
-          {/* Scan Result */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Scan Result</h2>
-            
-            {isProcessing ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Processing ticket...</p>
-              </div>
-            ) : scanResult ? (
-              <AnimatePresence>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className={`p-4 rounded-lg border-2 ${
-                    scanResult.isValid 
-                      ? 'border-green-200 bg-green-50' 
-                      : 'border-red-200 bg-red-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    {scanResult.isValid ? (
-                      <CheckCircle className="h-8 w-8 text-green-600" />
-                    ) : (
-                      <XCircle className="h-8 w-8 text-red-600" />
-                    )}
-                    <div>
-                      <h3 className={`font-semibold ${
-                        scanResult.isValid ? 'text-green-800' : 'text-red-800'
-                      }`}>
-                        {scanResult.isValid ? 'Valid Ticket' : 'Invalid Ticket'}
-                      </h3>
-                      <p className={`text-sm ${
-                        scanResult.isValid ? 'text-green-700' : 'text-red-700'
-                      }`}>
-                        {scanResult.message}
-                      </p>
-                    </div>
-                  </div>
+        {/* Scan Result Overlay */}
+        {scanResult && !isProcessing && (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer"
+              onClick={closeOverlay}
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className={`p-8 rounded-2xl border-2 max-w-lg w-full mx-4 text-center ${
+                  scanResult.isValid 
+                    ? 'border-green-300 bg-white shadow-green-100' 
+                    : 'border-red-300 bg-white shadow-red-100'
+                } shadow-2xl`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Large Icon */}
+                <div className="mb-6">
+                  {scanResult.isValid ? (
+                    <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
+                  ) : (
+                    <XCircle className="h-20 w-20 text-red-500 mx-auto" />
+                  )}
+                </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">{scanResult.customerName}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span>{scanResult.eventDate}</span>
-                    </div>
-                    
-                    {scanResult.eventTitle && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span>{scanResult.eventTitle}</span>
-                      </div>
-                    )}
-                    
-                    {scanResult.ticketTierName && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Ticket className="h-4 w-4 text-gray-500" />
-                        <span>{scanResult.ticketTierName}</span>
-                      </div>
-                    )}
+                {/* Main Status */}
+                <div className="mb-6">
+                  <h3 className={`text-3xl font-bold mb-2 ${
+                    scanResult.isValid ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    {scanResult.isValid ? 'VALID TICKET' : 'INVALID TICKET'}
+                  </h3>
+                  <p className={`text-lg ${
+                    scanResult.isValid ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                    {scanResult.message}
+                  </p>
+                  {scanResult.message.includes('already scanned') && (
+                    <p className="text-orange-600 mt-2 font-medium">
+                       ⚠️ Already Scanned for Entry
+                    </p>
+                  )}
+                </div>
+
+                {/* Customer Details */}
+                <div className="space-y-4 text-left bg-gray-50 p-4 rounded-xl">
+                  <div className="flex items-center justify-center gap-3">
+                    <User className="h-5 w-5 text-gray-600" />
+                    <span className="font-semibold text-lg text-gray-900">{scanResult.customerName}</span>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
-                <p>Scan a QR code to see results</p>
-              </div>
-            )}
-          </div>
-        </div>
+                  
+                  <div className="flex items-center justify-center gap-3">
+                    <Calendar className="h-5 w-5 text-gray-600" />
+                    <span className="text-gray-700">
+                      {scanResult.eventDate && scanResult.eventDate !== 'unknown' 
+                        ? new Date(scanResult.eventDate).toLocaleDateString()
+                        : 'Unknown Date'
+                      }
+                    </span>
+                  </div>
+                  
+                  {scanResult.eventTitle && (
+                    <div className="flex items-center justify-center gap-3">
+                      <MapPin className="h-5 w-5 text-gray-600" />
+                      <span className="font-medium text-gray-900">{scanResult.eventTitle}</span>
+                    </div>
+                  )}
+                  
+                  {scanResult.ticketTierName && (
+                    <div className="flex items-center justify-center gap-3">
+                      <Ticket className="h-5 w-5 text-gray-600" />
+                      <span className="text-gray-700">{scanResult.ticketTierName}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tap to close hint */}
+                <p className="text-sm text-gray-500 mt-6">Tap anywhere to close</p>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        )}
 
         {/* Scan History */}
         {scanHistory.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Scans</h2>
-            <div className="space-y-3">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">Recent Scans</h2>
+            <div className="space-y-4">
               {scanHistory.map((scan, index) => (
                 <div
                   key={index}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                  className={`p-4 rounded-xl border-2 ${
                     scan.isValid ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4 mb-3">
                     {scan.isValid ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
                     ) : (
-                      <XCircle className="h-5 w-5 text-red-600" />
+                      <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
                     )}
-                    <div>
-                      <p className={`font-medium ${
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-semibold text-lg ${
                         scan.isValid ? 'text-green-800' : 'text-red-800'
                       }`}>
                         {scan.customerName}
                       </p>
-                      <p className="text-sm text-gray-600">{scan.customerEmail}</p>
+                      <p className="text-gray-600">{scan.customerEmail}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
+                  
+                  <div className="bg-white p-3 rounded-lg">
+                    <p className="font-medium text-gray-900 mb-1">
                       {scan.eventTitle || 'Unknown Event'}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date().toLocaleTimeString()}
+                    <p className="text-sm text-gray-600">
+                      Entry • {
+                        (scan as any).timestamp 
+                          ? new Date((scan as any).timestamp).toLocaleTimeString()
+                          : (scan.eventDate && scan.eventDate !== 'unknown' 
+                              ? new Date(scan.eventDate).toLocaleDateString()
+                              : 'Unknown Date'
+                            )
+                      }
                     </p>
                   </div>
                 </div>

@@ -245,11 +245,9 @@ const generateTicketsPDF = async (data) => {
       // Generate QR code for each ticket
       const qrPayload = JSON.stringify({
         orderId: data.orderId,
-        ticketTier: ticket.tierName,
+        ticketTierId: ticket.tierId, // Use tierId instead of tierName
         quantity: ticket.quantity,
         customer: data.customerEmail,
-        event: data.eventName,
-        date: data.eventDate,
       });
 
       try {

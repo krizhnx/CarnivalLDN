@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/supabaseStore';
 
@@ -23,6 +23,13 @@ const AdminNavbar = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/scanner')}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <QrCode className="h-4 w-4" />
+              <span>Scanner</span>
+            </button>
             <span className="text-sm text-gray-600">
               Welcome, {user?.name}
             </span>

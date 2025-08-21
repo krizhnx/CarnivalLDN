@@ -211,6 +211,7 @@ app.post('/api/confirm-payment', async (req, res) => {
               eventDate: event.date,
               eventLocation: event.venue,
               tickets: tickets.map(ticket => ({
+                tierId: ticket.tier.id, // Add tierId for QR code generation
                 tierName: ticket.tier.name,
                 quantity: ticket.quantity,
                 unitPrice: ticket.tier.price,
@@ -269,6 +270,7 @@ app.post('/api/test-email', async (req, res) => {
       eventDate: '2024-12-25',
       eventLocation: 'Test Venue, London',
       tickets: [{
+        tierId: 'test-tier-123', // Add tierId for QR code generation
         tierName: 'General Admission',
         quantity: 2,
         unitPrice: 2500,
