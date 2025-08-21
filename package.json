@@ -11,7 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sendgrid/mail": "^8.1.5",
     "@stripe/react-stripe-js": "^3.9.0",
     "@stripe/stripe-js": "^7.8.0",
     "@supabase/supabase-js": "^2.55.0",
@@ -30,6 +29,7 @@
     "react-hook-form": "^7.48.2",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.20.1",
+    "resend": "^6.0.1",
     "stripe": "^18.4.0",
     "uuid": "^11.1.0",
     "zustand": "^4.4.7"

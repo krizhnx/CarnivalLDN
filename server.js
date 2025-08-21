@@ -3,6 +3,8 @@ const cors = require('cors');
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
+// Note: Email service will be imported after we set up the environment
+let sendTicketConfirmationEmail = null;
 require('dotenv').config({ path: '.env.local' });
 
 const app = express();
@@ -23,6 +25,22 @@ console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Set' : '❌ Not set
 console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✅ Set' : '❌ Not set');
 console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Not set');
 console.log('STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? '✅ Set' : '❌ Not set');
+console.log('RESEND_API_KEY:', process.env.RESEND_API_KEY ? '✅ Set' : '❌ Not set');
+
+// Initialize Email Service (only if Resend API key is provided)
+if (process.env.RESEND_API_KEY) {
+  try {
+    const { sendTicketConfirmationEmail: emailService } = require('./src/lib/emailService.js');
+    sendTicketConfirmationEmail = emailService;
+    console.log('✅ Email service initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize email service:', error.message);
+    sendTicketConfirmationEmail = null;
+  }
+} else {
+  console.log('⚠️  RESEND_API_KEY not found - email confirmations will not be sent');
+  console.log('   Set RESEND_API_KEY in .env.local to enable email functionality');
+}
 
 // Initialize Supabase (only if credentials are provided)
 let supabase = null;
@@ -173,6 +191,43 @@ app.post('/api/confirm-payment', async (req, res) => {
           console.error('Error updating ticket tier sold counts:', error.message);
         }
 
+        // Send confirmation email
+        try {
+          // Get event details for email
+          const { data: event, error: eventError } = await supabase
+            .from('events')
+            .select('title, date, venue')
+            .eq('id', eventId)
+            .single();
+
+          if (eventError) {
+            console.error('Error fetching event details for email:', eventError);
+          } else {
+            const emailData = {
+              customerName: customerInfo.name,
+              customerEmail: customerInfo.email,
+              orderId: order.id,
+              eventName: event.title,
+              eventDate: event.date,
+              eventLocation: event.venue,
+              tickets: tickets.map(ticket => ({
+                tierName: ticket.tier.name,
+                quantity: ticket.quantity,
+                unitPrice: ticket.tier.price,
+                totalPrice: ticket.tier.price * ticket.quantity
+              })),
+              totalAmount: totalAmount,
+              currency: 'gbp'
+            };
+
+            await sendTicketConfirmationEmail(emailData);
+            console.log('Confirmation email sent successfully');
+          }
+        } catch (emailError) {
+          console.error('Error sending confirmation email:', emailError);
+          // Don't fail the whole request if email fails
+        }
+
         console.log('Order processing completed:', order.id);
         
         // Always return success, even if database operations failed
@@ -203,10 +258,39 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Stripe API server is running' });
 });
 
+// Test email endpoint
+app.post('/api/test-email', async (req, res) => {
+  try {
+    const testData = {
+      customerName: 'Test User',
+      customerEmail: req.body.testEmail || 'test@example.com',
+      orderId: 'test-order-123',
+      eventName: 'Test Carnival Event',
+      eventDate: '2024-12-25',
+      eventLocation: 'Test Venue, London',
+      tickets: [{
+        tierName: 'General Admission',
+        quantity: 2,
+        unitPrice: 2500,
+        totalPrice: 5000
+      }],
+      totalAmount: 5000,
+      currency: 'gbp'
+    };
+
+    await sendTicketConfirmationEmail(testData);
+    res.json({ success: true, message: 'Test email sent successfully' });
+  } catch (error) {
+    console.error('Error sending test email:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`🚀 Stripe API server running on port ${port}`);
   console.log(`📡 API endpoints:`);
   console.log(`   POST /api/create-payment-intent`);
   console.log(`   POST /api/confirm-payment`);
   console.log(`   GET  /api/health`);
+  console.log(`   POST /api/test-email`);
 });

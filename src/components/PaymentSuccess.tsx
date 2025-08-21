@@ -115,7 +115,7 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
           <p className="text-gray-600">
-            Your tickets have been purchased successfully. You'll receive a confirmation email shortly.
+            Your tickets have been purchased successfully! Check your email for the confirmation and attached PDF tickets.
           </p>
         </div>
 
@@ -144,12 +144,12 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
         <div className="space-y-3">
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <Mail className="h-4 w-4" />
-            <span>Confirmation sent to {order.customerEmail || 'your email'}</span>
+            <span>Confirmation & tickets sent to {order.customerEmail || 'your email'}</span>
           </div>
           
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <Ticket className="h-4 w-4" />
-            <span>Your tickets are ready for download</span>
+            <span>PDF tickets attached to your email</span>
           </div>
         </div>
 

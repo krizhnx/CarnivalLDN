@@ -1,4 +1,5 @@
 const Stripe = require('stripe');
+const { sendTicketConfirmationEmail: sendEmail } = require('../../src/lib/emailService.js');
 
 module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -92,6 +93,61 @@ module.exports = async function handler(req: any, res: any) {
         console.error('Error updating ticket tier sold count:', updateError);
         // Don't fail the whole request if this fails
       }
+    }
+
+    // Get event details for email
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('title, date, venue')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError) {
+      console.error('Error fetching event details:', eventError);
+      // Don't fail the whole request if this fails
+    }
+
+    // Get ticket tier details for email
+    const ticketTierIds = tickets.map(t => t.tierId);
+    const { data: ticketTiers, error: tiersError } = await supabase
+      .from('ticket_tiers')
+      .select('id, name, price')
+      .in('id', ticketTierIds);
+
+    if (tiersError) {
+      console.error('Error fetching ticket tier details:', tiersError);
+      // Don't fail the whole request if this fails
+    }
+
+    // Send confirmation email
+    try {
+      if (event && ticketTiers) {
+        const emailData = {
+          customerName: customerInfo.name,
+          customerEmail: customerInfo.email,
+          orderId: order.id,
+          eventName: event.title,
+          eventDate: event.date,
+          eventLocation: event.venue,
+          tickets: tickets.map(ticket => {
+            const tier = ticketTiers.find(tt => tt.id === ticket.tierId);
+            return {
+              tierName: tier?.name || 'Unknown Tier',
+              quantity: parseInt(ticket.quantity),
+              unitPrice: tier?.price || 0,
+              totalPrice: (tier?.price || 0) * parseInt(ticket.quantity)
+            };
+          }),
+          totalAmount: paymentIntent.amount,
+          currency: paymentIntent.currency
+        };
+
+        await sendEmail(emailData);
+        console.log('Confirmation email sent successfully');
+      }
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError);
+      // Don't fail the whole request if email fails
     }
 
     res.status(200).json({
