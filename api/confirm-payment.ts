@@ -1,5 +1,5 @@
 const Stripe = require('stripe');
-const { sendTicketConfirmationEmail: sendEmail } = require('../../src/lib/emailService.js');
+const { sendTicketConfirmationEmail: sendEmail } = require('../src/lib/emailService.js');
 
 // Type definitions for the ticket metadata structure
 interface TicketMetadata {
