@@ -97,3 +97,36 @@ export interface LoginFormData {
   email: string;
   password: string;
 }
+
+// NEW TYPES FOR TICKET SCANNING
+export interface TicketScan {
+  id: string;
+  orderId: string;
+  ticketTierId: string;
+  customerEmail: string;
+  eventId: string;
+  scanType: 'entry' | 'exit';
+  scannedAt: Date;
+  scannedBy?: string;
+  location?: string;
+  notes?: string;
+}
+
+export interface TicketValidationResult {
+  isValid: boolean;
+  message: string;
+  orderStatus: string;
+  eventDate: string;
+  customerName: string;
+  customerEmail: string;
+  eventId?: string;
+  eventTitle?: string;
+  ticketTierName?: string;
+}
+
+export interface QRCodeData {
+  orderId: string;
+  ticketTierId: string;
+  quantity: number;
+  customer: string;
+}

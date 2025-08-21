@@ -4,10 +4,10 @@ interface DashboardHeaderProps {
   selectedTimeframe: '7d' | '30d' | '90d';
   selectedEvent: string;
   events: any[];
-  activeTab: 'analytics' | 'events' | 'orders';
+  activeTab: 'analytics' | 'events' | 'orders' | 'scanner';
   onTimeframeChange: (timeframe: '7d' | '30d' | '90d') => void;
   onEventChange: (eventId: string) => void;
-  onTabChange: (tab: 'analytics' | 'events' | 'orders') => void;
+  onTabChange: (tab: 'analytics' | 'events' | 'orders' | 'scanner') => void;
   onRefresh: () => void;
 }
 
@@ -27,7 +27,7 @@ const DashboardHeader = ({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-gray-600 mt-1">Manage analytics, events, and orders</p>
+            <p className="text-gray-600 mt-1">Manage analytics, events, orders, and scan tickets</p>
           </div>
           <div className="flex items-center gap-4">
             <select
@@ -76,6 +76,12 @@ const DashboardHeader = ({
             className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'orders' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
           >
             Orders
+          </button>
+          <button
+            onClick={() => onTabChange('scanner')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'scanner' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+          >
+            Ticket Scanner
           </button>
         </div>
       </div>

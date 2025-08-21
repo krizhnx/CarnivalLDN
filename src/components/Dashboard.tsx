@@ -12,7 +12,8 @@ import {
   EventManagement,
   OrdersTable,
   ConfirmationModal,
-  EventSpecificStats
+  EventSpecificStats,
+  TicketScanner
 } from './dashboard/index';
 import { exportCustomerData, exportEventData } from './dashboard/CSVExport';
 
@@ -36,7 +37,7 @@ const Dashboard = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
   const [selectedEvent, setSelectedEvent] = useState<string>('all');
   const [creatingEvents, setCreatingEvents] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'analytics' | 'events' | 'orders'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'events' | 'orders' | 'scanner'>('analytics');
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [confirm, setConfirm] = useState<{type: 'archive' | 'delete', event: Event} | null>(null);
@@ -521,6 +522,10 @@ const Dashboard = () => {
 
         {activeTab === 'orders' && (
           <OrdersTable orders={orders || []} events={events || []} />
+        )}
+
+        {activeTab === 'scanner' && (
+          <TicketScanner />
         )}
       </div>
 

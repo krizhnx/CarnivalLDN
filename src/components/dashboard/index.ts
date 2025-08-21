@@ -7,4 +7,5 @@ export { default as RecentOrdersTable } from './RecentOrdersTable';
 export { default as QuickEventCreation } from './QuickEventCreation';
 export { default as ConfirmationModal } from './ConfirmationModal';
 export { default as EventSpecificStats } from './EventSpecificStats';
+export { default as TicketScanner } from '../../TicketScanner/TicketScanner';
 export * from './CSVExport';

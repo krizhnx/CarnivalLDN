@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
-import { Event, AuthState, EventFormData, Order } from '../types'
+import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan } from '../types'
 import toast from 'react-hot-toast'
 
 interface AppState extends AuthState {
@@ -20,6 +20,9 @@ interface AppState extends AuthState {
   subscribeToEvents: () => any
   // Order actions
   getOrders: () => Promise<void>
+  // Ticket scanning actions
+  validateTicket: (orderId: string, ticketTierId: string, customerEmail: string) => Promise<TicketValidationResult>
+  recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
 }
 
 // Hardcoded admin credentials
@@ -486,6 +489,172 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error('Error fetching orders:', error)
           set({ orders: [] })
+        }
+      },
+
+      // Ticket scanning actions
+      validateTicket: async (orderId: string, ticketTierId: string, customerEmail: string): Promise<TicketValidationResult> => {
+        try {
+          // First, check if this ticket has already been scanned for entry
+          const { data: existingScans, error: scanError } = await supabase
+            .from('ticket_scans')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('ticket_tier_id', ticketTierId)
+            .eq('scan_type', 'entry')
+
+          if (scanError) {
+            console.error('Error checking existing scans:', scanError)
+            return {
+              isValid: false,
+              message: 'Failed to check ticket status',
+              orderStatus: 'unknown',
+              eventDate: 'unknown',
+              customerName: 'unknown',
+              customerEmail: customerEmail
+            }
+          }
+
+          // If already scanned for entry, check if it's a valid exit scan
+          if (existingScans && existingScans.length > 0) {
+            const lastScan = existingScans[0]
+            return {
+              isValid: true,
+              message: 'Ticket already scanned for entry, valid for exit',
+              orderStatus: 'completed',
+              eventDate: lastScan.event_date || 'unknown',
+              customerName: lastScan.customer_name || 'unknown',
+              customerEmail: customerEmail,
+              eventId: lastScan.event_id
+            }
+          }
+
+          // Check if the order and ticket are valid
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              events!inner(*)
+            `)
+            .eq('id', orderId)
+            .eq('customer_email', customerEmail)
+            .single()
+
+          if (orderError || !orderData) {
+            return {
+              isValid: false,
+              message: 'Order not found or invalid customer email',
+              orderStatus: 'unknown',
+              eventDate: 'unknown',
+              customerName: 'unknown',
+              customerEmail: customerEmail
+            }
+          }
+
+          // Check if payment is completed
+          if (orderData.status !== 'completed') {
+            return {
+              isValid: false,
+              message: 'Payment not completed',
+              orderStatus: orderData.status,
+              eventDate: orderData.events?.date || 'unknown',
+              customerName: orderData.customer_name || 'unknown',
+              customerEmail: customerEmail
+            }
+          }
+
+          // Check if event date hasn't passed
+          const eventDate = orderData.events?.date
+          if (eventDate && new Date(eventDate) < new Date()) {
+            return {
+              isValid: false,
+              message: 'Event has passed',
+              orderStatus: orderData.status,
+              eventDate: eventDate,
+              customerName: orderData.customer_name || 'unknown',
+              customerEmail: customerEmail
+            }
+          }
+
+          // Check if ticket tier exists and is active
+          const { data: tierData, error: tierError } = await supabase
+            .from('ticket_tiers')
+            .select('*')
+            .eq('id', ticketTierId)
+            .eq('event_id', orderData.event_id)
+            .single()
+
+          if (tierError || !tierData) {
+            return {
+              isValid: false,
+              message: 'Ticket tier not found',
+              orderStatus: orderData.status,
+              eventDate: eventDate || 'unknown',
+              customerName: orderData.customer_name || 'unknown',
+              customerEmail: customerEmail
+            }
+          }
+
+          if (!tierData.is_active) {
+            return {
+              isValid: false,
+              message: 'Ticket tier is inactive',
+              orderStatus: orderData.status,
+              eventDate: eventDate || 'unknown',
+              customerName: orderData.customer_name || 'unknown',
+              customerEmail: customerEmail
+            }
+          }
+
+          // All validations passed
+          return {
+            isValid: true,
+            message: 'Ticket is valid for entry',
+            orderStatus: orderData.status,
+            eventDate: eventDate || 'unknown',
+            customerName: orderData.customer_name || 'unknown',
+            customerEmail: customerEmail,
+            eventId: orderData.event_id,
+            eventTitle: orderData.events?.title,
+            ticketTierName: tierData.name
+          }
+
+        } catch (error) {
+          console.error('Error validating ticket:', error)
+          return {
+            isValid: false,
+            message: 'Failed to validate ticket',
+            orderStatus: 'unknown',
+            eventDate: 'unknown',
+            customerName: 'unknown',
+            customerEmail: customerEmail
+          }
+        }
+      },
+
+      recordTicketScan: async (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => {
+        try {
+          const { error } = await supabase
+            .from('ticket_scans')
+            .insert({
+              order_id: scanData.orderId,
+              ticket_tier_id: scanData.ticketTierId,
+              customer_email: scanData.customerEmail,
+              event_id: scanData.eventId,
+              scan_type: scanData.scanType,
+              scanned_by: scanData.scannedBy,
+              location: scanData.location,
+              notes: scanData.notes,
+              scanned_at: new Date().toISOString()
+            })
+
+          if (error) {
+            console.error('Error recording ticket scan:', error)
+            throw error
+          }
+        } catch (error) {
+          console.error('Error recording ticket scan:', error)
+          throw error
         }
       }
     }),

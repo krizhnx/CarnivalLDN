@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "server": "node server.js",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "tsc && vite build",
@@ -21,6 +21,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "framer-motion": "^10.16.4",
+    "html5-qrcode": "^2.3.8",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.294.0",
     "qrcode": "^1.5.4",
