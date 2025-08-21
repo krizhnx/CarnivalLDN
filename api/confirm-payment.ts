@@ -1,13 +1,36 @@
 const Stripe = require('stripe');
 const { sendTicketConfirmationEmail: sendEmail } = require('../../src/lib/emailService.js');
 
+// Type definitions for the ticket metadata structure
+interface TicketMetadata {
+  tierId: string;
+  quantity: number;
+}
+
+interface CustomerInfo {
+  email: string;
+  name: string;
+}
+
+interface TicketTier {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface Event {
+  title: string;
+  date: string;
+  venue: string;
+}
+
 module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { paymentIntentId, customerInfo } = req.body;
+    const { paymentIntentId, customerInfo }: { paymentIntentId: string; customerInfo: CustomerInfo } = req.body;
 
     if (!paymentIntentId || !customerInfo) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -43,7 +66,7 @@ module.exports = async function handler(req: any, res: any) {
 
     // Extract metadata from payment intent
     const { eventId, tickets: ticketsMetadata } = paymentIntent.metadata;
-    const tickets = JSON.parse(ticketsMetadata);
+    const tickets: TicketMetadata[] = JSON.parse(ticketsMetadata);
 
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -72,9 +95,9 @@ module.exports = async function handler(req: any, res: any) {
         .insert({
           order_id: order.id,
           ticket_tier_id: ticket.tierId,
-          quantity: parseInt(ticket.quantity),
-          unit_price: paymentIntent.amount / tickets.reduce((sum: number, t: any) => sum + parseInt(t.quantity), 0),
-          total_price: (paymentIntent.amount / tickets.reduce((sum: number, t: any) => sum + parseInt(t.quantity), 0)) * parseInt(ticket.quantity)
+          quantity: parseInt(ticket.quantity.toString()),
+          unit_price: paymentIntent.amount / tickets.reduce((sum: number, t: TicketMetadata) => sum + parseInt(t.quantity.toString()), 0),
+          total_price: (paymentIntent.amount / tickets.reduce((sum: number, t: TicketMetadata) => sum + parseInt(t.quantity.toString()), 0)) * parseInt(ticket.quantity.toString())
         });
 
       if (ticketError) {
@@ -86,7 +109,7 @@ module.exports = async function handler(req: any, res: any) {
       const { error: updateError } = await supabase
         .rpc('increment_sold_count', { 
           tier_id: ticket.tierId, 
-          quantity: parseInt(ticket.quantity) 
+          quantity: parseInt(ticket.quantity.toString()) 
         });
 
       if (updateError) {
@@ -108,7 +131,7 @@ module.exports = async function handler(req: any, res: any) {
     }
 
     // Get ticket tier details for email
-    const ticketTierIds = tickets.map(t => t.tierId);
+    const ticketTierIds = tickets.map((t: TicketMetadata) => t.tierId);
     const { data: ticketTiers, error: tiersError } = await supabase
       .from('ticket_tiers')
       .select('id, name, price')
@@ -129,13 +152,13 @@ module.exports = async function handler(req: any, res: any) {
           eventName: event.title,
           eventDate: event.date,
           eventLocation: event.venue,
-          tickets: tickets.map(ticket => {
-            const tier = ticketTiers.find(tt => tt.id === ticket.tierId);
+          tickets: tickets.map((ticket: TicketMetadata) => {
+            const tier: TicketTier | undefined = ticketTiers.find((tt: TicketTier) => tt.id === ticket.tierId);
             return {
               tierName: tier?.name || 'Unknown Tier',
-              quantity: parseInt(ticket.quantity),
+              quantity: parseInt(ticket.quantity.toString()),
               unitPrice: tier?.price || 0,
-              totalPrice: (tier?.price || 0) * parseInt(ticket.quantity)
+              totalPrice: (tier?.price || 0) * parseInt(ticket.quantity.toString())
             };
           }),
           totalAmount: paymentIntent.amount,
