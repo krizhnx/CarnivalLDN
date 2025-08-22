@@ -120,6 +120,25 @@ app.post('/api/confirm-payment', async (req, res) => {
       });
     }
     
+    // Age validation - must be 18 or older
+    if (customerInfo.dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(customerInfo.dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        return res.status(400).json({ 
+          error: 'You must be 18 years or older to purchase tickets',
+          age: age
+        });
+      }
+    }
+    
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {

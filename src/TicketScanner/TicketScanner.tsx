@@ -158,13 +158,13 @@ const TicketScanner: React.FC = () => {
         setScanResult(validation);
       }
       
-      // Auto-hide result after 5 seconds
+      // Auto-hide result after 1 second
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
         setScanResult(null);
-      }, 5000);
+      }, 3000);
       
     } catch (error) {
       console.error('Scan error:', error);
@@ -177,13 +177,13 @@ const TicketScanner: React.FC = () => {
         customerEmail: 'unknown'
       });
       
-      // Auto-hide error result after 5 seconds
+      // Auto-hide error result after 1 second
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
         setScanResult(null);
-      }, 5000);
+      }, 1000);
     } finally {
       setIsProcessing(false);
       processingRef.current = false;
@@ -191,7 +191,7 @@ const TicketScanner: React.FC = () => {
       // Clear the last scanned reference after a delay to allow for testing
       setTimeout(() => {
         lastScannedRef.current = '';
-      }, 5000);
+      }, 1000);
     }
   };
 

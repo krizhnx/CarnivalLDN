@@ -14,6 +14,13 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
   // Safely handle missing tickets data
   const totalTickets = order.tickets?.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0) || 0;
 
+  // Handle click outside modal to close
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   const { events } = useAppStore();
 
   const handleDownload = async () => {
@@ -103,7 +110,7 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -142,14 +149,14 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <Mail className="h-4 w-4" />
-            <span>Confirmation & tickets sent to {order.customerEmail || 'your email'}</span>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Mail className="h-4 w-4 flex-shrink-0" />
+            <span className="font-semibold">Confirmation & tickets sent to {order.customerEmail || 'your email'}</span>
           </div>
           
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-            <Ticket className="h-4 w-4" />
-            <span>PDF tickets attached to your email</span>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Ticket className="h-4 w-4 flex-shrink-0" />
+            <span className="font-semibold">PDF tickets attached to your email</span>
           </div>
         </div>
 

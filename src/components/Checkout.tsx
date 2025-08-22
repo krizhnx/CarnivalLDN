@@ -26,10 +26,97 @@ interface CustomerInfo {
   email: string;
   phone: string;
   dateOfBirth: string;
-  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | '';
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
 }
 
 const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) => {
+  // Custom styles for better form appearance on all devices
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        background: transparent;
+        bottom: 0;
+        color: transparent;
+        cursor: pointer;
+        height: auto;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: auto;
+        opacity: 0;
+      }
+      
+      /* Ensure date picker opens on mobile */
+      input[type="date"] {
+        position: relative;
+      }
+      
+      /* Make the entire input clickable for date picker */
+      input[type="date"]::-webkit-calendar-picker-indicator:hover {
+        opacity: 0.1;
+      }
+      
+      input[type="date"]::-webkit-datetime-edit {
+        color: #374151;
+      }
+      
+      input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+        padding: 0;
+      }
+      
+      input[type="date"]::-webkit-datetime-edit-text {
+        color: #9CA3AF;
+        padding: 0 0.2em;
+      }
+      
+      input[type="date"]::-webkit-datetime-edit-month-field,
+      input[type="date"]::-webkit-datetime-edit-day-field,
+      input[type="date"]::-webkit-datetime-edit-year-field {
+        color: #374151;
+        padding: 0 0.2em;
+      }
+      
+      input[type="date"]::-webkit-inner-spin-button {
+        display: none;
+      }
+      
+      input[type="date"]::-webkit-clear-button {
+        display: none;
+      }
+      
+      /* iOS specific fixes */
+      input, select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border-radius: 8px;
+        font-size: 16px;
+      }
+      
+      /* Ensure consistent height on iOS */
+      input, select {
+        min-height: 48px;
+        line-height: 1.5;
+      }
+      
+      /* Fix iOS select dropdown styling */
+      select {
+        background-image: none;
+      }
+      
+      /* Ensure text inputs don't zoom on iOS */
+      input[type="text"], input[type="email"], input[type="tel"] {
+        font-size: 16px;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
   const stripe = useStripe();
   const elements = useElements();
   const [ticketSelections, setTicketSelections] = useState<TicketSelection[]>([]);
@@ -38,7 +125,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: '',
+    gender: 'male',
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,9 +186,32 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     if (!customerInfo.email?.trim()) validationErrors.push('Email is required');
     if (!customerInfo.phone?.trim()) validationErrors.push('Phone number is required');
     if (!customerInfo.dateOfBirth) validationErrors.push('Date of birth is required');
+    if (!customerInfo.gender) validationErrors.push('Gender is required');
+    
+    // Age validation - must be 18 or older
+    if (customerInfo.dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(customerInfo.dateOfBirth);
+      
+      // Check if the date is valid
+      if (isNaN(birthDate.getTime())) {
+        validationErrors.push('Please enter a valid date of birth');
+      } else {
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age < 18) {
+          validationErrors.push('You must be 18 years or older to purchase tickets');
+        }
+      }
+    }
     
     if (validationErrors.length > 0) {
-      setError(`Please fill in: ${validationErrors.join(', ')}`);
+      setError(validationErrors.join(', '));
       return;
     }
     
@@ -308,50 +418,122 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={customerInfo.name}
-            onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={customerInfo.email}
-            onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          <input
-            type="tel"
-            placeholder="Phone Number"
-            value={customerInfo.phone}
-            onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          <input
-            type="date"
-            placeholder="Date of Birth"
-            value={customerInfo.dateOfBirth}
-            onChange={(e) => setCustomerInfo({ ...customerInfo, dateOfBirth: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Full Name *
+            </label>
+            <input
+              id="name"
+              type="text"
+              placeholder="e.g. John Smith"
+              value={customerInfo.name}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+              className="w-full h-12 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none'
+              }}
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address *
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="e.g. john.smith@email.com"
+              value={customerInfo.email}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+              className="w-full h-12 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none'
+              }}
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number *
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              placeholder="e.g. 07123456789"
+              value={customerInfo.phone}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+              className="w-full h-12 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                appearance: 'none'
+              }}
+              required
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
+              Date of Birth *
+            </label>
+            <div className="relative">
+              <input
+                id="dateOfBirth"
+                type="date"
+                value={customerInfo.dateOfBirth}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, dateOfBirth: e.target.value })}
+                placeholder="Select date of birth"
+                className="w-full h-12 px-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer hover:border-blue-400 transition-colors shadow-sm"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none'
+                }}
+                required
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">You must be 18 years or older to purchase tickets</p>
+          </div>
+          
           <div className="md:col-span-2">
-            <select
-              value={customerInfo.gender}
-              onChange={(e) => setCustomerInfo({ ...customerInfo, gender: e.target.value as CustomerInfo['gender'] })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select Gender (Optional)</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-              <option value="prefer_not_to_say">Prefer not to say</option>
-            </select>
+            <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
+              Gender *
+            </label>
+            <div className="relative">
+              <select
+                id="gender"
+                value={customerInfo.gender}
+                onChange={(e) => setCustomerInfo({ ...customerInfo, gender: e.target.value as CustomerInfo['gender'] })}
+                className="w-full h-12 px-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer hover:border-blue-400 transition-colors"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none'
+                }}
+                required
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -68,6 +68,7 @@ module.exports = async function handler(req: any, res: any) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Extract metadata from payment intent
+    // Note: Customer info validation (including age 18+) was already performed in create-payment-intent
     const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender } = paymentIntent.metadata;
     const tickets: TicketMetadata[] = JSON.parse(ticketsMetadata);
 

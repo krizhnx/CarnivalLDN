@@ -16,6 +16,38 @@ module.exports = async function handler(req: any, res: any) {
         received: { eventId, tickets, customerInfo, totalAmount }
       });
     }
+    
+    // Validate customer info
+    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.dateOfBirth) {
+      return res.status(400).json({ 
+        error: 'Missing required customer information',
+        missing: {
+          name: !customerInfo.name,
+          email: !customerInfo.email,
+          phone: !customerInfo.phone,
+          dateOfBirth: !customerInfo.dateOfBirth
+        }
+      });
+    }
+    
+    // Age validation - must be 18 or older
+    if (customerInfo.dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(customerInfo.dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        return res.status(400).json({ 
+          error: 'You must be 18 years or older to purchase tickets',
+          age: age
+        });
+      }
+    }
 
     // Validate tickets array
     if (!Array.isArray(tickets) || tickets.length === 0) {
