@@ -5,7 +5,6 @@ import { CheckCircle, XCircle, User, Calendar, MapPin, Ticket, ArrowLeft } from 
 import { TicketValidationResult, QRCodeData } from '../types';
 import { useAppStore } from '../store/supabaseStore';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
 
 const TicketScanner: React.FC = () => {
   const navigate = useNavigate();
@@ -51,14 +50,12 @@ const TicketScanner: React.FC = () => {
     // Prevent duplicate scans of the same QR code
     if (lastScannedRef.current === decodedText) {
       console.log('🚫 Duplicate QR code detected, ignoring');
-      toast.error('Duplicate scan detected - please wait');
       return;
     }
     
     // Prevent multiple simultaneous processing
     if (processingRef.current || isProcessing) {
       console.log('🚫 Already processing, ignoring scan');
-      toast.error('Already processing - please wait');
       return;
     }
     
@@ -90,8 +87,6 @@ const TicketScanner: React.FC = () => {
           notes: ''
         });
         
-        toast.success('Ticket scanned successfully for entry!');
-        
         // Add to scan history
         const scanWithMetadata = {
           ...validation,
@@ -100,12 +95,7 @@ const TicketScanner: React.FC = () => {
         };
         setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
       } else {
-        // Invalid ticket or already scanned - show error
-        if (validation.message.includes('already scanned')) {
-          toast.error('Ticket already scanned for entry');
-        } else {
-          toast.error(validation.message);
-        }
+        // Invalid ticket or already scanned - no toast needed
       }
       
       setScanResult(validation);
@@ -120,7 +110,6 @@ const TicketScanner: React.FC = () => {
       
     } catch (error) {
       console.error('Scan error:', error);
-      toast.error('Failed to process QR code');
       setScanResult({
         isValid: false,
         message: 'Invalid QR code format',
