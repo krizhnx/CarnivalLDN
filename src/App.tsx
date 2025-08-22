@@ -15,6 +15,7 @@ import Dashboard from './components/Dashboard'
 import EventsPage from './components/EventsPage'
 import ScannerPage from './pages/ScannerPage'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
+import NotFound from './components/NotFound'
 import { useAppStore } from './store/supabaseStore'
 
 function HomePage() {
@@ -80,6 +81,9 @@ function App() {
           path="/analytics"
           element={<AnalyticsDashboard />}
         />
+        
+        {/* Catch-all route for 404 */}
+        <Route path="*" element={<NotFound />} />
 
       </Routes>
       <Analytics />
