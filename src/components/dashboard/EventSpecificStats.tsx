@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Calendar, MapPin, Star, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download, Search, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Event, Order } from '../../types';
+import OrderDetailsModal from './OrderDetailsModal';
 
 
 interface EventSpecificStatsProps {
@@ -15,6 +16,8 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const formatCurrency = (amount: number) => `£${(amount / 100).toFixed(2)}`;
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
@@ -172,6 +175,16 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
   const handleRecordsPerPageChange = (records: number) => {
     setRecordsPerPage(records);
     setCurrentPage(1);
+  };
+
+  const handleOrderClick = (order: Order) => {
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
   };
 
   // Export sales info for the event
@@ -790,8 +803,12 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
+                                     {currentOrders.map((order) => (
+                     <tr 
+                       key={order.id} 
+                       className="hover:bg-gray-50 cursor-pointer transition-colors"
+                       onClick={() => handleOrderClick(order)}
+                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">
                         {order.id?.slice(0, 8)}...
                       </td>
@@ -924,11 +941,19 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
           <div className="text-center py-8 text-gray-500">
             <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p>No orders found for this event</p>
-          </div>
-        )}
-      </motion.div>
-    </div>
-  );
-};
+                     </div>
+         )}
+       </motion.div>
+
+       {/* Order Details Modal */}
+       <OrderDetailsModal
+         order={selectedOrder}
+         event={event}
+         isOpen={isModalOpen}
+         onClose={handleCloseModal}
+       />
+     </div>
+   );
+ };
 
 export default EventSpecificStats;
