@@ -16,6 +16,9 @@ import EventsPage from './components/EventsPage'
 import ScannerPage from './pages/ScannerPage'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 import NotFound from './components/NotFound'
+import PrivacyPolicy from './components/PrivacyPolicy'
+import TermsOfService from './components/TermsOfService'
+import CookiePolicy from './components/CookiePolicy'
 import { useAppStore } from './store/supabaseStore'
 
 function HomePage() {
@@ -81,6 +84,11 @@ function App() {
           path="/analytics"
           element={<AnalyticsDashboard />}
         />
+        
+        {/* Legal Pages */}
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
         
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFound />} />
