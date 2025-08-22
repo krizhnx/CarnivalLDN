@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Analytics } from '@vercel/analytics/react'
 import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
+import { initGA, trackPageView } from './lib/googleAnalytics'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import Events from './components/Events'
@@ -13,12 +14,19 @@ import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import EventsPage from './components/EventsPage'
 import ScannerPage from './pages/ScannerPage'
+import AnalyticsDashboard from './components/AnalyticsDashboard'
 import { useAppStore } from './store/supabaseStore'
 
 function HomePage() {
   const { getEvents, subscribeToEvents } = useAppStore()
 
   useEffect(() => {
+    // Initialize Google Analytics
+    initGA()
+    
+    // Track page view
+    trackPageView('/', 'Carnival LDN - Home')
+    
     // Load events on mount
     getEvents()
     
@@ -67,6 +75,10 @@ function App() {
         <Route
           path="/scanner"
           element={<ScannerPage />}
+        />
+        <Route
+          path="/analytics"
+          element={<AnalyticsDashboard />}
         />
 
       </Routes>

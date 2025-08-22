@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar, MapPin, Clock, ArrowRight } from 'lucide-react'
 import { useAppStore } from '../store/supabaseStore'
 import { useNavigate } from 'react-router-dom'
 import { Event } from '../types'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
+import { trackPageView, trackTicketView, trackButtonClick } from '../lib/googleAnalytics'
 
 const Events = () => {
   const { events } = useAppStore();
@@ -12,7 +14,14 @@ const Events = () => {
   // Glitch effect for title
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect();
 
+  // Track page view when component mounts
+  useEffect(() => {
+    trackPageView('/events', 'Carnival LDN - Events');
+  }, []);
+
   const handleEventClick = (event: Event) => {
+    // Track event view for analytics
+    trackTicketView(event.id, event.title);
     // Navigate to events page with event ID to open modal
     navigate(`/events?event=${event.id}`);
   };
@@ -166,18 +175,20 @@ const Events = () => {
                 </div>
 
                 {/* Info Only CTA Button */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEventClick(event);
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 hover:from-gray-800 hover:via-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-sm md:text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl group-hover:shadow-2xl"
-                >
-                  <span>Get Tickets</span>
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </motion.button>
+                                 <motion.button
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     // Track button click for analytics
+                     trackButtonClick('Get Tickets', `Events Section - ${event.title}`);
+                     handleEventClick(event);
+                   }}
+                   whileHover={{ scale: 1.02 }}
+                   whileTap={{ scale: 0.98 }}
+                   className="w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 hover:from-gray-800 hover:via-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-sm md:text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl group-hover:shadow-2xl"
+                 >
+                   <span>Get Tickets</span>
+                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                 </motion.button>
               </div>
             </motion.div>
           ))}

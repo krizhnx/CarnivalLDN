@@ -196,3 +196,15 @@ export interface GuestlistQRData {
   leadEmail: string;
   leadName: string;
 }
+
+// Google Analytics types
+declare global {
+  interface Window {
+    gtag: (
+      command: 'config' | 'event' | 'js',
+      targetId: string,
+      config?: any
+    ) => void;
+    dataLayer: any[];
+  }
+}

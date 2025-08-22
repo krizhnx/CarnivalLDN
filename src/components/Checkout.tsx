@@ -4,6 +4,7 @@ import { X, Lock, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Event, TicketTier, Order } from '../types';
+import { /* trackPageView, */ trackBeginCheckout, trackPurchase } from '../lib/googleAnalytics';
 // import { formatPrice } from '../lib/stripe';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51OyBk9IgkIAGwv6wTnbqfLaivBQ0wYCltGf0gS4yeEZpxkD1f5jKEwarmr294R0LXNEzEMNxHuCKLRpMH8DYgaWD00g8BPRDAG');
@@ -110,6 +111,17 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     setIsProcessing(true);
     setError(null);
 
+    // Track checkout begin for analytics
+    const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
+    const totalValue = getTotalAmount();
+    const items = selectedTickets.map(selection => ({
+      tier: selection.tier.name,
+      price: selection.tier.price,
+      quantity: selection.quantity
+    }));
+    
+    trackBeginCheckout(event.id, event.title, totalValue, items);
+
     try {
       // Create payment intent
       const response = await fetch('/api/create-payment-intent', {
@@ -191,6 +203,17 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             createdAt: new Date(),
             updatedAt: new Date(),
           };
+          
+          // Track successful purchase for analytics
+          const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
+          const totalValue = getTotalAmount();
+          const items = selectedTickets.map(selection => ({
+            tier: selection.tier.name,
+            price: selection.tier.price,
+            quantity: selection.quantity
+          }));
+          
+          trackPurchase(order.id, event.id, event.title, totalValue, items);
           
           onSuccess(order);
         }

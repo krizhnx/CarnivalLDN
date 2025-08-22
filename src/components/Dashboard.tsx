@@ -3,6 +3,7 @@ import { useAppStore } from '../store/supabaseStore';
 import { Event, Order } from '../types';
 import EventForm from './EventForm';
 import toast from 'react-hot-toast';
+import { BarChart3 } from 'lucide-react';
 import {
   DashboardHeader,
   DashboardStats,
@@ -494,6 +495,28 @@ const Dashboard = () => {
         onTabChange={setActiveTab}
         onRefresh={loadDashboardData}
       />
+
+      {/* Analytics Dashboard Link */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <BarChart3 className="h-6 w-6 text-blue-600" />
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900">Google Analytics Dashboard</h3>
+                <p className="text-blue-700 text-sm">Track real-time visitor behavior, conversions, and revenue insights</p>
+              </div>
+            </div>
+            <a
+              href="/analytics"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>View Analytics</span>
+            </a>
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'analytics' && (
