@@ -315,27 +315,59 @@ export const useAppStore = create<AppState>()(
 
           const isArchived = (eventRow as any)?.is_archived === true
 
-          // Prevent deleting events that have orders
+          // Prevent deleting non-archived events
           if (!isArchived) {
-            const { data: eventOrders, error: eventOrdersError } = await supabase
-              .from('orders')
-              .select('id')
-              .eq('event_id', id)
+            toast.error('Cannot delete: Only archived events can be deleted. Please archive the event first.')
+            const error: any = new Error('Cannot delete non-archived events')
+            error.code = 'EVENT_NOT_ARCHIVED'
+            throw error
+          }
 
-            if (eventOrdersError) {
-              console.error('Error checking event orders before delete:', eventOrdersError)
-            }
+          // Check if event has any data that would prevent deletion
+          const { data: eventOrders, error: eventOrdersError } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('event_id', id)
 
-            if ((eventOrders || []).length > 0) {
-              const error: any = new Error('Event has associated orders and cannot be deleted without handling dependencies')
-              error.code = 'EVENT_HAS_ORDERS'
-              throw error
-            }
+          if (eventOrdersError) {
+            console.error('Error checking event orders before delete:', eventOrdersError)
+          }
+
+          if ((eventOrders || []).length > 0) {
+            console.log(`📊 Event has ${(eventOrders || []).length} orders - proceeding with deletion of all related data`)
           }
 
           // If archived, hard-delete dependent data first to avoid FK conflicts
           if (isArchived) {
-            // Collect order ids for this event
+            console.log(`🗑️ Deleting archived event ${id} and all related data...`)
+            
+            // Delete in reverse dependency order to avoid FK conflicts
+            
+            // 1. Delete ticket_scans first (they reference both orders and events)
+            const { error: scansDeleteError } = await supabase
+              .from('ticket_scans')
+              .delete()
+              .eq('event_id', id)
+
+            if (scansDeleteError) {
+              console.error('Error deleting ticket_scans for event:', scansDeleteError)
+            } else {
+              console.log('✅ Deleted ticket_scans for event')
+            }
+
+            // 2. Delete guestlist_scans (they reference events)
+            const { error: guestlistScansError } = await supabase
+              .from('guestlist_scans')
+              .delete()
+              .eq('event_id', id)
+
+            if (guestlistScansError) {
+              console.error('Error deleting guestlist_scans for event:', guestlistScansError)
+            } else {
+              console.log('✅ Deleted guestlist_scans for event')
+            }
+
+            // 3. Collect order ids for this event
             const { data: ordersToDelete, error: ordersToDeleteError } = await supabase
               .from('orders')
               .select('id')
@@ -348,7 +380,9 @@ export const useAppStore = create<AppState>()(
             const orderIds = (ordersToDelete || []).map(o => o.id)
 
             if (orderIds.length > 0) {
-              // Delete order_tickets referencing those orders
+              console.log(`🗑️ Deleting ${orderIds.length} orders and related data...`)
+              
+              // 4. Delete order_tickets referencing those orders
               const { error: otDeleteError } = await supabase
                 .from('order_tickets')
                 .delete()
@@ -356,9 +390,11 @@ export const useAppStore = create<AppState>()(
 
               if (otDeleteError) {
                 console.error('Error deleting order_tickets for event:', otDeleteError)
+              } else {
+                console.log('✅ Deleted order_tickets for event')
               }
 
-              // Delete orders for the event
+              // 5. Delete orders for the event
               const { error: ordersDeleteError } = await supabase
                 .from('orders')
                 .delete()
@@ -366,7 +402,21 @@ export const useAppStore = create<AppState>()(
 
               if (ordersDeleteError) {
                 console.error('Error deleting orders for event:', ordersDeleteError)
+              } else {
+                console.log('✅ Deleted orders for event')
               }
+            }
+
+            // 6. Delete guestlists for this event
+            const { error: guestlistsError } = await supabase
+              .from('guestlists')
+              .delete()
+              .eq('event_id', id)
+
+            if (guestlistsError) {
+              console.error('Error deleting guestlists for event:', guestlistsError)
+            } else {
+              console.log('✅ Deleted guestlists for event')
             }
           }
 
@@ -391,11 +441,17 @@ export const useAppStore = create<AppState>()(
 
           // Refresh events
           await get().getEvents()
+          
+          toast.success('Event deleted successfully')
         } catch (error) {
           console.error('Error deleting event:', error)
           // @ts-ignore - error shape at runtime
           if ((error as any)?.code === 'EVENT_HAS_ORDERS') {
             toast.error('Cannot delete: this event has existing orders. Consider archiving it or enabling cascade deletes in Supabase.')
+          } else if ((error as any)?.code === 'EVENT_NOT_ARCHIVED') {
+            // This error is already handled with a toast above
+          } else if ((error as any)?.code === '23503') {
+            toast.error('Cannot delete event: There are still references to this event in the system. Please contact support if this persists.')
           } else {
             toast.error('Failed to delete event')
           }
