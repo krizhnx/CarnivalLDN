@@ -89,8 +89,9 @@ module.exports = async function handler(req: any, res: any) {
 
     console.log('✅ Event verified:', event.title);
 
-    // Generate unique guestlist ID
-    const guestlistId = `guestlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate unique guestlist ID (UUID v4)
+    const uuid = require('uuid');
+    const guestlistId = uuid.v4();
     console.log('🆔 Generated guestlist ID:', guestlistId);
 
     // Create QR code data
