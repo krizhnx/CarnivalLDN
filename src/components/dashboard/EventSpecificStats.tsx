@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Star, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download } from 'lucide-react';
+import { Calendar, MapPin, Star, TrendingUp, Users, DollarSign, Calendar as CalendarIcon, Download, Search, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Event, Order } from '../../types';
+
 
 interface EventSpecificStatsProps {
   events: Event[];
@@ -13,6 +14,7 @@ interface EventSpecificStatsProps {
 const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }: EventSpecificStatsProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(5);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const formatCurrency = (amount: number) => `£${(amount / 100).toFixed(2)}`;
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
@@ -22,6 +24,56 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
 
   // Filter orders for this specific event
   const eventOrders = orders.filter(order => order.eventId === selectedEvent);
+
+  // Filter orders based on search term
+  const filteredOrders = eventOrders.filter(order => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      order.customerName?.toLowerCase().includes(searchLower) ||
+      order.customerEmail?.toLowerCase().includes(searchLower) ||
+      order.id?.toLowerCase().includes(searchLower)
+    );
+  });
+
+
+
+  // Get scan status display
+  const getScanStatusDisplay = (order: Order) => {
+    if (!order.scans || order.scans.length === 0) {
+      return { text: 'Not Scanned', color: 'text-gray-500', icon: Clock };
+    }
+
+    const entryScans = order.scans.filter(s => s.scanType === 'entry');
+    const exitScans = order.scans.filter(s => s.scanType === 'exit');
+    const lastScan = order.scans[0]; // Most recent scan
+
+    if (entryScans.length > 0 && exitScans.length > 0) {
+      return { 
+        text: 'Scanned In & Out', 
+        color: 'text-blue-600', 
+        icon: CheckCircle,
+        time: new Date(lastScan.scannedAt).toLocaleTimeString()
+      };
+    } else if (entryScans.length > 0) {
+      return { 
+        text: 'Scanned In', 
+        color: 'text-green-600', 
+        icon: CheckCircle,
+        time: new Date(lastScan.scannedAt).toLocaleTimeString()
+      };
+    } else if (exitScans.length > 0) {
+      return { 
+        text: 'Scanned Out', 
+        color: 'text-orange-600', 
+        icon: XCircle,
+        time: new Date(lastScan.scannedAt).toLocaleTimeString()
+      };
+    }
+
+    return { text: 'Not Scanned', color: 'text-gray-500', icon: Clock };
+  };
 
   // Calculate event-specific stats
   const eventStats = {
@@ -98,10 +150,10 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
   };
 
   // Pagination for orders table
-  const totalPages = Math.ceil(eventOrders.length / recordsPerPage);
+  const totalPages = Math.ceil(filteredOrders.length / recordsPerPage);
   const startIndex = (currentPage - 1) * recordsPerPage;
   const endIndex = startIndex + recordsPerPage;
-  const currentOrders = eventOrders.slice(startIndex, endIndex);
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -117,6 +169,10 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
     const salesData = eventOrders.map(order => {
       const orderTickets = order.tickets?.map(ticket => {
         const tier = event.ticketTiers?.find(t => t.id === ticket.ticketTierId);
+        const scanStatus = getScanStatusDisplay(order);
+        const lastScanTime = order.scans && order.scans.length > 0 ? 
+          new Date(order.scans[0].scannedAt).toLocaleString() : 'Never';
+        
         return {
           'Order ID': order.id?.slice(0, 8) || 'N/A',
           'Customer Name': order.customerName || 'N/A',
@@ -126,6 +182,8 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
           'Unit Price': tier ? `£${(tier.price / 100).toFixed(2)}` : 'N/A',
           'Total Price': `£${((ticket.totalPrice || 0) / 100).toFixed(2)}`,
           'Order Status': order.status || 'N/A',
+          'Scan Status': scanStatus.text,
+          'Last Scan Time': lastScanTime,
           'Order Date': new Date(order.createdAt).toLocaleDateString(),
           'Order Time': new Date(order.createdAt).toLocaleTimeString()
         };
@@ -136,9 +194,9 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
 
     if (salesData.length > 0) {
       const csvContent = [
-        'Order ID,Customer Name,Customer Email,Ticket Tier,Quantity,Unit Price,Total Price,Order Status,Order Date,Order Time',
+        'Order ID,Customer Name,Customer Email,Ticket Tier,Quantity,Unit Price,Total Price,Order Status,Scan Status,Last Scan Time,Order Date,Order Time',
         ...salesData.map(row =>
-          `${row['Order ID']},${row['Customer Name']},${row['Customer Email']},${row['Ticket Tier']},${row['Quantity']},${row['Unit Price']},${row['Total Price']},${row['Order Status']},${row['Order Date']},${row['Order Time']}`
+          `${row['Order ID']},${row['Customer Name']},${row['Customer Email']},${row['Ticket Tier']},${row['Quantity']},${row['Unit Price']},${row['Total Price']},${row['Order Status']},${row['Scan Status']},${row['Last Scan Time']},${row['Order Date']},${row['Order Time']}`
         )
       ].join('\n');
 
@@ -432,6 +490,25 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
 
 
 
+      {/* Ticket Search Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+        className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">Search Tickets</h3>
+          <div className="flex items-center gap-2">
+            <Search className="h-5 w-5 text-gray-400" />
+            <span className="px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full border border-purple-200">
+              Quick Find
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+
       {/* Event Orders Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -439,29 +516,33 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
         transition={{ delay: 0.9 }}
         className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Event Orders</h3>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Show:</label>
-              <select
-                value={recordsPerPage}
-                onChange={(e) => handleRecordsPerPageChange(Number(e.target.value))}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Event Orders</h3>
+            
+            {/* Search Bar */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reset to first page when searching
+                  }}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                />
+              </div>
+              <button
+                onClick={exportSalesInfo}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-              </select>
-              <span className="text-sm text-gray-600">records</span>
+                <Download className="h-4 w-4" />
+                Export Sales Info
+              </button>
             </div>
-            <button
-              onClick={exportSalesInfo}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-            >
-              <Download className="h-4 w-4" />
-              Export Sales Info
-            </button>
           </div>
         </div>
 
@@ -476,6 +557,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tickets</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Scan Status</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   </tr>
                 </thead>
@@ -517,6 +599,23 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
                           {order.status || 'N/A'}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {(() => {
+                          const scanStatus = getScanStatusDisplay(order);
+                          const IconComponent = scanStatus.icon;
+                          return (
+                            <div className="flex flex-col items-center gap-1">
+                              <div className={`flex items-center gap-1 ${scanStatus.color}`}>
+                                <IconComponent className="h-4 w-4" />
+                                <span className="text-xs font-medium">{scanStatus.text}</span>
+                              </div>
+                              {scanStatus.time && (
+                                <span className="text-xs text-gray-500">{scanStatus.time}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </td>
@@ -526,41 +625,70 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-700">
-                Showing {startIndex + 1} to {Math.min(endIndex, eventOrders.length)} of {eventOrders.length} results
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-1 text-sm font-medium rounded-md ${
-                        page === currentPage
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+            {/* Pagination and Records Per Page */}
+            <div className="px-6 py-4 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                {/* Records per page selector - Bottom Left */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Show:</label>
+                  <select
+                    value={recordsPerPage}
+                    onChange={(e) => handleRecordsPerPageChange(Number(e.target.value))}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span className="text-sm text-gray-600">records</span>
                 </div>
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
+
+                {/* Pagination Info and Controls - Bottom Right */}
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-700">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
+                    {searchTerm && (
+                      <span className="ml-2 text-blue-600">
+                        (filtered from {eventOrders.length} total)
+                      </span>
+                    )}
+                  </div>
+                  
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-1 text-sm font-medium rounded-md ${
+                              page === currentPage
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>

@@ -46,6 +46,8 @@ export interface Order {
   customerName: string;
   createdAt: Date;
   updatedAt: Date;
+  // Add scan information
+  scans?: TicketScan[];
 }
 
 export interface OrderTicket {
@@ -129,4 +131,22 @@ export interface QRCodeData {
   ticketTierId: string;
   quantity: number;
   customer: string;
+}
+
+// New interface for ticket search results
+export interface TicketSearchResult {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventDate: string;
+  eventVenue: string;
+  ticketTierName: string;
+  quantity: number;
+  totalPrice: number;
+  orderStatus: string;
+  orderDate: Date;
+  scans: TicketScan[];
+  lastScanTime?: Date;
+  scanStatus: 'not_scanned' | 'scanned_in' | 'scanned_out' | 'scanned_both';
 }

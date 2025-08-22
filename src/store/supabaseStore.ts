@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
-import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan } from '../types'
+import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan, TicketSearchResult } from '../types'
 import toast from 'react-hot-toast'
 
 interface AppState extends AuthState {
@@ -24,6 +24,8 @@ interface AppState extends AuthState {
   validateTicket: (orderId: string, ticketTierId: string, customerEmail: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
   recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
   debugTicketData: (orderId: string, ticketTierId: string) => Promise<string>
+  // Ticket search actions
+  searchTickets: (searchTerm: string) => Promise<TicketSearchResult[]>
 }
 
 // Hardcoded admin credentials
@@ -435,7 +437,7 @@ export const useAppStore = create<AppState>()(
 
       getOrders: async () => {
         try {
-          console.log('🔄 Fetching orders with tickets...')
+          console.log('🔄 Fetching orders with tickets and scans...')
 
           // Fetch orders
           const { data: ordersData, error: ordersError } = await supabase
@@ -445,9 +447,10 @@ export const useAppStore = create<AppState>()(
 
           if (ordersError) throw ordersError
 
-          // For each order, fetch its tickets and map to frontend shape
+          // For each order, fetch its tickets and scans and map to frontend shape
           const mappedOrders: Order[] = await Promise.all(
             (ordersData || []).map(async (orderRow: any) => {
+              // Fetch tickets for this order
               const { data: ticketsData, error: ticketsError } = await supabase
                 .from('order_tickets')
                 .select('*')
@@ -466,6 +469,30 @@ export const useAppStore = create<AppState>()(
                 totalPrice: t.total_price,
               }))
 
+              // Fetch scans for this order
+              const { data: scansData, error: scansError } = await supabase
+                .from('ticket_scans')
+                .select('*')
+                .eq('order_id', orderRow.id)
+                .order('scanned_at', { ascending: false })
+
+              if (scansError) {
+                console.error('Error fetching scans for order:', orderRow.id, scansError)
+              }
+
+              const scans = (scansData || []).map((s: any) => ({
+                id: s.id,
+                orderId: s.order_id,
+                ticketTierId: s.ticket_tier_id,
+                customerEmail: s.customer_email,
+                eventId: s.event_id,
+                scanType: s.scan_type,
+                scannedAt: s.scanned_at,
+                scannedBy: s.scanned_by,
+                location: s.location,
+                notes: s.notes,
+              }))
+
               const mapped: Order = {
                 id: orderRow.id,
                 eventId: orderRow.event_id,
@@ -479,13 +506,14 @@ export const useAppStore = create<AppState>()(
                 customerName: orderRow.customer_name,
                 createdAt: orderRow.created_at,
                 updatedAt: orderRow.updated_at,
+                scans,
               }
 
               return mapped
             })
           )
 
-          console.log('📦 Orders with tickets (mapped):', mappedOrders)
+          console.log('📦 Orders with tickets and scans (mapped):', mappedOrders)
           set({ orders: mappedOrders })
         } catch (error) {
           console.error('Error fetching orders:', error)
@@ -785,6 +813,109 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error('Error recording ticket scan:', error);
           throw error;
+        }
+      },
+
+      // Search for specific tickets
+      searchTickets: async (searchTerm: string): Promise<TicketSearchResult[]> => {
+        try {
+          console.log('🔍 Searching for tickets with term:', searchTerm)
+          
+          // Search in orders table by customer name, email, or order ID
+          const { data: ordersData, error: ordersError } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              events!inner(title, date, venue),
+              ticket_tiers!inner(name)
+            `)
+            .or(`customer_name.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
+            .order('created_at', { ascending: false })
+
+          if (ordersError) throw ordersError
+
+          // For each matching order, fetch detailed information
+          const searchResults = await Promise.all(
+            (ordersData || []).map(async (orderRow: any) => {
+              // Fetch tickets for this order
+              const { data: ticketsData, error: ticketsError } = await supabase
+                .from('order_tickets')
+                .select('*')
+                .eq('order_id', orderRow.id)
+
+              if (ticketsError) {
+                console.error('Error fetching tickets for order:', orderRow.id, ticketsError)
+              }
+
+              // Fetch scans for this order
+              const { data: scansData, error: scansError } = await supabase
+                .from('ticket_scans')
+                .select('*')
+                .eq('order_id', orderRow.id)
+                .order('scanned_at', { ascending: false })
+
+              if (scansError) {
+                console.error('Error fetching scans for order:', orderRow.id, scansError)
+              }
+
+              const scans = (scansData || []).map((s: any) => ({
+                id: s.id,
+                orderId: s.order_id,
+                ticketTierId: s.ticket_tier_id,
+                customerEmail: s.customer_email,
+                eventId: s.event_id,
+                scanType: s.scan_type,
+                scannedAt: s.scanned_at,
+                scannedBy: s.scanned_by,
+                location: s.location,
+                notes: s.notes,
+              }))
+
+              // Determine scan status
+              const entryScans = scans.filter(s => s.scanType === 'entry')
+              const exitScans = scans.filter(s => s.scanType === 'exit')
+              let scanStatus: 'not_scanned' | 'scanned_in' | 'scanned_out' | 'scanned_both' = 'not_scanned'
+              
+              if (entryScans.length > 0 && exitScans.length > 0) {
+                scanStatus = 'scanned_both'
+              } else if (entryScans.length > 0) {
+                scanStatus = 'scanned_in'
+              } else if (exitScans.length > 0) {
+                scanStatus = 'scanned_out'
+              }
+
+              const lastScanTime = scans.length > 0 ? new Date(scans[0].scannedAt) : undefined
+
+              // Create result for each ticket in the order
+              const ticketResults: TicketSearchResult[] = (ticketsData || []).map((ticket: any) => ({
+                orderId: orderRow.id,
+                customerName: orderRow.customer_name || 'N/A',
+                customerEmail: orderRow.customer_email || 'N/A',
+                eventTitle: orderRow.events?.title || 'N/A',
+                eventDate: orderRow.events?.date || 'N/A',
+                eventVenue: orderRow.events?.venue || 'N/A',
+                ticketTierName: ticket.ticket_tier_id || 'N/A',
+                quantity: ticket.quantity || 0,
+                totalPrice: ticket.total_price || 0,
+                orderStatus: orderRow.status || 'N/A',
+                orderDate: new Date(orderRow.created_at),
+                scans,
+                lastScanTime,
+                scanStatus,
+              }))
+
+              return ticketResults
+            })
+          )
+
+          // Flatten the results since each order can have multiple tickets
+          const flattenedResults: TicketSearchResult[] = searchResults.flat()
+          console.log('🔍 Search results:', flattenedResults)
+          return flattenedResults
+
+        } catch (error) {
+          console.error('Error searching tickets:', error)
+          return []
         }
       },
 
