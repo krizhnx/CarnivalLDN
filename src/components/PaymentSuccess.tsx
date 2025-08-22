@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Ticket, Mail, Download } from 'lucide-react';
+import { CheckCircle, Ticket, Download } from 'lucide-react';
 import { Order } from '../types';
 import { useAppStore } from '../store/supabaseStore';
 import jsPDF from 'jspdf';
@@ -149,14 +149,13 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Mail className="h-4 w-4 flex-shrink-0" />
-            <span className="font-semibold">Confirmation & tickets sent to {order.customerEmail || 'your email'}</span>
+          <div className="text-sm text-gray-600">
+            Confirmation & tickets sent to <span className="font-semibold text-black">{order.customerEmail || 'your email'}</span>
           </div>
           
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <Ticket className="h-4 w-4 flex-shrink-0" />
-            <span className="font-semibold">PDF tickets attached to your email</span>
+            <span>PDF tickets attached to your email</span>
           </div>
         </div>
 
