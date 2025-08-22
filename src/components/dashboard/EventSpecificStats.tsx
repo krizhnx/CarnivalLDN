@@ -24,6 +24,16 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
 
   // Filter orders for this specific event
   const eventOrders = orders.filter(order => order.eventId === selectedEvent);
+  
+  // Debug: Log the orders data to see what we're working with
+  console.log('🔍 EventSpecificStats Debug:', {
+    selectedEvent,
+    totalOrders: orders.length,
+    eventOrdersCount: eventOrders.length,
+    sampleOrder: eventOrders[0],
+    ordersWithAge: eventOrders.filter(o => o.customerDateOfBirth).length,
+    ordersWithGender: eventOrders.filter(o => o.customerGender).length
+  });
 
   // Filter orders based on search term
   const filteredOrders = eventOrders.filter(order => {
@@ -337,13 +347,247 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
         </motion.div>
             </div>
 
+             {/* Customer Demographics Charts */}
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+         {/* Age Distribution Card */}
+         <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.6 }}
+           className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+         >
+           <h3 className="text-lg font-semibold text-gray-900 mb-6">Age Distribution</h3>
+           {(() => {
+                           // Calculate age distribution
+              const ageGroups = {
+                '18-24': 0,
+                '25-34': 0,
+                '35-44': 0,
+                '45+': 0
+              };
+
+             let totalWithAge = 0;
+             eventOrders.forEach(order => {
+               if (order.customerDateOfBirth) {
+                 const birthDate = new Date(order.customerDateOfBirth);
+                 const today = new Date();
+                 let age = today.getFullYear() - birthDate.getFullYear();
+                 const monthDiff = today.getMonth() - birthDate.getMonth();
+                 
+                 if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                   age--;
+                 }
+
+                                   if (age >= 18 && age <= 24) ageGroups['18-24']++;
+                  else if (age >= 25 && age <= 34) ageGroups['25-34']++;
+                  else if (age >= 35 && age <= 44) ageGroups['35-44']++;
+                  else if (age >= 45) ageGroups['45+']++;
+                 
+                 totalWithAge++;
+               }
+             });
+
+                           const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+             const total = Object.values(ageGroups).reduce((sum, count) => sum + count, 0);
+
+                           return total > 0 ? (
+                <div className="flex gap-8 items-center">
+                  {/* Donut Chart - Left Side */}
+                  <div className="flex-shrink-0">
+                    <div className="relative w-56 h-56">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        {Object.entries(ageGroups).map(([group, count], index) => {
+                          const percentage = total > 0 ? (count / total) * 100 : 0;
+                          const circumference = 2 * Math.PI * 45;
+                          const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
+                          const offset = index === 0 ? 0 : 
+                            Object.entries(ageGroups).slice(0, index).reduce((sum, [_, prevCount]) => 
+                              sum + (prevCount / total) * 100, 0) * circumference / 100;
+                          
+                          return (
+                            <circle
+                              key={group}
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              fill="none"
+                              stroke={colors[index]}
+                              strokeWidth="8"
+                              strokeDasharray={strokeDasharray}
+                              strokeDashoffset={-offset}
+                              className={`transition-all duration-300 hover:stroke-width-10 ${
+                                count === 0 ? 'opacity-30' : ''
+                              }`}
+                            />
+                          );
+                        })}
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-gray-900">{total}</div>
+                          <div className="text-sm text-gray-600">Customers</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legend - Right Side */}
+                  <div className="flex-1 space-y-2">
+                    {Object.entries(ageGroups).map(([group, count], index) => {
+                      const percentage = total > 0 ? (count / total) * 100 : 0;
+                      return (
+                        <div key={group} className={`flex items-center justify-between p-2 rounded-lg ${
+                          count === 0 ? 'bg-gray-100 opacity-60' : 'bg-gray-50'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-4 h-4 rounded-full" 
+                              style={{ backgroundColor: colors[index] }}
+                            />
+                            <span className={`text-sm font-medium ${
+                              count === 0 ? 'text-gray-500' : 'text-gray-700'
+                            }`}>{group}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-sm font-bold ${
+                              count === 0 ? 'text-gray-400' : 'text-gray-900'
+                            }`}>{count}</div>
+                            <div className={`text-xs ${
+                              count === 0 ? 'text-gray-400' : 'text-gray-500'
+                            }`}>{percentage.toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+             ) : (
+               <div className="text-center py-8 text-gray-500">
+                 <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                 <p>No age data available</p>
+               </div>
+             );
+           })()}
+         </motion.div>
+
+         {/* Gender Distribution Card */}
+         <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.7 }}
+           className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+         >
+           <h3 className="text-lg font-semibold text-gray-900 mb-6">Gender Distribution</h3>
+           {(() => {
+             // Calculate gender distribution
+             const genderCounts = {
+               'male': 0,
+               'female': 0,
+               'other': 0,
+               'prefer_not_to_say': 0
+             };
+
+             let totalWithGender = 0;
+             eventOrders.forEach(order => {
+               if (order.customerGender) {
+                 genderCounts[order.customerGender]++;
+                 totalWithGender++;
+               }
+             });
+
+             const colors = ['#3B82F6', '#EC4899', '#10B981', '#6B7280'];
+             const total = Object.values(genderCounts).reduce((sum, count) => sum + count, 0);
+
+                           return total > 0 ? (
+                <div className="flex gap-8 items-center">
+                  {/* Donut Chart - Left Side */}
+                  <div className="flex-shrink-0">
+                    <div className="relative w-56 h-56">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        {Object.entries(genderCounts).map(([gender, count], index) => {
+                          const percentage = total > 0 ? (count / total) * 100 : 0;
+                          const circumference = 2 * Math.PI * 45;
+                          const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
+                          const offset = index === 0 ? 0 : 
+                            Object.entries(genderCounts).slice(0, index).reduce((sum, [_, prevCount]) => 
+                              sum + (prevCount / total) * 100, 0) * circumference / 100;
+                          
+                          return (
+                            <circle
+                              key={gender}
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              fill="none"
+                              stroke={colors[index]}
+                              strokeWidth="8"
+                              strokeDasharray={strokeDasharray}
+                              strokeDashoffset={-offset}
+                              className={`transition-all duration-300 hover:stroke-width-10 ${
+                                count === 0 ? 'opacity-30' : ''
+                              }`}
+                            />
+                          );
+                        })}
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-gray-900">{total}</div>
+                          <div className="text-sm text-gray-600">Customers</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legend - Right Side */}
+                  <div className="flex-1 space-y-2">
+                    {Object.entries(genderCounts).map(([gender, count], index) => {
+                      const percentage = total > 0 ? (count / total) * 100 : 0;
+                      const genderLabel = gender === 'prefer_not_to_say' ? 'Prefer not to say' : 
+                                       gender.charAt(0).toUpperCase() + gender.slice(1);
+                      return (
+                        <div key={gender} className={`flex items-center justify-between p-2 rounded-lg ${
+                          count === 0 ? 'bg-gray-100 opacity-60' : 'bg-gray-50'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-4 h-4 rounded-full" 
+                              style={{ backgroundColor: colors[index] }}
+                            />
+                            <span className={`text-sm font-medium ${
+                              count === 0 ? 'text-gray-500' : 'text-gray-700'
+                            }`}>{genderLabel}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-sm font-bold ${
+                              count === 0 ? 'text-gray-400' : 'text-gray-900'
+                            }`}>{count}</div>
+                            <div className={`text-xs ${
+                              count === 0 ? 'text-gray-400' : 'text-gray-500'
+                            }`}>{percentage.toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+             ) : (
+               <div className="text-center py-8 text-gray-500">
+                 <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                 <p>No gender data available</p>
+               </div>
+             );
+           })()}
+         </motion.div>
+       </div>
+
       {/* Ticket Tier Performance and Useful Stats - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Ticket Tier Performance - Left Aligned */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.8 }}
             className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
           >
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Ticket Tier Performance</h3>
@@ -389,7 +633,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.9 }}
           className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
         >
           <div className="flex items-center justify-between mb-6">
@@ -497,7 +741,7 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
+        transition={{ delay: 1.0 }}
         className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
       >
         <div className="px-6 py-4 border-b border-gray-100">
