@@ -483,25 +483,25 @@ const EventsPage = () => {
       {/* Event Details Modal */}
       {showDetails && selectedEvent && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDetails(false)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                     <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="relative h-48 overflow-hidden">
               <img src={selectedEvent.image} alt={selectedEvent.title} className="w-full h-full object-cover" />
               <button className="absolute top-3 right-3 bg-white/90 rounded-full p-1" onClick={() => setShowDetails(false)}>
                 <X className="w-5 h-5 text-gray-700" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 text-center">
               <h3 className="text-xl font-bold text-gray-900">{selectedEvent.title}</h3>
               <p className="text-gray-600 text-sm">{selectedEvent.description}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
-                <div className="flex items-center gap-2"><Calendar className="w-4 h-4" /><span>{selectedEvent.date}</span></div>
-                <div className="flex items-center gap-2"><Clock className="w-4 h-4" /><span>{selectedEvent.time}</span></div>
-                <div className="flex items-center gap-2 sm:col-span-2"><MapPin className="w-4 h-4" /><span>{selectedEvent.venue}</span></div>
-              </div>
-              {selectedEvent.ticketTiers && selectedEvent.ticketTiers.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-800 mb-2">Ticket Tiers</h4>
-                  <div className="space-y-2">
+                             <div className="space-y-3 text-sm text-black">
+                 <div className="flex items-center justify-center gap-2"><Calendar className="w-4 h-4" /><span className="font-semibold">{selectedEvent.date}</span></div>
+                 <div className="flex items-center justify-center gap-2"><Clock className="w-4 h-4" /><span className="font-semibold">{selectedEvent.time}</span></div>
+                 <div className="flex items-center justify-center gap-2"><MapPin className="w-4 h-4" /><span className="font-semibold">{selectedEvent.venue}</span></div>
+               </div>
+                             {selectedEvent.ticketTiers && selectedEvent.ticketTiers.length > 0 && (
+                 <div className="text-left">
+                   <h4 className="text-sm font-semibold text-gray-800 mb-2">Ticket Tiers</h4>
+                   <div className="space-y-2">
                     {selectedEvent.ticketTiers.sort((a, b) => a.price - b.price).map(tier => {
                       const remaining = tier.capacity - tier.soldCount;
                       const isSoldOut = remaining <= 0 || tier.isActive === false;
