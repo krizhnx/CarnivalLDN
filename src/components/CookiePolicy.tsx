@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Settings, BarChart3, Eye, Database } from 'lucide-react'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
+import SEO from './SEO'
 
 const CookiePolicy = () => {
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
@@ -58,6 +59,11 @@ const CookiePolicy = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white py-20 px-4">
+      <SEO 
+        title="Cookie Policy"
+        description="Carnival LDN Cookie Policy - Learn about how we use cookies to enhance your browsing experience and provide personalized content."
+        keywords="Carnival LDN cookie policy, website cookies, London events cookies, privacy cookies, cookie management"
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { FileText, CheckCircle, AlertTriangle, Users, Calendar, CreditCard } from 'lucide-react'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
+import SEO from './SEO'
 
 const TermsOfService = () => {
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
@@ -75,6 +76,11 @@ const TermsOfService = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white py-20 px-4">
+      <SEO 
+        title="Terms of Service"
+        description="Carnival LDN Terms of Service - Read our terms and conditions for using our event services and website."
+        keywords="Carnival LDN terms of service, event booking terms, London events terms, party planning terms, event company terms"
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div

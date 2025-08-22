@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Eye, Lock, Database, Users, Globe } from 'lucide-react'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
+import SEO from './SEO'
 
 const PrivacyPolicy = () => {
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
@@ -67,6 +68,11 @@ const PrivacyPolicy = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white py-20 px-4">
+      <SEO 
+        title="Privacy Policy"
+        description="Carnival LDN Privacy Policy - Learn how we collect, use, and protect your personal information. Your privacy is important to us."
+        keywords="Carnival LDN privacy policy, data protection, GDPR compliance, London events privacy, personal data security"
+      />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div

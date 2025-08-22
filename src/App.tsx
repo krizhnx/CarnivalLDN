@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Analytics } from '@vercel/analytics/react'
 import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
+import { HelmetProvider } from 'react-helmet-async'
 import { initGA, trackPageView } from './lib/googleAnalytics'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
@@ -19,6 +20,7 @@ import NotFound from './components/NotFound'
 import PrivacyPolicy from './components/PrivacyPolicy'
 import TermsOfService from './components/TermsOfService'
 import CookiePolicy from './components/CookiePolicy'
+import SEO from './components/SEO'
 import { useAppStore } from './store/supabaseStore'
 
 function HomePage() {
@@ -45,6 +47,11 @@ function HomePage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <SEO 
+        title="Home"
+        description="Carnival LDN - London's premier professional events company. From club nights to corporate events, Bollywood parties to Diwali celebrations. Creating unforgettable experiences since 2014."
+        keywords="Carnival LDN, London events, nightlife London, club nights London, Bollywood parties London, Diwali celebrations London, New Year parties London, corporate events London, private parties London, event planning London, London nightlife, London party planning"
+      />
       <ParticleBackground />
       <Navbar />
       <Hero />
@@ -63,7 +70,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Router>
+    <HelmetProvider>
+      <Router>
       <Routes>
                        <Route path="/" element={<HomePage />} />
                <Route path="/events" element={<EventsPage />} />
@@ -121,7 +129,8 @@ function App() {
           },
         }}
       />
-    </Router>
+      </Router>
+    </HelmetProvider>
   )
 }
 
