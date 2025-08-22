@@ -150,3 +150,46 @@ export interface TicketSearchResult {
   lastScanTime?: Date;
   scanStatus: 'not_scanned' | 'scanned_in' | 'scanned_out' | 'scanned_both';
 }
+
+// Guestlist functionality
+export interface Guestlist {
+  id: string;
+  eventId: string;
+  leadName: string;
+  leadEmail: string;
+  leadPhone?: string;
+  totalTickets: number;
+  notes?: string;
+  qrCodeData: string;
+  remainingScans: number;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface GuestlistScan {
+  id: string;
+  guestlistId: string;
+  eventId: string;
+  scanType: 'entry' | 'exit';
+  scannedAt: Date;
+  scannedBy?: string;
+  location?: string;
+  notes?: string;
+}
+
+export interface GuestlistFormData {
+  leadName: string;
+  leadEmail: string;
+  leadPhone?: string;
+  totalTickets: number;
+  notes?: string;
+}
+
+export interface GuestlistQRData {
+  type: 'guestlist';
+  guestlistId: string;
+  eventId: string;
+  totalTickets: number;
+  leadEmail: string;
+  leadName: string;
+}

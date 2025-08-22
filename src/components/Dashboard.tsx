@@ -12,7 +12,9 @@ import {
   EventManagement,
   OrdersTable,
   ConfirmationModal,
-  EventSpecificStats
+  EventSpecificStats,
+  GuestlistModal,
+  GuestlistManagement
 } from './dashboard/index';
 import { exportCustomerData, exportEventData } from './dashboard/CSVExport';
 
@@ -40,6 +42,9 @@ const Dashboard = () => {
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [confirm, setConfirm] = useState<{type: 'archive' | 'delete', event: Event} | null>(null);
+  const [isGuestlistModalOpen, setIsGuestlistModalOpen] = useState(false);
+  const [isGuestlistManagementOpen, setIsGuestlistManagementOpen] = useState(false);
+  const [selectedEventForGuestlist, setSelectedEventForGuestlist] = useState<Event | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -97,6 +102,21 @@ const Dashboard = () => {
   const handleArchiveToggle = (ev: Event) => {
     setConfirm({ type: 'archive', event: ev });
   };
+
+  const handleGuestlistClick = (event: Event) => {
+    setSelectedEventForGuestlist(event);
+    setIsGuestlistModalOpen(true);
+  };
+
+  const handleGuestlistSuccess = (guestlist: any) => {
+    setIsGuestlistModalOpen(false);
+    setSelectedEventForGuestlist(null);
+    toast.success(`Guestlist created successfully! QR code sent to ${guestlist.leadEmail}`);
+    // Optionally refresh data
+    loadDashboardData();
+  };
+
+
 
   const createTestEvent = async (type: 'sundowner' | 'bollywood' | 'carnival') => {
     setCreatingEvents(prev => [...prev, type]);
@@ -516,6 +536,7 @@ const Dashboard = () => {
             onEditEvent={handleEditEventClick}
             onArchiveToggle={handleArchiveToggle}
             onDeleteEvent={handleDeleteEventClick}
+            onGuestlist={handleGuestlistClick}
           />
         )}
 
@@ -550,6 +571,37 @@ const Dashboard = () => {
                     setConfirm(null);
                   }}
       />
+
+      {/* Guestlist Modal */}
+      {isGuestlistModalOpen && selectedEventForGuestlist && (
+        <GuestlistModal
+          event={selectedEventForGuestlist}
+          onClose={() => {
+            setIsGuestlistModalOpen(false);
+            setSelectedEventForGuestlist(null);
+          }}
+          onSuccess={handleGuestlistSuccess}
+          onManageGuestlists={() => {
+            setIsGuestlistModalOpen(false);
+            setIsGuestlistManagementOpen(true);
+          }}
+        />
+      )}
+
+      {/* Guestlist Management Modal */}
+      {isGuestlistManagementOpen && selectedEventForGuestlist && (
+        <GuestlistManagement
+          event={selectedEventForGuestlist}
+          onClose={() => {
+            setIsGuestlistManagementOpen(false);
+            setSelectedEventForGuestlist(null);
+          }}
+          onCreateNew={() => {
+            setIsGuestlistManagementOpen(false);
+            setIsGuestlistModalOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 };

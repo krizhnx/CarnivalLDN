@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, User, Calendar, MapPin, Ticket, ArrowLeft } from 'lucide-react';
-import { TicketValidationResult, QRCodeData } from '../types';
+import { TicketValidationResult } from '../types';
 import { useAppStore } from '../store/supabaseStore';
+import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 const TicketScanner: React.FC = () => {
@@ -13,7 +14,7 @@ const TicketScanner: React.FC = () => {
   const [scanHistory, setScanHistory] = useState<TicketValidationResult[]>([]);
 
   
-  const { validateTicket, recordTicketScan } = useAppStore();
+  const { validateTicket, recordTicketScan, validateGuestlist, recordGuestlistScan } = useAppStore();
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,37 +69,94 @@ const TicketScanner: React.FC = () => {
       console.log('🔍 Raw QR code data:', decodedText);
       
       // Parse QR code data
-      const qrData: QRCodeData = JSON.parse(decodedText);
+      const qrData = JSON.parse(decodedText);
       console.log('🔍 Parsed QR data:', qrData);
       
-      // Validate ticket (entry only)
-      const validation = await validateTicket(qrData.orderId, qrData.ticketTierId, qrData.customer, 'entry');
-      console.log('🔍 Validation result:', validation);
+      let validation;
       
-      if (validation.isValid) {
-        // Ticket is valid and not already scanned
-        await recordTicketScan({
-          orderId: qrData.orderId,
-          ticketTierId: qrData.ticketTierId,
-          customerEmail: qrData.customer,
-          eventId: validation.eventId || '',
-          scanType: 'entry',
-          location: '',
-          notes: ''
-        });
+      // Check if this is a guestlist QR code
+      if (qrData.type === 'guestlist') {
+        console.log('🔍 Processing guestlist QR code');
         
-        // Add to scan history
-        const scanWithMetadata = {
-          ...validation,
-          scanType: 'entry',
-          timestamp: new Date().toISOString()
-        };
-        setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
+        // Validate guestlist
+        validation = await validateGuestlist(qrData.guestlistId, 'entry');
+        console.log('🔍 Guestlist validation result:', validation);
+        
+        if (validation.isValid) {
+          // Guestlist is valid and has remaining scans
+          await recordGuestlistScan({
+            guestlistId: qrData.guestlistId,
+            eventId: validation.eventId || '',
+            scanType: 'entry',
+            location: '',
+            notes: '',
+            scannedBy: 'admin' // Add the missing scannedBy field
+          });
+          
+          // Get the updated guestlist data to show the correct remaining count after the scan
+          const { data: updatedGuestlist } = await supabase
+            .from('guestlists')
+            .select('remaining_scans')
+            .eq('id', qrData.guestlistId)
+            .single();
+          
+          // Update the message to show the correct remaining count after the scan
+          const remainingCount = updatedGuestlist?.remaining_scans || 0;
+          const updatedMessage = remainingCount === 1 
+            ? '1 ticket remaining'
+            : `${remainingCount} tickets remaining`;
+          
+          // Create updated validation object with correct remaining count
+          const updatedValidation = {
+            ...validation,
+            message: updatedMessage
+          };
+          
+          // Add to scan history with updated validation
+          const scanWithMetadata = {
+            ...updatedValidation,
+            scanType: 'entry',
+            timestamp: new Date().toISOString()
+          };
+          setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
+          
+          // Update the scan result to show the correct remaining count
+          setScanResult(updatedValidation);
+        }
       } else {
-        // Invalid ticket or already scanned - no toast needed
+        // Regular ticket QR code
+        console.log('🔍 Processing regular ticket QR code');
+        
+        // Validate ticket (entry only)
+        validation = await validateTicket(qrData.orderId, qrData.ticketTierId, qrData.customer, 'entry');
+        console.log('🔍 Ticket validation result:', validation);
+        
+        if (validation.isValid) {
+          // Ticket is valid and not already scanned
+          await recordTicketScan({
+            orderId: qrData.orderId,
+            ticketTierId: qrData.ticketTierId,
+            customerEmail: qrData.customer,
+            eventId: validation.eventId || '',
+            scanType: 'entry',
+            location: '',
+            notes: ''
+          });
+          
+          // Add to scan history
+          const scanWithMetadata = {
+            ...validation,
+            scanType: 'entry',
+            timestamp: new Date().toISOString()
+          };
+          setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
+        }
       }
       
-      setScanResult(validation);
+      // Only set scan result if it hasn't been set yet (for guestlists)
+      if (!scanResult) {
+        setScanResult(validation);
+      }
       
       // Auto-hide result after 5 seconds
       if (timeoutRef.current) {

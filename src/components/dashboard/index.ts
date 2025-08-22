@@ -8,4 +8,6 @@ export { default as QuickEventCreation } from './QuickEventCreation';
 export { default as ConfirmationModal } from './ConfirmationModal';
 export { default as EventSpecificStats } from './EventSpecificStats';
 export { default as TicketScanner } from '../../TicketScanner/TicketScanner';
+export { default as GuestlistModal } from '../GuestlistModal';
+export { default as GuestlistManagement } from '../GuestlistManagement';
 export * from './CSVExport';

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
-import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan, TicketSearchResult } from '../types'
+import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan, TicketSearchResult, GuestlistScan } from '../types'
 import toast from 'react-hot-toast'
 
 interface AppState extends AuthState {
@@ -20,12 +20,14 @@ interface AppState extends AuthState {
   subscribeToEvents: () => any
   // Order actions
   getOrders: () => Promise<void>
-  // Ticket scanning actions
-  validateTicket: (orderId: string, ticketTierId: string, customerEmail: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
-  recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
-  debugTicketData: (orderId: string, ticketTierId: string) => Promise<string>
-  // Ticket search actions
-  searchTickets: (searchTerm: string) => Promise<TicketSearchResult[]>
+        // Ticket scanning actions
+      validateTicket: (orderId: string, ticketTierId: string, customerEmail: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
+      validateGuestlist: (guestlistId: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
+      recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
+      recordGuestlistScan: (scanData: Omit<GuestlistScan, 'id' | 'scannedAt'>) => Promise<void>
+      debugTicketData: (orderId: string, ticketTierId: string) => Promise<string>
+      // Ticket search actions
+      searchTickets: (searchTerm: string) => Promise<TicketSearchResult[]>
 }
 
 // Hardcoded admin credentials
@@ -1009,6 +1011,138 @@ export const useAppStore = create<AppState>()(
           
         } catch (error) {
           return `❌ Debug Error: ${error}\n`;
+        }
+      },
+
+      // Guestlist validation
+      validateGuestlist: async (guestlistId: string, scanType: 'entry' | 'exit' = 'entry'): Promise<TicketValidationResult> => {
+        try {
+          console.log('🔍 Validating guestlist:', { guestlistId, scanType });
+
+          // Check if guestlist exists and can be scanned
+          const { data: guestlist, error: guestlistError } = await supabase
+            .from('guestlists')
+            .select('*')
+            .eq('id', guestlistId)
+            .single();
+
+          if (guestlistError || !guestlist) {
+            console.log('❌ Guestlist not found:', guestlistError);
+            return {
+              isValid: false,
+              message: 'Guestlist not found',
+              orderStatus: 'unknown',
+              eventDate: 'unknown',
+              customerName: 'unknown',
+              customerEmail: 'unknown'
+            };
+          }
+
+          // Check if remaining scans > 0
+          if (guestlist.remaining_scans <= 0) {
+            console.log('❌ No remaining scans for guestlist');
+            return {
+              isValid: false,
+              message: 'All tickets from this group pass have been used',
+              orderStatus: 'completed',
+              eventDate: 'unknown',
+              customerName: guestlist.lead_name,
+              customerEmail: guestlist.lead_email
+            };
+          }
+
+          // Get event details
+          const { data: event, error: eventError } = await supabase
+            .from('events')
+            .select('*')
+            .eq('id', guestlist.event_id)
+            .single();
+
+          if (eventError || !event) {
+            console.log('❌ Event not found:', eventError);
+            return {
+              isValid: false,
+              message: 'Event not found',
+              orderStatus: 'completed',
+              eventDate: 'unknown',
+              customerName: guestlist.lead_name,
+              customerEmail: guestlist.lead_email
+            };
+          }
+
+          // Check if event date hasn't passed
+          const eventDate = event.date;
+          if (eventDate && new Date(eventDate) < new Date()) {
+            console.log('❌ Event has passed:', eventDate);
+            return {
+              isValid: false,
+              message: 'Event has passed',
+              orderStatus: 'completed',
+              eventDate: eventDate,
+              customerName: guestlist.lead_name,
+              customerEmail: guestlist.lead_email
+            };
+          }
+
+          // All validations passed
+          console.log('✅ Guestlist validation successful');
+          return {
+            isValid: true,
+            message: `Group pass valid - ${guestlist.remaining_scans} tickets remaining`,
+            orderStatus: 'completed',
+            eventDate: eventDate || 'unknown',
+            customerName: guestlist.lead_name,
+            customerEmail: guestlist.lead_email,
+            eventId: guestlist.event_id,
+            eventTitle: event.title,
+            ticketTierName: `Group Pass (${guestlist.total_tickets} tickets)`
+          };
+
+        } catch (error) {
+          console.error('❌ Error validating guestlist:', error);
+          return {
+            isValid: false,
+            message: 'Failed to validate guestlist',
+            orderStatus: 'unknown',
+            eventDate: 'unknown',
+            customerName: 'unknown',
+            customerEmail: 'unknown'
+          };
+        }
+      },
+
+      // Record guestlist scan
+      recordGuestlistScan: async (scanData: Omit<GuestlistScan, 'id' | 'scannedAt'>) => {
+        try {
+          // First, decrement the remaining scans
+          const { error: decrementError } = await supabase
+            .rpc('decrement_guestlist_scans', { guestlist_uuid: scanData.guestlistId });
+
+          if (decrementError) {
+            console.error('Error decrementing guestlist scans:', decrementError);
+            throw decrementError;
+          }
+
+          // Then, record the scan (include all required fields from the database schema)
+          const { error } = await supabase
+            .from('guestlist_scans')
+            .insert({
+              guestlist_id: scanData.guestlistId,
+              event_id: scanData.eventId, // Required field
+              scan_type: scanData.scanType, // Required field with default 'entry'
+              scanned_by: scanData.scannedBy || 'admin',
+              location: scanData.location || '',
+              notes: scanData.notes || '',
+              scanned_at: new Date().toISOString()
+            });
+
+          if (error) {
+            console.error('Error recording guestlist scan:', error);
+            throw error;
+          }
+        } catch (error) {
+          console.error('Error recording guestlist scan:', error);
+          throw error;
         }
       }
     }),

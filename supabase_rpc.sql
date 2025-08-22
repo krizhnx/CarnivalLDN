@@ -148,3 +148,60 @@ BEGIN
     AND o.event_id = p_event_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Guestlist functionality
+-- Create guestlists table
+CREATE TABLE IF NOT EXISTS public.guestlists (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  lead_name text NOT NULL,
+  lead_email text NOT NULL,
+  lead_phone text,
+  total_tickets integer NOT NULL,
+  notes text,
+  qr_code_data text NOT NULL,
+  remaining_scans integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  created_by text,
+  CONSTRAINT guestlists_pkey PRIMARY KEY (id),
+  CONSTRAINT guestlists_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE
+);
+
+-- Create guestlist_scans table
+CREATE TABLE IF NOT EXISTS public.guestlist_scans (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  guestlist_id uuid NOT NULL,
+  scanned_at timestamp with time zone DEFAULT now(),
+  scanned_by text,
+  location text,
+  notes text,
+  CONSTRAINT guestlist_scans_pkey PRIMARY KEY (id),
+  CONSTRAINT guestlist_scans_guestlist_id_fkey FOREIGN KEY (guestlist_id) REFERENCES public.guestlists(id) ON DELETE CASCADE
+);
+
+-- Function to decrement remaining scans for a guestlist
+CREATE OR REPLACE FUNCTION decrement_guestlist_scans(guestlist_uuid uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE guestlists 
+  SET remaining_scans = GREATEST(0, remaining_scans - 1)
+  WHERE id = guestlist_uuid AND remaining_scans > 0;
+  
+  RETURN FOUND;
+END;
+$$;
+
+-- Function to check if guestlist can be scanned
+CREATE OR REPLACE FUNCTION can_scan_guestlist(guestlist_uuid uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN EXISTS(
+    SELECT 1 FROM guestlists 
+    WHERE id = guestlist_uuid AND remaining_scans > 0
+  );
+END;
+$$;

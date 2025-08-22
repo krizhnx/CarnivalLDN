@@ -1,4 +1,5 @@
 import { Event } from '../../types';
+import { Users } from 'lucide-react';
 
 interface EventManagementProps {
   currentEvents: Event[];
@@ -7,6 +8,7 @@ interface EventManagementProps {
   onEditEvent: (event: Event) => void;
   onArchiveToggle: (event: Event) => void;
   onDeleteEvent: (event: Event) => void;
+  onGuestlist: (event: Event) => void;
 }
 
 const EventManagement = ({
@@ -15,7 +17,8 @@ const EventManagement = ({
   onAddEvent,
   onEditEvent,
   onArchiveToggle,
-  onDeleteEvent
+  onDeleteEvent,
+  onGuestlist
 }: EventManagementProps) => {
 
 
@@ -41,12 +44,20 @@ const EventManagement = ({
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ev.date}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-[180px]">{ev.venue}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ev.ticketTiers?.length || 0}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  <button onClick={() => onEditEvent(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">Edit</button>
-                  <button onClick={() => onArchiveToggle(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">
-                    {isArchived ? 'Unarchive' : 'Archive'}
-                  </button>
-                  <button onClick={() => onDeleteEvent(ev)} className="px-3 py-1 rounded-md border border-red-200 text-red-700 hover:bg-red-50">Delete</button>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => onGuestlist(ev)} className="px-3 py-1 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      Guestlist
+                    </button>
+                    <button onClick={() => onEditEvent(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">Edit</button>
+                    <button onClick={() => onArchiveToggle(ev)} className="px-3 py-1 rounded-md border text-gray-700 hover:bg-gray-50">
+                      {isArchived ? 'Unarchive' : 'Archive'}
+                    </button>
+                    {isArchived && (
+                      <button onClick={() => onDeleteEvent(ev)} className="px-3 py-1 rounded-md border border-red-200 text-red-700 hover:bg-red-50">Delete</button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

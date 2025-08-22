@@ -288,6 +288,253 @@ app.post('/api/test-email', async (req, res) => {
   }
 });
 
+// Guestlist API endpoints
+app.post('/api/create-guestlist', async (req, res) => {
+  try {
+    const { eventId, leadName, leadEmail, leadPhone, totalTickets, notes } = req.body;
+
+    if (!eventId || !leadName || !leadEmail || !totalTickets || totalTickets < 1) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: eventId, leadName, leadEmail, totalTickets' 
+      });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    // Verify event exists
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('title, date, venue')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError || !event) {
+      return res.status(400).json({ error: 'Event not found' });
+    }
+
+    // Generate unique guestlist ID using proper UUID
+    const guestlistId = uuidv4();
+
+    // Create QR code data
+    const qrCodeData = JSON.stringify({
+      type: 'guestlist',
+      guestlistId: guestlistId,
+      eventId: eventId,
+      totalTickets: totalTickets,
+      leadEmail: leadEmail,
+      leadName: leadName
+    });
+
+    // Create guestlist record
+    const { data: guestlist, error: guestlistError } = await supabase
+      .from('guestlists')
+      .insert({
+        id: guestlistId,
+        event_id: eventId,
+        lead_name: leadName,
+        lead_email: leadEmail,
+        lead_phone: leadPhone || null,
+        total_tickets: totalTickets,
+        notes: notes || null,
+        qr_code_data: qrCodeData,
+        remaining_scans: totalTickets,
+        created_by: 'admin'
+      })
+      .select()
+      .single();
+
+    if (guestlistError) {
+      console.error('Error creating guestlist:', guestlistError);
+      return res.status(500).json({ error: 'Failed to create guestlist' });
+    }
+
+    // Send email with QR code if email service is available
+    if (sendTicketConfirmationEmail) {
+      try {
+        // Import guestlist email function
+        const { sendGuestlistEmail } = require('./src/lib/emailService.js');
+        await sendGuestlistEmail({
+          guestlistId: guestlistId,
+          eventId: eventId,
+          eventName: event.title,
+          eventDate: event.date,
+          eventLocation: event.venue,
+          leadName: leadName,
+          leadEmail: leadEmail,
+          totalTickets: totalTickets,
+          notes: notes
+        });
+      } catch (emailError) {
+        console.error('Error sending guestlist email:', emailError);
+        // Don't fail the request if email fails, but log it
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      guestlist: {
+        id: guestlistId,
+        eventId: eventId,
+        leadName: leadName,
+        leadEmail: leadEmail,
+        leadPhone: leadPhone,
+        totalTickets: totalTickets,
+        notes: notes,
+        qrCodeData: qrCodeData,
+        remainingScans: totalTickets,
+        createdAt: new Date().toISOString(),
+        createdBy: 'admin'
+      },
+      message: 'Guestlist created successfully and QR code sent'
+    });
+
+  } catch (error) {
+    console.error('Error creating guestlist:', error);
+    res.status(500).json({ error: 'Failed to create guestlist' });
+  }
+});
+
+app.get('/api/guestlists', async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    
+    console.log('🔍 Guestlists API called with eventId:', eventId);
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'eventId is required' });
+    }
+
+    if (!supabase) {
+      console.error('❌ Supabase not connected');
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    console.log('🔍 Querying guestlists for event:', eventId);
+    
+    const { data: guestlists, error } = await supabase
+      .from('guestlists')
+      .select('*')
+      .eq('event_id', eventId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error fetching guestlists:', error);
+      return res.status(500).json({ error: 'Failed to fetch guestlists' });
+    }
+    
+    console.log('✅ Found guestlists:', guestlists?.length || 0);
+
+    // Transform data to match frontend interface
+    const transformedGuestlists = guestlists.map(guestlist => ({
+      id: guestlist.id,
+      eventId: guestlist.event_id,
+      leadName: guestlist.lead_name,
+      leadEmail: guestlist.lead_email,
+      leadPhone: guestlist.lead_phone,
+      totalTickets: guestlist.total_tickets,
+      notes: guestlist.notes,
+      qrCodeData: guestlist.qr_code_data,
+      remainingScans: guestlist.remaining_scans,
+      createdAt: guestlist.created_at,
+      createdBy: guestlist.created_by
+    }));
+
+    res.status(200).json({
+      success: true,
+      guestlists: transformedGuestlists
+    });
+  } catch (error) {
+    console.error('Error fetching guestlists:', error);
+    res.status(500).json({ error: 'Failed to fetch guestlists' });
+  }
+});
+
+app.post('/api/resend-guestlist-qr', async (req, res) => {
+  try {
+    const { guestlistId } = req.body;
+
+    if (!guestlistId) {
+      return res.status(400).json({ error: 'guestlistId is required' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    // Fetch guestlist and event details
+    const { data: guestlist, error: guestlistError } = await supabase
+      .from('guestlists')
+      .select(`
+        *,
+        events:event_id (
+          title,
+          date,
+          venue
+        )
+      `)
+      .eq('id', guestlistId)
+      .single();
+
+    if (guestlistError || !guestlist) {
+      return res.status(404).json({ error: 'Guestlist not found' });
+    }
+
+    // Send email with QR code if email service is available
+    if (sendTicketConfirmationEmail) {
+      try {
+        const { sendGuestlistEmail } = require('./src/lib/emailService.js');
+        await sendGuestlistEmail({
+          guestlistId: guestlist.id,
+          eventId: guestlist.event_id,
+          eventName: guestlist.events.title,
+          eventDate: guestlist.events.date,
+          eventLocation: guestlist.events.venue,
+          leadName: guestlist.lead_name,
+          leadEmail: guestlist.lead_email,
+          totalTickets: guestlist.total_tickets,
+          notes: guestlist.notes
+        });
+      } catch (emailError) {
+        console.error('Error sending guestlist email:', emailError);
+        return res.status(500).json({ error: 'Failed to send email' });
+      }
+    }
+
+    res.status(200).json({ success: true, message: 'QR code resent successfully' });
+  } catch (error) {
+    console.error('Error resending guestlist QR:', error);
+    res.status(500).json({ error: 'Failed to resend QR code' });
+  }
+});
+
+app.delete('/api/guestlists/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    // Delete guestlist
+    const { error } = await supabase
+      .from('guestlists')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting guestlist:', error);
+      return res.status(500).json({ error: 'Failed to delete guestlist' });
+    }
+
+    res.status(200).json({ success: true, message: 'Guestlist deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting guestlist:', error);
+    res.status(500).json({ error: 'Failed to delete guestlist' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`🚀 Stripe API server running on port ${port}`);
   console.log(`📡 API endpoints:`);
@@ -295,4 +542,8 @@ app.listen(port, () => {
   console.log(`   POST /api/confirm-payment`);
   console.log(`   GET  /api/health`);
   console.log(`   POST /api/test-email`);
+  console.log(`   POST /api/create-guestlist`);
+  console.log(`   GET  /api/guestlists`);
+  console.log(`   POST /api/resend-guestlist-qr`);
+  console.log(`   DELETE /api/guestlists/:id`);
 });
