@@ -1,4 +1,4 @@
-const { sendGuestlistEmail } = require('../src/lib/emailService.js');
+const { sendGuestlistEmail: createGuestlistEmail } = require('../src/lib/emailService.js');
 
 module.exports = async function handler(req: any, res: any) {
   // Add CORS headers for production
@@ -139,7 +139,7 @@ module.exports = async function handler(req: any, res: any) {
       if (!resendApiKey) {
         console.warn('⚠️ RESEND_API_KEY missing, skipping email');
       } else {
-        await sendGuestlistEmail({
+        await createGuestlistEmail({
           guestlistId: guestlistId,
           eventId: eventId,
           eventName: event.title,

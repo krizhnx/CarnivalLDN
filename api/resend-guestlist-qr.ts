@@ -1,4 +1,4 @@
-const { sendGuestlistEmail } = require('../src/lib/emailService.js');
+const { sendGuestlistEmail: resendGuestlistEmail } = require('../src/lib/emailService.js');
 
 module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -49,7 +49,7 @@ module.exports = async function handler(req: any, res: any) {
 
     // Send email with QR code
     try {
-      await sendGuestlistEmail({
+      await resendGuestlistEmail({
         guestlistId: guestlist.id,
         eventId: guestlist.event_id,
         eventName: event.title,
