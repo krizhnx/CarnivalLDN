@@ -124,7 +124,7 @@ export const useAppStore = create<AppState>()(
                 description: tier.description,
                 benefits: tier.benefits,
                 isActive: tier.is_active,
-              }))
+              })).sort((a, b) => a.price - b.price) // Sort by price in ascending order
             }
           })
 

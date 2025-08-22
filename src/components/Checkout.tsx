@@ -37,7 +37,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   useEffect(() => {
     console.log('Event ticket tiers:', event.ticketTiers);
     if (event.ticketTiers && event.ticketTiers.length > 0) {
-      const initialSelections = event.ticketTiers.map(tier => ({
+      // Ensure tiers are sorted by price in ascending order
+      const sortedTiers = [...event.ticketTiers].sort((a, b) => a.price - b.price);
+      const initialSelections = sortedTiers.map(tier => ({
         tierId: tier.id,
         tier,
         quantity: 0,
@@ -187,7 +189,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           <div className="mb-4 text-sm text-red-600">This event is sold out.</div>
         )}
         <div className="space-y-4">
-          {(event.ticketTiers || []).map((tier) => {
+          {(event.ticketTiers || []).sort((a, b) => a.price - b.price).map((tier) => {
             const selection = ticketSelections.find(s => s.tierId === tier.id) || { tier, quantity: 0 } as any;
             const remaining = tier.capacity - tier.soldCount;
             const isSoldOut = remaining <= 0 || tier.isActive === false;

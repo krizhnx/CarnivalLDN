@@ -427,7 +427,7 @@ const EventsPage = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                          {event.ticketTiers.slice(0, 2).map((tier) => (
+                          {event.ticketTiers.sort((a, b) => a.price - b.price).slice(0, 2).map((tier) => (
                             <div key={tier.id} className="flex items-center justify-between p-2.5 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100">
                               <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -502,7 +502,7 @@ const EventsPage = () => {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-800 mb-2">Ticket Tiers</h4>
                   <div className="space-y-2">
-                    {selectedEvent.ticketTiers.map(tier => {
+                    {selectedEvent.ticketTiers.sort((a, b) => a.price - b.price).map(tier => {
                       const remaining = tier.capacity - tier.soldCount;
                       const isSoldOut = remaining <= 0 || tier.isActive === false;
                       return (

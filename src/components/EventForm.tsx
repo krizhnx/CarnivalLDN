@@ -276,7 +276,7 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
               </div>
               {ticketTiers.length > 0 ? (
                 <div className="space-y-2">
-                  {ticketTiers.map((tier) => (
+                  {ticketTiers.sort((a, b) => a.price - b.price).map((tier) => (
                     <div key={tier.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <span className="font-medium text-gray-900">{tier.name}</span>
