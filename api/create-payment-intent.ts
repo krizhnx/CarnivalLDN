@@ -69,6 +69,9 @@ module.exports = async function handler(req: any, res: any) {
         eventId,
         customerName: customerInfo.name,
         customerEmail: customerInfo.email,
+        customerPhone: customerInfo.phone,
+        customerDateOfBirth: customerInfo.dateOfBirth,
+        customerGender: customerInfo.gender,
         ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
         tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity })))
       }

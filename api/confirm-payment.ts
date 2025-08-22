@@ -10,6 +10,9 @@ interface TicketMetadata {
 interface CustomerInfo {
   email: string;
   name: string;
+  phone: string;
+  dateOfBirth: string;
+  gender?: string;
 }
 
 interface TicketTier {
@@ -65,7 +68,7 @@ module.exports = async function handler(req: any, res: any) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Extract metadata from payment intent
-    const { eventId, tickets: ticketsMetadata } = paymentIntent.metadata;
+    const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender } = paymentIntent.metadata;
     const tickets: TicketMetadata[] = JSON.parse(ticketsMetadata);
 
     // Create order
@@ -77,8 +80,11 @@ module.exports = async function handler(req: any, res: any) {
         status: 'completed',
         total_amount: paymentIntent.amount,
         currency: paymentIntent.currency,
-        customer_email: customerInfo.email,
-        customer_name: customerInfo.name
+        customer_email: customerEmail,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_date_of_birth: customerDateOfBirth,
+        customer_gender: customerGender
       })
       .select()
       .single();
@@ -146,8 +152,11 @@ module.exports = async function handler(req: any, res: any) {
     try {
       if (event && ticketTiers) {
         const emailData = {
-          customerName: customerInfo.name,
-          customerEmail: customerInfo.email,
+          customerName: customerName,
+          customerEmail: customerEmail,
+          customerPhone: customerPhone,
+          customerDateOfBirth: customerDateOfBirth,
+          customerGender: customerGender,
           orderId: order.id,
           eventName: event.title,
           eventDate: event.date,

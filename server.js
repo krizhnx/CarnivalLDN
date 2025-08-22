@@ -82,6 +82,9 @@ app.post('/api/create-payment-intent', async (req, res) => {
         eventId,
         customerName: customerInfo.name,
         customerEmail: customerInfo.email,
+        customerPhone: customerInfo.phone,
+        customerDateOfBirth: customerInfo.dateOfBirth,
+        customerGender: customerInfo.gender,
         ticketCount: tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
       },
       automatic_payment_methods: {
@@ -104,12 +107,29 @@ app.post('/api/confirm-payment', async (req, res) => {
   try {
     const { paymentIntentId, eventId, tickets, customerInfo, totalAmount } = req.body;
     
+    // Validate required customer info
+    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.dateOfBirth) {
+      return res.status(400).json({ 
+        error: 'Missing required customer information',
+        missing: {
+          name: !customerInfo.name,
+          email: !customerInfo.email,
+          phone: !customerInfo.phone,
+          dateOfBirth: !customerInfo.dateOfBirth
+        }
+      });
+    }
+    
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
       return res.status(400).json({ error: 'Payment not completed' });
     }
 
+    // Debug: Log the entire request body and customer info
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('Received customerInfo:', JSON.stringify(customerInfo, null, 2));
+    
     // Create order object
     const order = {
       id: uuidv4(), // Generate proper UUID
@@ -121,8 +141,14 @@ app.post('/api/confirm-payment', async (req, res) => {
       currency: 'gbp',
       customer_email: customerInfo.email,
       customer_name: customerInfo.name,
+      customer_phone: customerInfo.phone || null, // Convert empty string to null
+      customer_date_of_birth: customerInfo.dateOfBirth || null, // Convert empty string to null
+      customer_gender: customerInfo.gender || null, // Convert empty string to null
       created_at: new Date().toISOString(),
     };
+    
+    // Debug: Log the order object being created
+    console.log('Created order object:', JSON.stringify(order, null, 2));
 
     try {
       if (supabase) {
@@ -206,6 +232,9 @@ app.post('/api/confirm-payment', async (req, res) => {
             const emailData = {
               customerName: customerInfo.name,
               customerEmail: customerInfo.email,
+              customerPhone: customerInfo.phone,
+              customerDateOfBirth: customerInfo.dateOfBirth,
+              customerGender: customerInfo.gender,
               orderId: order.id,
               eventName: event.title,
               eventDate: event.date,

@@ -20,13 +20,24 @@ interface TicketSelection {
   quantity: number;
 }
 
+interface CustomerInfo {
+  name: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | '';
+}
+
 const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const [ticketSelections, setTicketSelections] = useState<TicketSelection[]>([]);
-  const [customerInfo, setCustomerInfo] = useState({
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
     email: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '',
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,10 +92,20 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       return;
     }
 
-    if (!customerInfo.name || !customerInfo.email) {
-      setError('Please fill in your name and email.');
+    // Enhanced validation with specific error messages
+    const validationErrors = [];
+    if (!customerInfo.name?.trim()) validationErrors.push('Name is required');
+    if (!customerInfo.email?.trim()) validationErrors.push('Email is required');
+    if (!customerInfo.phone?.trim()) validationErrors.push('Phone number is required');
+    if (!customerInfo.dateOfBirth) validationErrors.push('Date of birth is required');
+    
+    if (validationErrors.length > 0) {
+      setError(`Please fill in: ${validationErrors.join(', ')}`);
       return;
     }
+    
+    // Log the customer info being sent for debugging
+    console.log('Sending customer info:', customerInfo);
 
     setIsProcessing(true);
     setError(null);
@@ -164,6 +185,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             })),
             customerEmail: customerInfo.email,
             customerName: customerInfo.name,
+            customerPhone: customerInfo.phone,
+            customerDateOfBirth: customerInfo.dateOfBirth,
+            customerGender: customerInfo.gender || undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -277,6 +301,35 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            value={customerInfo.phone}
+            onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          />
+          <input
+            type="date"
+            placeholder="Date of Birth"
+            value={customerInfo.dateOfBirth}
+            onChange={(e) => setCustomerInfo({ ...customerInfo, dateOfBirth: e.target.value })}
+            className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          />
+          <div className="md:col-span-2">
+            <select
+              value={customerInfo.gender}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, gender: e.target.value as CustomerInfo['gender'] })}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Gender (Optional)</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
+          </div>
         </div>
       </div>
 

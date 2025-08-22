@@ -44,6 +44,9 @@ export interface Order {
   tickets: OrderTicket[];
   customerEmail: string;
   customerName: string;
+  customerPhone?: string;
+  customerDateOfBirth?: string;
+  customerGender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   createdAt: Date;
   updatedAt: Date;
   // Add scan information
