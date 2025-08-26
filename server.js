@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
@@ -12,7 +13,59 @@ const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
+
+// Gzip compression middleware - should be one of the first middleware
+app.use(compression({
+  // Only compress responses larger than 1KB
+  threshold: 1024,
+  // Compress all content types
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  // Compression level (0-9, higher = more compression but slower)
+  level: 6,
+  // Enable for all browsers
+  memLevel: 8
+}));
+
+// Log compression status
+app.use((req, res, next) => {
+  const originalSend = res.send;
+  res.send = function(data) {
+    const contentLength = Buffer.byteLength(data);
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+    const isCompressed = res.getHeader('content-encoding') === 'gzip';
+
+    if (contentLength > 1024) {
+      console.log(`📦 Compression: ${req.method} ${req.path} - ${contentLength} bytes ${isCompressed ? '(compressed)' : '(not compressed)'} - Accepts: ${acceptEncoding}`);
+    }
+
+    originalSend.call(this, data);
+  };
+  next();
+});
+
 app.use(express.json());
+
+// Health check endpoint to test compression
+app.get('/api/health', (req, res) => {
+  const testData = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    compression: {
+      enabled: true,
+      threshold: '1KB',
+      level: 6
+    },
+    // Add some dummy data to ensure response is large enough to trigger compression
+    dummyData: Array(1000).fill('This is test data to ensure compression is working properly. ').join('')
+  };
+
+  res.json(testData);
+});
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51OyBk9IgkIAGwv6wlVQzyWVfwJGw73Jdf0i4k3VrT4DBWi8EUpyJpZqGkLhrGqKf18E5XlpVo9UOuwQVUFJ6Lfie00lQ80w5Fa', {
@@ -70,7 +123,7 @@ if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || proces
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
     const { eventId, tickets, customerInfo, totalAmount } = req.body;
-    
+
     if (!eventId || !tickets || !customerInfo || !totalAmount) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -106,10 +159,10 @@ app.post('/api/create-payment-intent', async (req, res) => {
 app.post('/api/confirm-payment', async (req, res) => {
   try {
     const { paymentIntentId, eventId, tickets, customerInfo, totalAmount } = req.body;
-    
+
     // Validate required customer info
     if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.dateOfBirth) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required customer information',
         missing: {
           name: !customerInfo.name,
@@ -119,26 +172,26 @@ app.post('/api/confirm-payment', async (req, res) => {
         }
       });
     }
-    
+
     // Age validation - must be 18 or older
     if (customerInfo.dateOfBirth) {
       const today = new Date();
       const birthDate = new Date(customerInfo.dateOfBirth);
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
-      
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       if (age < 18) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'You must be 18 years or older to purchase tickets',
           age: age
         });
       }
     }
-    
+
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== 'succeeded') {
@@ -148,7 +201,7 @@ app.post('/api/confirm-payment', async (req, res) => {
     // Debug: Log the entire request body and customer info
     console.log('Full request body:', JSON.stringify(req.body, null, 2));
     console.log('Received customerInfo:', JSON.stringify(customerInfo, null, 2));
-    
+
     // Create order object
     const order = {
       id: uuidv4(), // Generate proper UUID
@@ -165,17 +218,17 @@ app.post('/api/confirm-payment', async (req, res) => {
       customer_gender: customerInfo.gender || null, // Convert empty string to null
       created_at: new Date().toISOString(),
     };
-    
+
     // Debug: Log the order object being created
     console.log('Created order object:', JSON.stringify(order, null, 2));
 
     try {
       if (supabase) {
         console.log('Attempting to save order to Supabase...');
-        
+
         // Save order to Supabase
         console.log('Attempting to insert order:', JSON.stringify(order, null, 2));
-        
+
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .insert([order])
@@ -203,7 +256,7 @@ app.post('/api/confirm-payment', async (req, res) => {
           }));
 
           console.log('Attempting to insert order tickets:', JSON.stringify(orderTickets, null, 2));
-          
+
           const { error: ticketsError } = await supabase
             .from('order_tickets')
             .insert(orderTickets);
@@ -278,7 +331,7 @@ app.post('/api/confirm-payment', async (req, res) => {
         }
 
         console.log('Order processing completed:', order.id);
-        
+
         // Always return success, even if database operations failed
         res.status(200).json({
           success: true,
@@ -342,8 +395,8 @@ app.post('/api/create-guestlist', async (req, res) => {
     const { eventId, leadName, leadEmail, leadPhone, totalTickets, notes } = req.body;
 
     if (!eventId || !leadName || !leadEmail || !totalTickets || totalTickets < 1) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: eventId, leadName, leadEmail, totalTickets' 
+      return res.status(400).json({
+        error: 'Missing required fields: eventId, leadName, leadEmail, totalTickets'
       });
     }
 
@@ -447,7 +500,7 @@ app.post('/api/create-guestlist', async (req, res) => {
 app.get('/api/guestlists', async (req, res) => {
   try {
     const { eventId } = req.query;
-    
+
     console.log('🔍 Guestlists API called with eventId:', eventId);
 
     if (!eventId) {
@@ -460,7 +513,7 @@ app.get('/api/guestlists', async (req, res) => {
     }
 
     console.log('🔍 Querying guestlists for event:', eventId);
-    
+
     const { data: guestlists, error } = await supabase
       .from('guestlists')
       .select('*')
@@ -471,7 +524,7 @@ app.get('/api/guestlists', async (req, res) => {
       console.error('❌ Error fetching guestlists:', error);
       return res.status(500).json({ error: 'Failed to fetch guestlists' });
     }
-    
+
     console.log('✅ Found guestlists:', guestlists?.length || 0);
 
     // Transform data to match frontend interface

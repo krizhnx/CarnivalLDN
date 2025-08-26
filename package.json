@@ -9,7 +9,8 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "tunnel": "npx ngrok http 3000"
+    "tunnel": "npx ngrok http 3000",
+    "test:compression": "curl -H 'Accept-Encoding: gzip' -I http://localhost:3001/api/health"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^3.9.0",
@@ -17,6 +18,7 @@
     "@supabase/supabase-js": "^2.55.0",
     "@types/uuid": "^10.0.0",
     "@vercel/analytics": "^1.5.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "date-fns": "^2.30.0",
     "dotenv": "^17.2.1",
@@ -40,6 +42,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/react": "^18.2.37",
