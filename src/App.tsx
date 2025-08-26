@@ -16,6 +16,7 @@ import Dashboard from './components/Dashboard'
 import EventsPage from './components/EventsPage'
 import ScannerPage from './pages/ScannerPage'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
+import GalleryPage from './pages/GalleryPage'
 import NotFound from './components/NotFound'
 import PrivacyPolicy from './components/PrivacyPolicy'
 import TermsOfService from './components/TermsOfService'
@@ -29,16 +30,16 @@ function HomePage() {
   useEffect(() => {
     // Initialize Google Analytics
     initGA()
-    
+
     // Track page view
     trackPageView('/', 'Carnival LDN - Home')
-    
+
     // Load events on mount
     getEvents()
-    
+
     // Subscribe to real-time updates
     const subscription = subscribeToEvents()
-    
+
     // Cleanup subscription on unmount
     return () => {
       subscription?.unsubscribe()
@@ -47,7 +48,7 @@ function HomePage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <SEO 
+      <SEO
         title="Home"
         description="Carnival LDN - London's premier professional events company. From club nights to corporate events, Bollywood parties to Diwali celebrations. Creating unforgettable experiences since 2014."
         keywords="Carnival LDN, London events, nightlife London, club nights London, Bollywood parties London, Diwali celebrations London, New Year parties London, corporate events London, private parties London, event planning London, London nightlife, London party planning"
@@ -75,6 +76,7 @@ function App() {
       <Routes>
                        <Route path="/" element={<HomePage />} />
                <Route path="/events" element={<EventsPage />} />
+               <Route path="/gallery" element={<GalleryPage />} />
                <Route path="/admin" element={<Login />} />
         <Route
           path="/admin/dashboard"
@@ -92,12 +94,12 @@ function App() {
           path="/analytics"
           element={<AnalyticsDashboard />}
         />
-        
+
         {/* Legal Pages */}
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/cookie-policy" element={<CookiePolicy />} />
-        
+
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFound />} />
 

@@ -87,7 +87,7 @@ const Hero = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
         >
-          <source src="/vid.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/dg9reru4s/video/upload/v1756197502/vid_mprror.mp4" type="video/mp4" />
         </video>
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-black/50" />

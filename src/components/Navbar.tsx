@@ -19,6 +19,7 @@ const Navbar = () => {
   const navItems = [
     { name: 'Home', href: location.pathname === '/' ? '#home' : '/#home' },
     { name: 'Events', href: location.pathname === '/' ? '#events' : '/events' },
+    { name: 'Gallery', href: '/gallery' },
     { name: 'About', href: location.pathname === '/' ? '#about' : '/#about' },
     { name: 'Contact', href: location.pathname === '/' ? '#contact' : '/#contact' },
   ]

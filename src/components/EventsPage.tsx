@@ -84,9 +84,9 @@ const EventsPage = () => {
             loop
             muted
             playsInline
-            className="w-full h-full object-cover scale-150"
+            className="w-full h-full object-cover"
           >
-            <source src="/vid.mp4" type="video/mp4" />
+            <source src="https://res.cloudinary.com/dg9reru4s/video/upload/v1756197502/vid_mprror.mp4" type="video/mp4" />
           </video>
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-black/60"></div>
@@ -248,7 +248,7 @@ const EventsPage = () => {
             playsInline
             className="w-full h-full object-cover scale-150"
           >
-            <source src="/vid-ev.mp4" type="video/mp4" />
+            <source src="https://res.cloudinary.com/dg9reru4s/video/upload/v1756198520/vid-ev_xlwkrd.mp4" type="video/mp4" />
           </video>
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-gray-900/70"></div>
