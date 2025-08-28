@@ -458,7 +458,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                         {tier.originalPrice && tier.originalPrice > tier.price && (
                           <div className="text-sm text-gray-400 line-through">£{(tier.originalPrice / 100).toFixed(2)}</div>
                         )}
-                        <div className="text-sm text-gray-500">{remaining} available</div>
+
                       </>
                     )}
                   </div>

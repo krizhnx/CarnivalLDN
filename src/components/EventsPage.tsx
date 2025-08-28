@@ -516,7 +516,6 @@ const EventsPage = () => {
                                 <span className="text-gray-400 line-through">£{(tier.originalPrice / 100).toFixed(2)}</span>
                               )}
                               <span className="font-semibold text-gray-900">{tier.price === 0 ? 'Free' : `£${(tier.price / 100).toFixed(2)}`}</span>
-                              <span className="text-xs text-gray-500">({remaining} left)</span>
                             </div>
                           )}
                         </div>
