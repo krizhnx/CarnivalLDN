@@ -170,11 +170,6 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!stripe || !elements) {
-      setError('Stripe has not loaded yet. Please try again.');
-      return;
-    }
-
     if (getTotalTickets() === 0) {
       setError('Please select at least one ticket.');
       return;
@@ -233,51 +228,82 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     trackBeginCheckout(event.id, event.title, totalValue, items);
 
     try {
-      // Create payment intent
-      const response = await fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          eventId: event.id,
-          tickets: ticketSelections.filter(s => s.quantity > 0),
-          customerInfo,
-          totalAmount: getTotalAmount(),
-        }),
-      });
+      const totalAmount = getTotalAmount();
+      const isFreeEvent = totalAmount === 0;
 
-      if (!response.ok) {
-        throw new Error('Failed to create payment intent');
-      }
-
-      const { clientSecret } = await response.json();
-
-      // Confirm payment
-      const { error: paymentError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: elements.getElement(CardElement)!,
-          billing_details: {
-            name: customerInfo.name,
-            email: customerInfo.email,
-          },
-        },
-      });
-
-      if (paymentError) {
-        setError(paymentError.message || 'Payment failed');
-        return;
-      }
-
-      if (paymentIntent.status === 'succeeded') {
-        // Create order record
-        const orderResponse = await fetch('/api/confirm-payment', {
+      if (isFreeEvent) {
+        // Handle free event - no payment required
+        const response = await fetch('/api/create-free-order', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            paymentIntentId: paymentIntent.id,
+            eventId: event.id,
+            tickets: ticketSelections.filter(s => s.quantity > 0),
+            customerInfo,
+            totalAmount: 0,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create free order');
+        }
+
+        const orderData = await response.json();
+        
+        // Create a proper order object with the correct structure
+        const order = {
+          id: orderData.order?.id || `order_${Date.now()}`,
+          eventId: event.id,
+          userId: customerInfo.email,
+          stripePaymentIntentId: null, // No payment for free events
+          status: 'completed' as const,
+          totalAmount: 0,
+          currency: 'gbp',
+          tickets: ticketSelections.filter(s => s.quantity > 0).map(selection => ({
+            id: `ticket_${Date.now()}_${selection.tierId}`,
+            orderId: orderData.order?.id || `order_${Date.now()}`,
+            ticketTierId: selection.tierId,
+            quantity: selection.quantity,
+            unitPrice: 0,
+            totalPrice: 0,
+          })),
+          customerEmail: customerInfo.email,
+          customerName: customerInfo.name,
+          customerPhone: customerInfo.phone,
+          customerDateOfBirth: customerInfo.dateOfBirth,
+          customerGender: customerInfo.gender || undefined,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        // Track successful order for analytics
+        const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
+        const items = selectedTickets.map(selection => ({
+          tier: selection.tier.name,
+          price: 0,
+          quantity: selection.quantity
+        }));
+        
+        trackPurchase(order.id, event.id, event.title, 0, items);
+        
+        onSuccess(order);
+      } else {
+        // Handle paid event - require Stripe
+        if (!stripe || !elements) {
+          setError('Stripe has not loaded yet. Please try again.');
+          return;
+        }
+
+        // Create payment intent
+        const response = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             eventId: event.id,
             tickets: ticketSelections.filter(s => s.quantity > 0),
             customerInfo,
@@ -285,47 +311,86 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           }),
         });
 
-        if (orderResponse.ok) {
-          const orderData = await orderResponse.json();
-          
-          // Create a proper order object with the correct structure
-          const order = {
-            id: orderData.order?.id || `order_${Date.now()}`,
-            eventId: event.id,
-            userId: customerInfo.email,
-            stripePaymentIntentId: orderData.paymentIntentId,
-            status: 'completed' as const,
-            totalAmount: getTotalAmount(),
-            currency: 'gbp',
-            tickets: ticketSelections.filter(s => s.quantity > 0).map(selection => ({
-              id: `ticket_${Date.now()}_${selection.tierId}`,
-              orderId: orderData.order?.id || `order_${Date.now()}`,
-              ticketTierId: selection.tierId,
-              quantity: selection.quantity,
-              unitPrice: selection.tier.price,
-              totalPrice: selection.tier.price * selection.quantity,
-            })),
-            customerEmail: customerInfo.email,
-            customerName: customerInfo.name,
-            customerPhone: customerInfo.phone,
-            customerDateOfBirth: customerInfo.dateOfBirth,
-            customerGender: customerInfo.gender || undefined,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          
-          // Track successful purchase for analytics
-          const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
-          const totalValue = getTotalAmount();
-          const items = selectedTickets.map(selection => ({
-            tier: selection.tier.name,
-            price: selection.tier.price,
-            quantity: selection.quantity
-          }));
-          
-          trackPurchase(order.id, event.id, event.title, totalValue, items);
-          
-          onSuccess(order);
+        if (!response.ok) {
+          throw new Error('Failed to create payment intent');
+        }
+
+        const { clientSecret } = await response.json();
+
+        // Confirm payment
+        const { error: paymentError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: elements.getElement(CardElement)!,
+            billing_details: {
+              name: customerInfo.name,
+              email: customerInfo.email,
+            },
+          },
+        });
+
+        if (paymentError) {
+          setError(paymentError.message || 'Payment failed');
+          return;
+        }
+
+        if (paymentIntent.status === 'succeeded') {
+          // Create order record
+          const orderResponse = await fetch('/api/confirm-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id,
+              eventId: event.id,
+              tickets: ticketSelections.filter(s => s.quantity > 0),
+              customerInfo,
+              totalAmount: getTotalAmount(),
+            }),
+          });
+
+          if (orderResponse.ok) {
+            const orderData = await orderResponse.json();
+            
+            // Create a proper order object with the correct structure
+            const order = {
+              id: orderData.order?.id || `order_${Date.now()}`,
+              eventId: event.id,
+              userId: customerInfo.email,
+              stripePaymentIntentId: orderData.paymentIntentId,
+              status: 'completed' as const,
+              totalAmount: getTotalAmount(),
+              currency: 'gbp',
+              tickets: ticketSelections.filter(s => s.quantity > 0).map(selection => ({
+                id: `ticket_${Date.now()}_${selection.tierId}`,
+                orderId: orderData.order?.id || `order_${Date.now()}`,
+                ticketTierId: selection.tierId,
+                quantity: selection.quantity,
+                unitPrice: selection.tier.price,
+                totalPrice: selection.tier.price * selection.quantity,
+              })),
+              customerEmail: customerInfo.email,
+              customerName: customerInfo.name,
+              customerPhone: customerInfo.phone,
+              customerDateOfBirth: customerInfo.dateOfBirth,
+              customerGender: customerInfo.gender || undefined,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            
+            // Track successful purchase for analytics
+            const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
+            const totalValue = getTotalAmount();
+            const items = selectedTickets.map(selection => ({
+              tier: selection.tier.name,
+              price: selection.tier.price,
+              quantity: selection.quantity
+            }));
+            
+            trackPurchase(order.id, event.id, event.title, totalValue, items);
+            
+            onSuccess(order);
+          }
         }
       }
     } catch (err) {
@@ -339,6 +404,23 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Progress Bar */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700">
+            {getTotalAmount() === 0 ? 'Step 1 of 2' : 'Step 1 of 3'}
+          </span>
+          <span className="text-sm text-gray-500">Select Tickets</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <motion.div
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            initial={{ width: 0 }}
+            animate={{ width: getTotalAmount() === 0 ? "50%" : "33%" }}
+          />
+        </div>
+      </div>
+
       {/* Ticket Selection */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Tickets</h3>
@@ -538,28 +620,43 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         </div>
       </div>
 
-      {/* Payment */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment</h3>
-        <div className="border rounded-lg p-4">
-          <CardElement
-            options={{
-              style: {
-                base: {
-                  fontSize: '16px',
-                  color: '#424770',
-                  '::placeholder': {
-                    color: '#aab7c4',
+      {/* Payment - Only show for paid events */}
+      {getTotalAmount() > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment</h3>
+          <div className="border rounded-lg p-4">
+            <CardElement
+              options={{
+                style: {
+                  base: {
+                    fontSize: '16px',
+                    color: '#424770',
+                    '::placeholder': {
+                      color: '#aab7c4',
+                    },
+                  },
+                  invalid: {
+                    color: '#9e2146',
                   },
                 },
-                invalid: {
-                  color: '#9e2146',
-                },
-              },
-            }}
-          />
+              }}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Free Event Notice */}
+      {getTotalAmount() === 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <div>
+              <h4 className="font-medium text-green-800">Free Event</h4>
+              <p className="text-sm text-green-700">No payment required. Your tickets will be sent to your email after confirmation.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Order Summary */}
       <div className="bg-gray-50 rounded-lg p-4">
@@ -592,18 +689,29 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={!stripe || isProcessing || getTotalTickets() === 0}
+        disabled={isProcessing || getTotalTickets() === 0 || (getTotalAmount() > 0 && (!stripe || !elements))}
         className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {isProcessing ? (
           <>
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            <span className="ml-2">Processing Payment...</span>
+            <span className="ml-2">
+              {getTotalAmount() === 0 ? 'Processing Order...' : 'Processing Payment...'}
+            </span>
           </>
         ) : (
           <>
-            <Lock className="h-5 w-5" />
-            <span className="ml-2">Pay £{(getTotalAmount() / 100).toFixed(2)}</span>
+            {getTotalAmount() === 0 ? (
+              <>
+                <CheckCircle className="h-5 w-5" />
+                <span className="ml-2">Get Free Tickets</span>
+              </>
+            ) : (
+              <>
+                <Lock className="h-5 w-5" />
+                <span className="ml-2">Pay £{(getTotalAmount() / 100).toFixed(2)}</span>
+              </>
+            )}
           </>
         )}
       </button>
@@ -617,18 +725,23 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         >
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-lg font-semibold text-gray-700">Processing your payment...</p>
+            <p className="text-lg font-semibold text-gray-700">
+              {getTotalAmount() === 0 ? 'Processing your order...' : 'Processing your payment...'}
+            </p>
             <p className="text-sm text-gray-500 mt-2">Please don't close this window</p>
           </div>
         </motion.div>
       )}
 
-      <div className="text-center text-sm text-gray-500">
-        <div className="flex items-center justify-center gap-2">
-          <Lock className="h-4 w-4" />
-          Secure payment powered by Stripe
+      {/* Security Notice - Only show for paid events */}
+      {getTotalAmount() > 0 && (
+        <div className="text-center text-sm text-gray-500">
+          <div className="flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4" />
+            Secure payment powered by Stripe
+          </div>
         </div>
-      </div>
+      )}
     </form>
   );
 };
@@ -642,21 +755,6 @@ const Checkout = ({ event, onClose, onSuccess }: CheckoutProps) => {
         className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
         <div className="p-6 border-b">
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Step 1 of 3</span>
-              <span className="text-sm text-gray-500">Select Tickets</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <motion.div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                initial={{ width: 0 }}
-                animate={{ width: "33%" }}
-              />
-            </div>
-          </div>
-          
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Buy Tickets</h2>

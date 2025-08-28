@@ -34,7 +34,7 @@ const TermsOfService = () => {
       content: [
         "All payments are processed securely through Stripe",
         "Prices are quoted in British Pounds (GBP) and include applicable taxes",
-        "Payment is required in full at the time of booking",
+        "Payment is required in full at the time of booking for paid events",
         "Refund requests must be submitted in writing within specified timeframes",
         "Processing fees may apply to refunds and are non-refundable"
       ]

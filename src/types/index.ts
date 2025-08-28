@@ -37,7 +37,7 @@ export interface Order {
   id: string;
   eventId: string;
   userId: string;
-  stripePaymentIntentId: string;
+  stripePaymentIntentId: string | null; // Can be null for free events
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   totalAmount: number;
   currency: string;
