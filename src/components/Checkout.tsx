@@ -47,45 +47,45 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         width: auto;
         opacity: 0;
       }
-      
+
       /* Ensure date picker opens on mobile */
       input[type="date"] {
         position: relative;
       }
-      
+
       /* Make the entire input clickable for date picker */
       input[type="date"]::-webkit-calendar-picker-indicator:hover {
         opacity: 0.1;
       }
-      
+
       input[type="date"]::-webkit-datetime-edit {
         color: #374151;
       }
-      
+
       input[type="date"]::-webkit-datetime-edit-fields-wrapper {
         padding: 0;
       }
-      
+
       input[type="date"]::-webkit-datetime-edit-text {
         color: #9CA3AF;
         padding: 0 0.2em;
       }
-      
+
       input[type="date"]::-webkit-datetime-edit-month-field,
       input[type="date"]::-webkit-datetime-edit-day-field,
       input[type="date"]::-webkit-datetime-edit-year-field {
         color: #374151;
         padding: 0 0.2em;
       }
-      
+
       input[type="date"]::-webkit-inner-spin-button {
         display: none;
       }
-      
+
       input[type="date"]::-webkit-clear-button {
         display: none;
       }
-      
+
       /* iOS specific fixes */
       input, select {
         -webkit-appearance: none;
@@ -94,25 +94,25 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         border-radius: 8px;
         font-size: 16px;
       }
-      
+
       /* Ensure consistent height on iOS */
       input, select {
         min-height: 48px;
         line-height: 1.5;
       }
-      
+
       /* Fix iOS select dropdown styling */
       select {
         background-image: none;
       }
-      
+
       /* Ensure text inputs don't zoom on iOS */
       input[type="text"], input[type="email"], input[type="tel"] {
         font-size: 16px;
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
@@ -148,9 +148,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   }, [event]);
 
   const updateTicketQuantity = (tierId: string, quantity: number) => {
-    setTicketSelections(prev => 
-      prev.map(selection => 
-        selection.tierId === tierId 
+    setTicketSelections(prev =>
+      prev.map(selection =>
+        selection.tierId === tierId
           ? { ...selection, quantity: Math.max(0, quantity) }
           : selection
       )
@@ -163,13 +163,24 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     }, 0);
   };
 
+  // Check if event has any free tickets available
+  const hasFreeTickets = () => {
+    return event.ticketTiers?.some(tier => tier.price === 0 && tier.isActive !== false);
+  };
+
+  // Check if all selected tickets are free
+  const isAllFreeTickets = () => {
+    const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
+    return selectedTickets.length > 0 && selectedTickets.every(s => s.tier.price === 0);
+  };
+
   const getTotalTickets = () => {
     return ticketSelections.reduce((total, selection) => total + selection.quantity, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (getTotalTickets() === 0) {
       setError('Please select at least one ticket.');
       return;
@@ -182,34 +193,34 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     if (!customerInfo.phone?.trim()) validationErrors.push('Phone number is required');
     if (!customerInfo.dateOfBirth) validationErrors.push('Date of birth is required');
     if (!customerInfo.gender) validationErrors.push('Gender is required');
-    
+
     // Age validation - must be 18 or older
     if (customerInfo.dateOfBirth) {
       const today = new Date();
       const birthDate = new Date(customerInfo.dateOfBirth);
-      
+
       // Check if the date is valid
       if (isNaN(birthDate.getTime())) {
         validationErrors.push('Please enter a valid date of birth');
       } else {
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
-        
+
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
           age--;
         }
-        
+
         if (age < 18) {
           validationErrors.push('You must be 18 years or older to purchase tickets');
         }
       }
     }
-    
+
     if (validationErrors.length > 0) {
       setError(validationErrors.join(', '));
       return;
     }
-    
+
     // Log the customer info being sent for debugging
     console.log('Sending customer info:', customerInfo);
 
@@ -224,7 +235,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       price: selection.tier.price,
       quantity: selection.quantity
     }));
-    
+
     trackBeginCheckout(event.id, event.title, totalValue, items);
 
     try {
@@ -252,7 +263,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         }
 
         const orderData = await response.json();
-        
+
         // Create a proper order object with the correct structure
         const order = {
           id: orderData.order?.id || `order_${Date.now()}`,
@@ -278,7 +289,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        
+
         // Track successful order for analytics
         const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
         const items = selectedTickets.map(selection => ({
@@ -286,9 +297,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           price: 0,
           quantity: selection.quantity
         }));
-        
+
         trackPurchase(order.id, event.id, event.title, 0, items);
-        
+
         onSuccess(order);
       } else {
         // Handle paid event - require Stripe
@@ -351,7 +362,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
 
           if (orderResponse.ok) {
             const orderData = await orderResponse.json();
-            
+
             // Create a proper order object with the correct structure
             const order = {
               id: orderData.order?.id || `order_${Date.now()}`,
@@ -377,7 +388,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               createdAt: new Date(),
               updatedAt: new Date(),
             };
-            
+
             // Track successful purchase for analytics
             const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
             const totalValue = getTotalAmount();
@@ -386,9 +397,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               price: selection.tier.price,
               quantity: selection.quantity
             }));
-            
+
             trackPurchase(order.id, event.id, event.title, totalValue, items);
-            
+
             onSuccess(order);
           }
         }
@@ -408,7 +419,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">
-            {getTotalAmount() === 0 ? 'Step 1 of 2' : 'Step 1 of 3'}
+            {isAllFreeTickets() ? 'Step 1 of 2' : 'Step 1 of 3'}
           </span>
           <span className="text-sm text-gray-500">Select Tickets</span>
         </div>
@@ -416,7 +427,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           <motion.div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
             initial={{ width: 0 }}
-            animate={{ width: getTotalAmount() === 0 ? "50%" : "33%" }}
+            animate={{ width: isAllFreeTickets() ? "50%" : "33%" }}
           />
         </div>
       </div>
@@ -519,7 +530,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email Address *
@@ -539,7 +550,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
               Phone Number *
@@ -559,7 +570,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
               Date of Birth *
@@ -587,7 +598,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             </div>
             <p className="text-sm text-gray-600 mt-1">You must be 18 years or older to purchase tickets</p>
           </div>
-          
+
           <div className="md:col-span-2">
             <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
               Gender *
@@ -645,8 +656,8 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         </div>
       )}
 
-      {/* Free Event Notice */}
-      {getTotalAmount() === 0 && (
+      {/* Free Event Notice - Only show if event has free tickets and user has selected free tickets */}
+      {hasFreeTickets() && isAllFreeTickets() && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
@@ -696,12 +707,12 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           <>
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             <span className="ml-2">
-              {getTotalAmount() === 0 ? 'Processing Order...' : 'Processing Payment...'}
+              {isAllFreeTickets() ? 'Processing Order...' : 'Processing Payment...'}
             </span>
           </>
         ) : (
           <>
-            {getTotalAmount() === 0 ? (
+            {isAllFreeTickets() ? (
               <>
                 <CheckCircle className="h-5 w-5" />
                 <span className="ml-2">Get Free Tickets</span>
@@ -726,7 +737,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-lg font-semibold text-gray-700">
-              {getTotalAmount() === 0 ? 'Processing your order...' : 'Processing your payment...'}
+              {isAllFreeTickets() ? 'Processing your order...' : 'Processing your payment...'}
             </p>
             <p className="text-sm text-gray-500 mt-2">Please don't close this window</p>
           </div>
@@ -771,10 +782,10 @@ const Checkout = ({ event, onClose, onSuccess }: CheckoutProps) => {
 
         <div className="p-6">
           <Elements stripe={stripePromise}>
-            <CheckoutForm 
-              event={event} 
-              onClose={onClose} 
-              onSuccess={onSuccess} 
+            <CheckoutForm
+              event={event}
+              onClose={onClose}
+              onSuccess={onSuccess}
             />
           </Elements>
         </div>
