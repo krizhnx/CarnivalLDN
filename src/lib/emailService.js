@@ -213,7 +213,7 @@ const generateTicketConfirmationHTML = (data) => {
         <!-- Body -->
         <div class="content">
           <h2>Hello ${data.customerName},</h2>
-          <p class="highlight">Your tickets for <strong>${data.eventName}</strong> are confirmed ✅</p>
+          <p class="highlight">Your tickets for <strong>${data.eventName}</strong> are confirmed!</p>
 
           <!-- Event Details -->
           <div class="ticket-details">
@@ -230,7 +230,6 @@ const generateTicketConfirmationHTML = (data) => {
             ${data.tickets.map(ticket => `
               <div class="ticket-item">
                 <span>${ticket.tierName} × ${ticket.quantity}</span>
-                <span>${formatCurrency(ticket.totalPrice, data.currency)}</span>
               </div>
             `).join('')}
             <div class="total">
@@ -238,15 +237,9 @@ const generateTicketConfirmationHTML = (data) => {
             </div>
           </div>
 
-          <!-- Call-to-action -->
-          <p style="text-align:center;">
-            <a href="#" class="button">Download Your Tickets</a>
-          </p>
+          <!-- Important Information -->
           <p style="font-size:15px;text-align:center;margin-top:15px;">
-            🎫 Your tickets are also attached as a PDF. Please keep them safe for event entry.
-          </p>
-          <p style="font-size:14px;text-align:center;color:#555;">
-            Have questions? Just reply to this email and we'll be happy to help.
+            🎫 Your tickets are attached as a PDF. Please keep them safe for event entry.
           </p>
         </div>
 
