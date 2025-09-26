@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle, Ticket, Download } from 'lucide-react';
 import { Order } from '../types';
 import { useAppStore } from '../store/supabaseStore';
+import { supabase } from '../lib/supabase';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
@@ -25,6 +26,29 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
 
   const handleDownload = async () => {
     try {
+      // Fetch the actual order data from the database to ensure we have the correct ticket_tier_id
+      const { data: dbOrder, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_tickets (
+            *,
+            ticket_tiers (
+              id,
+              name,
+              price
+            )
+          )
+        `)
+        .eq('id', order.id)
+        .single();
+
+      if (orderError || !dbOrder) {
+        console.error('Error fetching order from database:', orderError);
+        // Fallback to frontend order data
+        console.log('Falling back to frontend order data');
+      }
+
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -53,7 +77,9 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
       doc.text(`Status: ${order.status}`, margin, y); y += 16;
       doc.text(`Total: £${((order.totalAmount || 0) / 100).toFixed(2)}`, margin, y); y += 20;
 
-      const tickets = order.tickets || [];
+      // Use database order tickets if available, otherwise fallback to frontend order tickets
+      const tickets = dbOrder?.order_tickets || order.tickets || [];
+      
       for (let i = 0; i < tickets.length; i++) {
         const t = tickets[i];
         // Page break check
@@ -62,11 +88,13 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
           y = margin;
         }
 
-        const tierName = (() => {
-          const ev = events?.find(e => e.id === order.eventId);
-          const tier = ev?.ticketTiers?.find(tt => tt.id === t.ticketTierId);
-          return tier?.name || t.ticketTierId;
-        })();
+        // Get tier name - use database data if available
+        const tierName = dbOrder?.order_tickets?.[i]?.ticket_tiers?.name || 
+          (() => {
+            const ev = events?.find(e => e.id === order.eventId);
+            const tier = ev?.ticketTiers?.find(tt => tt.id === t.ticketTierId);
+            return tier?.name || t.ticketTierId;
+          })();
 
         // Ticket card
         const cardX = margin;
@@ -86,16 +114,25 @@ const PaymentSuccess = ({ order, onClose }: PaymentSuccessProps) => {
         doc.setFontSize(12);
         doc.text(`Tier: ${tierName}`, cardX + 16, ty); ty += 14;
         doc.text(`Quantity: ${t.quantity}`, cardX + 16, ty); ty += 14;
-        doc.text(`Unit: £${(t.unitPrice / 100).toFixed(2)}   Total: £${(t.totalPrice / 100).toFixed(2)}`, cardX + 16, ty); ty += 18;
+        doc.text(`Unit: £${((t.unit_price || t.unitPrice || 0) / 100).toFixed(2)}   Total: £${((t.total_price || t.totalPrice || 0) / 100).toFixed(2)}`, cardX + 16, ty); ty += 18;
         doc.setTextColor(75, 85, 99); // gray-600
         doc.text(`Order Ref: ${order.id?.slice(0, 8)}...`, cardX + 16, ty);
 
+        // Use the correct ticket_tier_id from database if available
+        const correctTicketTierId = dbOrder?.order_tickets?.[i]?.ticket_tier_id || t.ticketTierId;
+        
         const qrPayload = JSON.stringify({
           orderId: order.id,
-          ticketTierId: t.ticketTierId,
+          ticketTierId: correctTicketTierId,
           quantity: t.quantity,
           customer: order.customerEmail,
         });
+        
+        // Debug: Log the QR payload to help troubleshoot
+        console.log('🔍 Website Download QR Payload:', qrPayload);
+        console.log('🔍 Correct Ticket Tier ID:', correctTicketTierId);
+        console.log('🔍 Database Order:', dbOrder);
+        console.log('🔍 Frontend Order:', order);
 
         const qrDataUrl = await QRCode.toDataURL(qrPayload, { width: 120, margin: 1, color: { dark: '#111827', light: '#FFFFFFFF' } });
         doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 136, y + 15, 120, 120);

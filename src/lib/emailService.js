@@ -249,6 +249,11 @@ const generateTicketsPDF = async (data) => {
         quantity: ticket.quantity,
         customer: data.customerEmail,
       });
+      
+      // Debug: Log the QR payload to help troubleshoot
+      console.log('🔍 Email Service QR Payload:', qrPayload);
+      console.log('🔍 Email ticket data:', ticket);
+      console.log('🔍 Email order data:', data);
 
       try {
         const qrDataUrl = await QRCode.toDataURL(qrPayload, { 
