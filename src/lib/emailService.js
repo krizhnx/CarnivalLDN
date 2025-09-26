@@ -73,72 +73,192 @@ const formatDate = (dateString) => {
 };
 
 const generateTicketConfirmationHTML = (data) => {
-
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Ticket Confirmation - ${data.eventName}</title>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; text-align: center; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #000000; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; text-align: center; }
-        .ticket-details { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #000000; text-align: left; }
-        .ticket-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee; font-size: 16px; }
-        .ticket-item:last-child { border-bottom: none; }
-        .total { font-size: 20px; font-weight: bold; text-align: right; margin-top: 20px; padding-top: 20px; border-top: 2px solid #000000; }
-        .footer { text-align: center; margin-top: 30px; color: #666; font-size: 16px; }
-        .button { display: inline-block; background: #000000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-      </style>
-    </head>
-    <body>
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Confirmation - ${data.eventName}</title>
+    <style>
+      /* General resets for email clients */
+      body, table, td, a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table {
+        border-collapse: collapse !important;
+      }
+      img {
+        border: 0;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+        max-width: 100%;
+      }
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        background-color: #f4f4f4;
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      }
+      .header {
+        background: linear-gradient(135deg, #000000, #434343);
+        color: #ffffff;
+        padding: 40px 20px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: 1px;
+      }
+      .content {
+        padding: 30px 25px;
+        color: #333333;
+        text-align: left;
+      }
+      .content h2 {
+        font-size: 22px;
+        margin-top: 0;
+      }
+      .highlight {
+        font-size: 18px;
+        margin-bottom: 25px;
+      }
+      .ticket-details {
+        background: #fafafa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 25px 0;
+        border: 1px solid #eaeaea;
+      }
+      .ticket-details h3 {
+        font-size: 18px;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #000000;
+        display: inline-block;
+        padding-bottom: 4px;
+      }
+      .ticket-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 16px;
+        padding: 10px 0;
+        border-bottom: 1px dashed #ddd;
+      }
+      .ticket-item:last-child {
+        border-bottom: none;
+      }
+      .total {
+        text-align: right;
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px solid #000000;
+      }
+      .button {
+        display: inline-block;
+        background: #000000;
+        color: #ffffff !important;
+        padding: 14px 28px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 25px auto;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        padding: 25px 15px;
+        font-size: 13px;
+        color: #999999;
+        background: #f4f4f4;
+        border-top: 1px solid #e0e0e0;
+      }
+      @media screen and (max-width: 600px) {
+        .content, .header, .footer {
+          padding: 20px !important;
+        }
+        .ticket-item {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .ticket-item span {
+          margin-bottom: 5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div style="padding:20px;">
       <div class="container">
+        <!-- Header -->
         <div class="header">
-          <h1>Ticket Confirmation</h1>
-          <p>Thank you for your purchase!</p>
+          <h1>🎟️ Ticket Confirmation</h1>
+          <p style="margin:10px 0 0;font-size:16px;">Thank you for your purchase!</p>
         </div>
-        
+
+        <!-- Body -->
         <div class="content">
-          <h2 style="font-size: 24px; margin-bottom: 20px;">Hello ${data.customerName}!</h2>
-          <p style="font-size: 18px; margin-bottom: 30px;">Your tickets for <strong>${data.eventName}</strong> have been confirmed.</p>
-          
+          <h2>Hello ${data.customerName},</h2>
+          <p class="highlight">Your tickets for <strong>${data.eventName}</strong> are confirmed ✅</p>
+
+          <!-- Event Details -->
           <div class="ticket-details">
-            <h3 style="font-size: 20px; margin-bottom: 20px; color: #000000;">Event Details</h3>
-            <p style="font-size: 16px; margin-bottom: 10px;"><strong>Event:</strong> ${data.eventName}</p>
-            <p style="font-size: 16px; margin-bottom: 10px;"><strong>Date:</strong> ${formatDate(data.eventDate)}</p>
-            <p style="font-size: 16px; margin-bottom: 10px;"><strong>Location:</strong> ${data.eventLocation}</p>
-            <p style="font-size: 16px; margin-bottom: 10px;"><strong>Order ID:</strong> ${data.orderId}</p>
+            <h3>Event Details</h3>
+            <p><strong>Event:</strong> ${data.eventName}</p>
+            <p><strong>Date:</strong> ${formatDate(data.eventDate)}</p>
+            <p><strong>Location:</strong> ${data.eventLocation}</p>
+            <p><strong>Order ID:</strong> ${data.orderId}</p>
           </div>
-          
+
+          <!-- Ticket Summary -->
           <div class="ticket-details">
-            <h3 style="font-size: 20px; margin-bottom: 20px; color: #000000;">Ticket Summary</h3>
+            <h3>Ticket Summary</h3>
             ${data.tickets.map(ticket => `
               <div class="ticket-item">
-                <span style="font-size: 18px; font-weight: 600;">${ticket.tierName} × ${ticket.quantity}</span>
-                <span style="font-size: 18px; font-weight: 600;">${formatCurrency(ticket.totalPrice, data.currency)}</span>
+                <span>${ticket.tierName} × ${ticket.quantity}</span>
+                <span>${formatCurrency(ticket.totalPrice, data.currency)}</span>
               </div>
             `).join('')}
             <div class="total">
               Total: ${formatCurrency(data.totalAmount, data.currency)}
             </div>
           </div>
-          
-          <p><strong>🎫 Your tickets are attached to this email as a PDF!</strong> Please download and save them for the event.</p>
-          <p>Please keep this confirmation email for your records.</p>
-          
-          <p>If you have any questions, please don't hesitate to contact us.</p>
-          
-          <div class="footer">
-            <p>Thank you for choosing Carnival LDN!</p>
-            <p>© ${new Date().getFullYear()} Carnival LDN. All rights reserved.</p>
-          </div>
+
+          <!-- Call-to-action -->
+          <p style="text-align:center;">
+            <a href="#" class="button">Download Your Tickets</a>
+          </p>
+          <p style="font-size:15px;text-align:center;margin-top:15px;">
+            🎫 Your tickets are also attached as a PDF. Please keep them safe for event entry.
+          </p>
+          <p style="font-size:14px;text-align:center;color:#555;">
+            Have questions? Just reply to this email and we'll be happy to help.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <p>Thank you for choosing <strong>Carnival LDN</strong>!</p>
+          <p>© ${new Date().getFullYear()} Carnival LDN. All rights reserved.</p>
         </div>
       </div>
-    </body>
-    </html>
+    </div>
+  </body>
+  </html>
   `;
 };
 
