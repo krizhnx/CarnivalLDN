@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../store/supabaseStore';
-import { Event, Order } from '../types';
+import { Event, Order, AffiliateSociety, AffiliateFormData, SocietyPerformance } from '../types';
 import EventForm from './EventForm';
+import AffiliateSocietyModal from './AffiliateSocietyModal';
+import AffiliateLinkGenerator from './AffiliateLinkGenerator';
+import SocietyDetailsModal from './SocietyDetailsModal';
+import SocietyLinksModal from './SocietyLinksModal';
 import toast from 'react-hot-toast';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Users } from 'lucide-react';
 import {
   DashboardHeader,
   DashboardStats,
@@ -33,19 +37,48 @@ interface DashboardStats {
 }
 
 const Dashboard = () => {
-  const { events, orders, getEvents, getOrders, addEvent, deleteEvent, archiveEvent } = useAppStore();
+  const { 
+    events, 
+    orders, 
+    affiliateSocieties,
+    // @ts-ignore - Used by SocietyLinksModal component
+    affiliateLinks,
+    affiliateStats,
+    getEvents, 
+    getOrders, 
+    addEvent, 
+    deleteEvent, 
+    archiveEvent,
+    getAffiliateSocieties,
+    addAffiliateSociety,
+    updateAffiliateSociety,
+    deleteAffiliateSociety,
+    createAffiliateLinks,
+    getAffiliateLinks,
+    getAffiliateStats,
+    getSocietyPerformance,
+  } = useAppStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
   const [selectedEvent, setSelectedEvent] = useState<string>('all');
   const [creatingEvents, setCreatingEvents] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'analytics' | 'events' | 'orders'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'events' | 'orders' | 'affiliate'>('analytics');
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [confirm, setConfirm] = useState<{type: 'archive' | 'delete', event: Event} | null>(null);
   const [isGuestlistModalOpen, setIsGuestlistModalOpen] = useState(false);
   const [isGuestlistManagementOpen, setIsGuestlistManagementOpen] = useState(false);
   const [selectedEventForGuestlist, setSelectedEventForGuestlist] = useState<Event | null>(null);
+  
+  // Affiliate tracking state
+  const [isSocietyModalOpen, setIsSocietyModalOpen] = useState(false);
+  const [isLinkGeneratorOpen, setIsLinkGeneratorOpen] = useState(false);
+  const [editingSociety, setEditingSociety] = useState<AffiliateSociety | null>(null);
+  const [societyPerformance, setSocietyPerformance] = useState<SocietyPerformance[]>([]);
+  const [isSocietyDetailsOpen, setIsSocietyDetailsOpen] = useState(false);
+  const [isSocietyLinksOpen, setIsSocietyLinksOpen] = useState(false);
+  const [viewingSociety, setViewingSociety] = useState<AffiliateSociety | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -69,8 +102,19 @@ const Dashboard = () => {
     }, 10000); // 10 second timeout
 
     try {
-      console.log('📡 Fetching events and orders...');
-      await Promise.all([getEvents(), getOrders()]);
+      console.log('📡 Fetching events, orders, affiliate societies, affiliate links, and stats...');
+      await Promise.all([
+        getEvents(), 
+        getOrders(), 
+        getAffiliateSocieties(),
+        getAffiliateLinks(),
+        getAffiliateStats()
+      ]);
+      
+      // Load society performance data
+      const performanceData = await getSocietyPerformance();
+      setSocietyPerformance(performanceData);
+      
       console.log('✅ Data fetched successfully');
 
       // Calculate comprehensive stats
@@ -115,6 +159,79 @@ const Dashboard = () => {
     toast.success(`Guestlist created successfully! QR code sent to ${guestlist.leadEmail}`);
     // Optionally refresh data
     loadDashboardData();
+  };
+
+  // Affiliate tracking handlers
+  const handleAddSociety = () => {
+    setEditingSociety(null);
+    setIsSocietyModalOpen(true);
+  };
+
+  const handleEditSociety = (society: AffiliateSociety) => {
+    setEditingSociety(society);
+    setIsSocietyModalOpen(true);
+  };
+
+  const handleSaveSociety = async (societyData: AffiliateFormData) => {
+    try {
+      if (editingSociety) {
+        await updateAffiliateSociety(editingSociety.id, societyData);
+      } else {
+        await addAffiliateSociety(societyData);
+      }
+      setIsSocietyModalOpen(false);
+      setEditingSociety(null);
+      // Refresh performance data
+      const performanceData = await getSocietyPerformance();
+      setSocietyPerformance(performanceData);
+    } catch (error) {
+      console.error('Error saving society:', error);
+      // Error toast is handled in the store function
+    }
+  };
+
+  const handleGenerateLinks = () => {
+    setIsLinkGeneratorOpen(true);
+  };
+
+  const handleGenerateTrackingLinks = async (societyIds: string[], eventId: string) => {
+    try {
+      await createAffiliateLinks(societyIds, eventId);
+      setIsLinkGeneratorOpen(false);
+      // Refresh affiliate links and performance data after creating links
+      const performanceData = await Promise.all([
+        getAffiliateLinks(),
+        getSocietyPerformance()
+      ]);
+      setSocietyPerformance(performanceData[1]);
+    } catch (error) {
+      console.error('Error generating tracking links:', error);
+      // Error toast is handled in the store function
+    }
+  };
+
+  // Action button handlers
+  const handleViewSociety = (society: AffiliateSociety) => {
+    setViewingSociety(society);
+    setIsSocietyDetailsOpen(true);
+  };
+
+  const handleViewLinks = (society: AffiliateSociety) => {
+    setViewingSociety(society);
+    setIsSocietyLinksOpen(true);
+  };
+
+  const handleDeleteSociety = async (society: AffiliateSociety) => {
+    if (window.confirm(`Are you sure you want to delete ${society.name}? This action cannot be undone.`)) {
+      try {
+        await deleteAffiliateSociety(society.id);
+        // Refresh performance data after deletion
+        const performanceData = await getSocietyPerformance();
+        setSocietyPerformance(performanceData);
+      } catch (error) {
+        console.error('Error deleting society:', error);
+      }
+    }
   };
 
 
@@ -489,7 +606,7 @@ const Dashboard = () => {
         selectedTimeframe={selectedTimeframe}
         selectedEvent={selectedEvent}
         events={events || []}
-        activeTab={activeTab}
+        activeTab={activeTab as 'analytics' | 'events' | 'orders' | 'affiliate'}
         onTimeframeChange={setSelectedTimeframe}
         onEventChange={setSelectedEvent}
         onTabChange={setActiveTab}
@@ -566,6 +683,198 @@ const Dashboard = () => {
         {activeTab === 'orders' && (
           <OrdersTable orders={orders || []} events={events || []} />
         )}
+
+        {activeTab === 'affiliate' && (
+          <div className="space-y-8">
+            {/* Affiliate Tracking Header */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-purple-900">Affiliate Tracking</h2>
+                  <p className="text-purple-700 mt-2">Track university society performance and generate custom promotional links</p>
+                </div>
+                <div className="flex space-x-3">
+                  <button 
+                    onClick={handleAddSociety}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Add Society
+                  </button>
+                  <button 
+                    onClick={handleGenerateLinks}
+                    className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                  >
+                    Generate Links
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Active Societies</p>
+                    <p className="text-2xl font-semibold text-gray-900">{affiliateStats?.totalSocieties || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Clicks</p>
+                    <p className="text-2xl font-semibold text-gray-900">{affiliateStats?.totalClicks || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Tickets Sold</p>
+                    <p className="text-2xl font-semibold text-gray-900">{affiliateStats?.totalTicketsSold || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Revenue</p>
+                    <p className="text-2xl font-semibold text-gray-900">£{((affiliateStats?.totalRevenue || 0) / 100).toFixed(0)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Society Performance Table */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Society Performance</h3>
+                <p className="text-sm text-gray-600">Track clicks, conversions, and revenue by society</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Society</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clicks</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tickets Sold</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {affiliateSocieties.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                          <div className="flex flex-col items-center">
+                            <Users className="h-12 w-12 text-gray-300 mb-4" />
+                            <p className="text-lg font-medium text-gray-900 mb-2">No societies added yet</p>
+                            <p className="text-sm text-gray-500 mb-4">Start by adding your first university society to track their performance</p>
+                            <button
+                              onClick={handleAddSociety}
+                              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            >
+                              Add Your First Society
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      societyPerformance.map((performance) => {
+                        const society = performance.society;
+                        const colors = [
+                          'from-blue-400 to-blue-600',
+                          'from-purple-400 to-purple-600', 
+                          'from-pink-400 to-pink-600',
+                          'from-green-400 to-green-600',
+                          'from-yellow-400 to-yellow-600',
+                          'from-red-400 to-red-600'
+                        ];
+                        const colorClass = colors[Math.floor(Math.random() * colors.length)];
+                        const initials = society.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
+                        
+                        return (
+                          <tr key={society.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className={`h-10 w-10 rounded-full bg-gradient-to-r ${colorClass} flex items-center justify-center`}>
+                                    <span className="text-white font-semibold text-sm">{initials}</span>
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{society.name}</div>
+                                  <div className="text-sm text-gray-500">{society.code}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {society.university || 'Not specified'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{performance.clicks}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{performance.ticketsSold}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">£{(performance.revenue / 100).toFixed(0)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button 
+                                onClick={() => handleViewSociety(society)}
+                                className="text-blue-600 hover:text-blue-900 mr-3"
+                              >
+                                View
+                              </button>
+                              <button 
+                                onClick={() => handleViewLinks(society)}
+                                className="text-green-600 hover:text-green-900 mr-3"
+                              >
+                                Links
+                              </button>
+                              <button 
+                                onClick={() => handleEditSociety(society)}
+                                className="text-gray-600 hover:text-gray-900 mr-3"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSociety(society)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {isEventFormOpen && (
@@ -625,6 +934,50 @@ const Dashboard = () => {
           }}
         />
       )}
+
+      {/* Affiliate Society Modal */}
+      {isSocietyModalOpen && (
+        <AffiliateSocietyModal
+          isOpen={isSocietyModalOpen}
+          onClose={() => {
+            setIsSocietyModalOpen(false);
+            setEditingSociety(null);
+          }}
+          onSave={handleSaveSociety}
+          editingSociety={editingSociety}
+        />
+      )}
+
+      {/* Affiliate Link Generator Modal */}
+      {isLinkGeneratorOpen && (
+        <AffiliateLinkGenerator
+          isOpen={isLinkGeneratorOpen}
+          onClose={() => setIsLinkGeneratorOpen(false)}
+          onGenerateLinks={handleGenerateTrackingLinks}
+          societies={affiliateSocieties}
+          events={events || []}
+        />
+      )}
+
+      {/* Society Details Modal */}
+      <SocietyDetailsModal
+        society={viewingSociety}
+        isOpen={isSocietyDetailsOpen}
+        onClose={() => {
+          setIsSocietyDetailsOpen(false);
+          setViewingSociety(null);
+        }}
+      />
+
+      {/* Society Links Modal */}
+      <SocietyLinksModal
+        society={viewingSociety}
+        isOpen={isSocietyLinksOpen}
+        onClose={() => {
+          setIsSocietyLinksOpen(false);
+          setViewingSociety(null);
+        }}
+      />
     </div>
   );
 };

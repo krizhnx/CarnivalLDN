@@ -216,6 +216,7 @@ app.post('/api/confirm-payment', async (req, res) => {
       customer_phone: customerInfo.phone || null, // Convert empty string to null
       customer_date_of_birth: customerInfo.dateOfBirth || null, // Convert empty string to null
       customer_gender: customerInfo.gender || null, // Convert empty string to null
+      affiliate_link_id: req.body.affiliateLinkId || null, // Include affiliate link ID
       created_at: new Date().toISOString(),
     };
 

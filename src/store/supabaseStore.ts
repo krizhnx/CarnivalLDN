@@ -1,13 +1,17 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
-import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan, TicketSearchResult, GuestlistScan } from '../types'
+import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan, TicketSearchResult, GuestlistScan, AffiliateSociety, AffiliateFormData, AffiliateLink, AffiliateStats, SocietyPerformance } from '../types'
 import toast from 'react-hot-toast'
 
 interface AppState extends AuthState {
   events: Event[]
   orders: any[]
   isLoading: boolean
+  // Affiliate tracking state
+  affiliateSocieties: AffiliateSociety[]
+  affiliateLinks: AffiliateLink[]
+  affiliateStats: AffiliateStats | null
   // Auth actions
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
@@ -20,6 +24,16 @@ interface AppState extends AuthState {
   subscribeToEvents: () => any
   // Order actions
   getOrders: () => Promise<void>
+  // Affiliate tracking actions
+  getAffiliateSocieties: () => Promise<void>
+  addAffiliateSociety: (societyData: AffiliateFormData) => Promise<void>
+  updateAffiliateSociety: (id: string, societyData: AffiliateFormData) => Promise<void>
+  deleteAffiliateSociety: (id: string) => Promise<void>
+  getAffiliateLinks: () => Promise<void>
+  createAffiliateLinks: (societyIds: string[], eventId: string) => Promise<void>
+  getAffiliateStats: () => Promise<void>
+  getSocietyPerformance: () => Promise<SocietyPerformance[]>
+  trackAffiliateClick: (linkId: string, sessionId?: string) => Promise<void>
         // Ticket scanning actions
       validateTicket: (orderId: string, ticketTierId: string, customerEmail: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
       validateGuestlist: (guestlistId: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
@@ -45,6 +59,10 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       events: [],
       orders: [],
+      // Affiliate tracking initial state
+      affiliateSocieties: [],
+      affiliateLinks: [],
+      affiliateStats: null,
 
       // Auth actions - SIMPLIFIED (hardcoded)
       login: async (email: string, password: string) => {
@@ -1203,7 +1221,420 @@ export const useAppStore = create<AppState>()(
           console.error('Error recording guestlist scan:', error);
           throw error;
         }
-      }
+      },
+
+      // Affiliate tracking actions
+      getAffiliateSocieties: async () => {
+        try {
+          console.log('🔍 Fetching affiliate societies from Supabase...');
+          console.log('🔗 Supabase client:', supabase);
+          
+          const { data: societies, error } = await supabase
+            .from('affiliate_societies')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('❌ Error fetching affiliate societies:', error);
+            throw error;
+          }
+
+          console.log('📊 Raw societies data from Supabase:', societies);
+
+          const transformedSocieties = (societies || []).map(society => ({
+            id: society.id,
+            name: society.name,
+            code: society.code,
+            contactName: society.contact_name,
+            contactEmail: society.contact_email,
+            contactPhone: society.contact_phone,
+            university: society.university,
+            societyType: society.society_type,
+            commissionRate: society.commission_rate,
+            isActive: society.is_active,
+            createdAt: society.created_at,
+            updatedAt: society.updated_at,
+          }));
+
+          console.log('✅ Transformed societies:', transformedSocieties);
+          set({ affiliateSocieties: transformedSocieties });
+        } catch (error) {
+          console.error('Error fetching affiliate societies:', error);
+          toast.error('Failed to load affiliate societies');
+        }
+      },
+
+      addAffiliateSociety: async (societyData: AffiliateFormData) => {
+        try {
+          const { data: society, error } = await supabase
+            .from('affiliate_societies')
+            .insert({
+              name: societyData.name,
+              code: societyData.code,
+              contact_name: societyData.contactName || null,
+              contact_email: societyData.contactEmail || null,
+              contact_phone: societyData.contactPhone || null,
+              university: societyData.university || null,
+              society_type: societyData.societyType || null,
+              commission_rate: societyData.commissionRate,
+              is_active: true,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          const transformedSociety = {
+            id: society.id,
+            name: society.name,
+            code: society.code,
+            contactName: society.contact_name,
+            contactEmail: society.contact_email,
+            contactPhone: society.contact_phone,
+            university: society.university,
+            societyType: society.society_type,
+            commissionRate: society.commission_rate,
+            isActive: society.is_active,
+            createdAt: society.created_at,
+            updatedAt: society.updated_at,
+          };
+
+          set(state => ({
+            affiliateSocieties: [transformedSociety, ...state.affiliateSocieties]
+          }));
+
+          toast.success('Society created successfully!');
+        } catch (error) {
+          console.error('Error creating affiliate society:', error);
+          toast.error('Failed to create society');
+          throw error;
+        }
+      },
+
+      updateAffiliateSociety: async (id: string, societyData: AffiliateFormData) => {
+        try {
+          const { data: society, error } = await supabase
+            .from('affiliate_societies')
+            .update({
+              name: societyData.name,
+              code: societyData.code,
+              contact_name: societyData.contactName || null,
+              contact_email: societyData.contactEmail || null,
+              contact_phone: societyData.contactPhone || null,
+              university: societyData.university || null,
+              society_type: societyData.societyType || null,
+              commission_rate: societyData.commissionRate,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          const transformedSociety = {
+            id: society.id,
+            name: society.name,
+            code: society.code,
+            contactName: society.contact_name,
+            contactEmail: society.contact_email,
+            contactPhone: society.contact_phone,
+            university: society.university,
+            societyType: society.society_type,
+            commissionRate: society.commission_rate,
+            isActive: society.is_active,
+            createdAt: society.created_at,
+            updatedAt: society.updated_at,
+          };
+
+          set(state => ({
+            affiliateSocieties: state.affiliateSocieties.map(s => 
+              s.id === id ? transformedSociety : s
+            )
+          }));
+
+          toast.success('Society updated successfully!');
+        } catch (error) {
+          console.error('Error updating affiliate society:', error);
+          toast.error('Failed to update society');
+          throw error;
+        }
+      },
+
+      deleteAffiliateSociety: async (id: string) => {
+        try {
+          // Get all affiliate links for this society first
+          const { data: societyLinks, error: linksQueryError } = await supabase
+            .from('affiliate_links')
+            .select('id')
+            .eq('society_id', id);
+
+          if (linksQueryError) {
+            console.error('Error querying affiliate links:', linksQueryError);
+            throw linksQueryError;
+          }
+
+          const linkIds = societyLinks?.map(link => link.id) || [];
+
+          if (linkIds.length > 0) {
+            // Step 1: Delete all affiliate clicks associated with these links
+            console.log('🗑️ Deleting affiliate clicks for links:', linkIds);
+            const { error: clicksError } = await supabase
+              .from('affiliate_clicks')
+              .delete()
+              .in('link_id', linkIds);
+
+            if (clicksError) {
+              console.error('Error deleting affiliate clicks:', clicksError);
+              throw clicksError;
+            }
+
+            // Step 2: Delete all affiliate links associated with this society
+            console.log('🗑️ Deleting affiliate links for society:', id);
+            const { error: linksError } = await supabase
+              .from('affiliate_links')
+              .delete()
+              .eq('society_id', id);
+
+            if (linksError) {
+              console.error('Error deleting affiliate links:', linksError);
+              throw linksError;
+            }
+          }
+
+          // Step 3: Delete the society itself
+          console.log('🗑️ Deleting society:', id);
+          const { error: societyError } = await supabase
+            .from('affiliate_societies')
+            .delete()
+            .eq('id', id);
+
+          if (societyError) {
+            console.error('Error deleting society:', societyError);
+            throw societyError;
+          }
+
+          // Update local state
+          set(state => ({
+            affiliateSocieties: state.affiliateSocieties.filter(s => s.id !== id),
+            affiliateLinks: state.affiliateLinks.filter(link => link.societyId !== id)
+          }));
+
+          toast.success('Society and all associated data deleted successfully!');
+        } catch (error) {
+          console.error('Error deleting affiliate society:', error);
+          toast.error('Failed to delete society. It may have associated orders or other constraints.');
+          throw error;
+        }
+      },
+
+      getAffiliateLinks: async () => {
+        try {
+          console.log('🔍 Fetching affiliate links from Supabase...');
+          const { data: links, error } = await supabase
+            .from('affiliate_links')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('❌ Error fetching affiliate links:', error);
+            throw error;
+          }
+
+          console.log('📊 Raw links data from Supabase:', links);
+
+          const transformedLinks = (links || []).map(link => ({
+            id: link.id,
+            societyId: link.society_id,
+            eventId: link.event_id,
+            linkCode: link.link_code,
+            customUrl: link.custom_url,
+            isActive: link.is_active,
+            createdAt: link.created_at,
+          }));
+
+          console.log('✅ Transformed links:', transformedLinks);
+          set({ affiliateLinks: transformedLinks });
+        } catch (error) {
+          console.error('Error fetching affiliate links:', error);
+          toast.error('Failed to load affiliate links');
+        }
+      },
+
+      createAffiliateLinks: async (societyIds: string[], eventId: string) => {
+        try {
+          const linksToCreate = societyIds.map(societyId => ({
+            society_id: societyId,
+            event_id: eventId,
+            link_code: `${societyId}-${eventId}-${Date.now()}`,
+            is_active: true,
+          }));
+
+          const { data: links, error } = await supabase
+            .from('affiliate_links')
+            .insert(linksToCreate)
+            .select();
+
+          if (error) throw error;
+
+          const transformedLinks = (links || []).map(link => ({
+            id: link.id,
+            societyId: link.society_id,
+            eventId: link.event_id,
+            linkCode: link.link_code,
+            customUrl: link.custom_url,
+            isActive: link.is_active,
+            createdAt: link.created_at,
+          }));
+
+          set(state => ({
+            affiliateLinks: [...transformedLinks, ...state.affiliateLinks]
+          }));
+
+          toast.success(`${societyIds.length} tracking link(s) created successfully!`);
+        } catch (error) {
+          console.error('Error creating affiliate links:', error);
+          toast.error('Failed to create tracking links');
+          throw error;
+        }
+      },
+
+      getAffiliateStats: async () => {
+        try {
+          // Get total societies
+          const { count: societyCount } = await supabase
+            .from('affiliate_societies')
+            .select('*', { count: 'exact', head: true });
+
+          // Get total clicks
+          const { count: clickCount } = await supabase
+            .from('affiliate_clicks')
+            .select('*', { count: 'exact', head: true });
+
+          // Get total tickets sold and revenue from orders with affiliate links
+          const { data: affiliateOrders, error: ordersError } = await supabase
+            .from('orders')
+            .select(`
+              total_amount,
+              order_tickets (quantity)
+            `)
+            .not('affiliate_link_id', 'is', null)
+            .eq('status', 'completed');
+
+          if (ordersError) throw ordersError;
+
+          const totalRevenue = (affiliateOrders || []).reduce((sum, order) => sum + (order.total_amount || 0), 0);
+          const totalTicketsSold = (affiliateOrders || []).reduce((sum, order) => {
+            const orderTickets = order.order_tickets || [];
+            return sum + orderTickets.reduce((ticketSum: number, ticket: any) => ticketSum + (ticket.quantity || 0), 0);
+          }, 0);
+
+          const stats: AffiliateStats = {
+            totalSocieties: societyCount || 0,
+            totalClicks: clickCount || 0,
+            totalTicketsSold,
+            totalRevenue,
+          };
+
+          set({ affiliateStats: stats });
+        } catch (error) {
+          console.error('Error fetching affiliate stats:', error);
+          toast.error('Failed to load affiliate statistics');
+        }
+      },
+
+      getSocietyPerformance: async (): Promise<SocietyPerformance[]> => {
+        try {
+          // Get all societies
+          const { data: societies, error: societiesError } = await supabase
+            .from('affiliate_societies')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (societiesError) throw societiesError;
+
+          const performanceData: SocietyPerformance[] = [];
+
+          for (const society of societies || []) {
+            // Get clicks for this society's links
+            const { count: clicks } = await supabase
+              .from('affiliate_clicks')
+              .select('*', { count: 'exact', head: true })
+              .in('link_id', 
+                (await supabase
+                  .from('affiliate_links')
+                  .select('id')
+                  .eq('society_id', society.id)
+                ).data?.map(link => link.id) || []
+              );
+
+            // Get revenue and tickets for this society's links
+            const { data: orders } = await supabase
+              .from('orders')
+              .select(`
+                total_amount,
+                order_tickets (quantity)
+              `)
+              .in('affiliate_link_id', 
+                (await supabase
+                  .from('affiliate_links')
+                  .select('id')
+                  .eq('society_id', society.id)
+                ).data?.map(link => link.id) || []
+              )
+              .eq('status', 'completed');
+
+            const revenue = (orders || []).reduce((sum, order) => sum + (order.total_amount || 0), 0);
+            const ticketsSold = (orders || []).reduce((sum, order) => {
+              const orderTickets = order.order_tickets || [];
+              return sum + orderTickets.reduce((ticketSum: number, ticket: any) => ticketSum + (ticket.quantity || 0), 0);
+            }, 0);
+
+            performanceData.push({
+              society: {
+                id: society.id,
+                name: society.name,
+                code: society.code,
+                contactName: society.contact_name,
+                contactEmail: society.contact_email,
+                contactPhone: society.contact_phone,
+                university: society.university,
+                societyType: society.society_type,
+                commissionRate: society.commission_rate,
+                isActive: society.is_active,
+                createdAt: society.created_at,
+                updatedAt: society.updated_at,
+              },
+              clicks: clicks || 0,
+              ticketsSold,
+              revenue,
+            });
+          }
+
+          return performanceData;
+        } catch (error) {
+          console.error('Error fetching society performance:', error);
+          toast.error('Failed to load society performance data');
+          return [];
+        }
+      },
+
+      trackAffiliateClick: async (linkId: string, sessionId?: string) => {
+        try {
+          const { error } = await supabase
+            .from('affiliate_clicks')
+            .insert({
+              link_id: linkId,
+              session_id: sessionId || null,
+              clicked_at: new Date().toISOString(),
+            });
+
+          if (error) throw error;
+        } catch (error) {
+          console.error('Error tracking affiliate click:', error);
+          // Don't show toast for tracking errors as they shouldn't interrupt user experience
+        }
+      },
     }),
     {
       name: 'carnival-admin-storage',

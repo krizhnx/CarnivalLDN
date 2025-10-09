@@ -197,6 +197,76 @@ export interface GuestlistQRData {
   leadName: string;
 }
 
+// Affiliate tracking types
+export interface AffiliateSociety {
+  id: string;
+  name: string;
+  code: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  university?: string;
+  societyType?: string;
+  commissionRate: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AffiliateLink {
+  id: string;
+  societyId: string;
+  eventId: string;
+  linkCode: string;
+  customUrl?: string;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface AffiliateClick {
+  id: string;
+  linkId: string;
+  ipAddress?: string;
+  userAgent?: string;
+  referrer?: string;
+  clickedAt: Date;
+  sessionId?: string;
+}
+
+export interface AffiliateConversion {
+  id: string;
+  linkId: string;
+  orderId: string;
+  conversionValue: number;
+  commissionEarned: number;
+  convertedAt: Date;
+}
+
+export interface AffiliateStats {
+  totalSocieties: number;
+  totalClicks: number;
+  totalTicketsSold: number;
+  totalRevenue: number;
+}
+
+export interface SocietyPerformance {
+  society: AffiliateSociety;
+  clicks: number;
+  ticketsSold: number;
+  revenue: number;
+}
+
+export interface AffiliateFormData {
+  name: string;
+  code: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  university?: string;
+  societyType?: string;
+  commissionRate: number;
+}
+
 // Google Analytics types
 declare global {
   interface Window {

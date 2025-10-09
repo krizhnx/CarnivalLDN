@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, Clock, ArrowRight, X } from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Event, Order } from '../types';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -11,7 +11,7 @@ import PaymentSuccess from './PaymentSuccess';
 import { useGlitchEffect } from '../hooks/useGlitchEffect';
 
 const EventsPage = () => {
-  const { events, getEvents, isLoading } = useAppStore();
+  const { events, getEvents, isLoading, trackAffiliateClick, affiliateLinks, getAffiliateLinks, affiliateSocieties, getAffiliateSocieties } = useAppStore();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [highlightedEvent, setHighlightedEvent] = useState<string | null>(null);
@@ -20,6 +20,9 @@ const EventsPage = () => {
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
 
+  // Ref to track processed affiliate clicks to prevent duplicates
+  const processedClicksRef = useRef<Set<string>>(new Set());
+
   // Glitch effect for title
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect();
 
@@ -27,15 +30,21 @@ const EventsPage = () => {
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        await getEvents();
-        console.log('Events loaded in EventsPage:', events);
+        console.log('🚀 Starting to load events, affiliate links, and societies...');
+        await Promise.all([
+          getEvents(),
+          getAffiliateLinks(),
+          getAffiliateSocieties()
+        ]);
+        console.log('✅ All data loaded successfully');
+        console.log('Events, affiliate links, and societies loaded in EventsPage:', events, affiliateLinks, affiliateSocieties);
       } catch (error) {
-        console.error('Failed to load events:', error);
+        console.error('❌ Failed to load events:', error);
       }
     };
 
     loadEvents();
-  }, [getEvents]);
+  }, [getEvents, getAffiliateLinks, getAffiliateSocieties]);
 
     // Check for event ID in URL and highlight event automatically
   useEffect(() => {
@@ -58,6 +67,76 @@ const EventsPage = () => {
       }
     }
   }, [events, searchParams]);
+
+  // Track affiliate clicks when ref parameter is present
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    const eventId = searchParams.get('event');
+    
+    // Create a unique key for this click combination
+    const clickKey = `${refCode}-${eventId}`;
+    
+    console.log('🔍 Affiliate tracking check:', {
+      refCode,
+      eventId,
+      clickKey,
+      alreadyProcessed: processedClicksRef.current.has(clickKey),
+      affiliateLinksLength: affiliateLinks.length,
+      affiliateSocietiesLength: affiliateSocieties.length
+    });
+    
+    if (refCode && eventId && affiliateLinks.length > 0 && affiliateSocieties.length > 0) {
+      // Check if we've already processed this click combination
+      if (processedClicksRef.current.has(clickKey)) {
+        console.log('⏭️ Click already processed, skipping:', clickKey);
+        return;
+      }
+      
+      // Find the affiliate link that matches this ref code and event
+      const matchingLink = affiliateLinks.find(link => {
+        // Extract society ID from link code
+        // Link code format: ${societyId}-${eventId}-${timestamp}
+        // We need to extract the society ID (first UUID before the event ID)
+        const linkCodeParts = link.linkCode.split('-');
+        // Society ID is the first 5 parts (UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+        const societyIdFromLink = linkCodeParts.slice(0, 5).join('-');
+        
+        // Find the society that matches this ref code
+        const matchingSociety = affiliateSocieties.find(society => 
+          society.code === refCode && society.id === societyIdFromLink
+        );
+        
+        console.log('🔍 Link matching check:', {
+          linkId: link.id,
+          linkCode: link.linkCode,
+          societyIdFromLink,
+          matchingSociety,
+          refCode,
+          eventId: link.eventId
+        });
+        
+        return matchingSociety && link.eventId === eventId;
+      });
+      
+      if (matchingLink) {
+        console.log('✅ Tracking affiliate click:', { refCode, eventId, linkId: matchingLink.id });
+        
+        // Mark this click as processed
+        processedClicksRef.current.add(clickKey);
+        
+        // Track the click in the database
+        trackAffiliateClick(matchingLink.id);
+        
+        // Store the affiliate link ID in sessionStorage for checkout attribution
+        sessionStorage.setItem('affiliate_link_id', matchingLink.id);
+        sessionStorage.setItem('affiliate_ref_code', refCode);
+        
+        console.log('Stored affiliate link ID for checkout attribution:', matchingLink.id);
+      } else {
+        console.log('No matching affiliate link found for:', { refCode, eventId });
+      }
+    }
+  }, [searchParams, affiliateLinks, trackAffiliateClick, affiliateSocieties]);
 
   // Hide scroll indicator when user scrolls
   useEffect(() => {
