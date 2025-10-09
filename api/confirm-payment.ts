@@ -69,7 +69,7 @@ module.exports = async function handler(req: any, res: any) {
 
     // Extract metadata from payment intent
     // Note: Customer info validation (including age 18+) was already performed in create-payment-intent
-    const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender } = paymentIntent.metadata;
+    const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender, affiliateLinkId } = paymentIntent.metadata;
     const tickets: TicketMetadata[] = JSON.parse(ticketsMetadata);
 
     // Create order
@@ -85,7 +85,8 @@ module.exports = async function handler(req: any, res: any) {
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_date_of_birth: customerDateOfBirth,
-        customer_gender: customerGender
+        customer_gender: customerGender,
+        affiliate_link_id: affiliateLinkId || null // Include affiliate link ID
       })
       .select()
       .single();

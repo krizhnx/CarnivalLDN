@@ -7,7 +7,7 @@ module.exports = async function handler(req: any, res: any) {
 
   try {
     console.log('Request body:', req.body);
-    const { eventId, tickets, customerInfo, totalAmount } = req.body;
+    const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId } = req.body;
 
     if (!eventId || !tickets || !customerInfo || !totalAmount) {
       console.log('Missing fields:', { eventId, tickets, customerInfo, totalAmount });
@@ -104,6 +104,7 @@ module.exports = async function handler(req: any, res: any) {
         customerPhone: customerInfo.phone,
         customerDateOfBirth: customerInfo.dateOfBirth,
         customerGender: customerInfo.gender,
+        affiliateLinkId: affiliateLinkId || null, // Include affiliate link ID
         ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
         tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity })))
       }
