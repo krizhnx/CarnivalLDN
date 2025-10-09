@@ -8,6 +8,12 @@ module.exports = async function handler(req: any, res: any) {
   try {
     console.log('Request body:', req.body);
     const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId } = req.body;
+    
+    console.log('🔍 Affiliate tracking in create-payment-intent:', {
+      affiliateLinkId,
+      hasAffiliateLinkId: !!affiliateLinkId,
+      sessionStorageAffiliateLinkId: req.body.affiliateLinkId
+    });
 
     if (!eventId || !tickets || !customerInfo || !totalAmount) {
       console.log('Missing fields:', { eventId, tickets, customerInfo, totalAmount });

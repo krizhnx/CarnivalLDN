@@ -71,6 +71,12 @@ module.exports = async function handler(req: any, res: any) {
     // Note: Customer info validation (including age 18+) was already performed in create-payment-intent
     const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender, affiliateLinkId } = paymentIntent.metadata;
     const tickets: TicketMetadata[] = JSON.parse(ticketsMetadata);
+    
+    console.log('🔍 Affiliate tracking in confirm-payment:', {
+      affiliateLinkId,
+      hasAffiliateLinkId: !!affiliateLinkId,
+      paymentIntentMetadata: paymentIntent.metadata
+    });
 
     // Create order
     const { data: order, error: orderError } = await supabase

@@ -319,6 +319,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             tickets: ticketSelections.filter(s => s.quantity > 0),
             customerInfo,
             totalAmount: getTotalAmount(),
+            affiliateLinkId: sessionStorage.getItem('affiliate_link_id'), // Include affiliate link ID
           }),
         });
 
