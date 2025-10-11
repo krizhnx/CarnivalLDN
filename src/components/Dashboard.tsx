@@ -254,7 +254,7 @@ const Dashboard = () => {
           price: 'From £25',
           description: 'Experience the magic of London at sunset with our exclusive Carnival LDN Sundowner. Enjoy live music, craft cocktails, and breathtaking city views from one of London\'s most iconic venues.',
           capacity: '150',
-          image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&h=600&fit=crop',
+          image: '/palace.png',
           tags: 'sundowner,networking,music,cocktails,views',
           gradient: 'from-orange-400 via-red-500 to-pink-500',
           ticketTiers: [
