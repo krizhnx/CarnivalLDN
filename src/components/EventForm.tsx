@@ -243,19 +243,19 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
                 {...register('image', {
                   required: 'Image URL is required',
                   pattern: {
-                    value: /^https?:\/\/.+/,
-                    message: 'Please enter a valid URL starting with http:// or https://'
+                    value: /^(https?:\/\/.+|\/.+)/,
+                    message: 'Please enter a valid URL starting with http:// or https://, or a relative path starting with /'
                   }
                 })}
-                type="url"
+                type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="https://images.unsplash.com/photo-..."
+                placeholder="https://images.unsplash.com/photo-... or /palace.png"
               />
               {errors.image && (
                 <p className="mt-1 text-sm text-red-600">{errors.image.message}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Tip: You can use Picsum URLs like https://picsum.photos/800/600?random=1 or Unsplash URLs
+                Tip: You can use external URLs (https://picsum.photos/800/600?random=1) or local images (/palace.png)
               </p>
             </div>
 

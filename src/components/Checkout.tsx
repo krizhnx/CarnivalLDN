@@ -158,9 +158,13 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   };
 
   const getTotalAmount = () => {
-    return ticketSelections.reduce((total, selection) => {
+    const subtotal = ticketSelections.reduce((total, selection) => {
       return total + (selection.tier.price * selection.quantity);
     }, 0);
+    
+    // Add £1.50 fixed fee (in pence: 150)
+    const fee = 150;
+    return subtotal + fee;
   };
 
   // Check if event has any free tickets available
@@ -684,6 +688,14 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               </div>
             ))}
           <div className="border-t pt-2 mt-2">
+            <div className="flex justify-between text-sm">
+              <span>Subtotal</span>
+              <span>£{((ticketSelections.reduce((total, selection) => total + (selection.tier.price * selection.quantity), 0)) / 100).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Processing Fee</span>
+              <span>£1.50</span>
+            </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
               <span>£{(getTotalAmount() / 100).toFixed(2)}</span>
