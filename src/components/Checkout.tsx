@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { X, Lock, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
@@ -129,7 +129,6 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentRequest, setPaymentRequest] = useState<any>(null);
   const [canMakePayment, setCanMakePayment] = useState(false);
   // const [currentStep, setCurrentStep] = useState<'tickets' | 'customer' | 'payment' | 'processing'>('tickets');
   // const [progress, setProgress] = useState(0);
@@ -159,29 +158,24 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     return subtotal + fee;
   };
 
-  // Initialize Apple Pay
-  useEffect(() => {
-    if (stripe && getTotalAmount() > 0) {
-      const pr = stripe.paymentRequest({
-        country: 'GB',
-        currency: 'gbp',
-        total: {
-          label: `${event.title} Tickets`,
-          amount: getTotalAmount(),
-        },
-        requestPayerName: true,
-        requestPayerEmail: true,
-        requestPayerPhone: true,
-      });
+  // Create stable payment request using useMemo
+  const paymentRequest = useMemo(() => {
+    if (!stripe || getTotalAmount() <= 0) return null;
+    
+    const pr = stripe.paymentRequest({
+      country: 'GB',
+      currency: 'gbp',
+      total: {
+        label: `${event.title} Tickets`,
+        amount: getTotalAmount(),
+      },
+      requestPayerName: true,
+      requestPayerEmail: true,
+      requestPayerPhone: true,
+    });
 
-      // Check if Apple Pay is available before setting up the payment request
-      pr.canMakePayment().then((result) => {
-        if (result) {
-          setCanMakePayment(true);
-          setPaymentRequest(pr);
-          
-          // Set up payment method handler only if Apple Pay is available
-          pr.on('paymentmethod', async (ev) => {
+    // Set up payment method handler
+    pr.on('paymentmethod', async (ev) => {
         // Create payment intent
         try {
           const response = await fetch('/api/create-payment-intent', {
@@ -293,18 +287,38 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           setError(err instanceof Error ? err.message : 'An error occurred');
         }
       });
+
+    return pr;
+  }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo]);
+
+  // Check Apple Pay availability
+  useEffect(() => {
+    if (paymentRequest) {
+      paymentRequest.canMakePayment().then((result) => {
+        console.log('Apple Pay availability check:', result);
+        console.log('Device info:', {
+          userAgent: navigator.userAgent,
+          isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+          isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+        });
+        
+        if (result) {
+          console.log('Apple Pay is available');
+          setCanMakePayment(true);
         } else {
-          // Apple Pay not available, don't set payment request
+          console.log('Apple Pay is NOT available');
           setCanMakePayment(false);
-          setPaymentRequest(null);
         }
       });
     } else {
-      // Reset states when conditions aren't met
       setCanMakePayment(false);
-      setPaymentRequest(null);
     }
-  }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo]);
+  }, [paymentRequest]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Rendering Apple Pay section:', { canMakePayment, hasPaymentRequest: !!paymentRequest });
+  }, [canMakePayment, paymentRequest]);
 
   const updateTicketQuantity = (tierId: string, quantity: number) => {
     setTicketSelections(prev =>
