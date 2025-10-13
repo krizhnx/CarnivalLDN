@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Lock, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, CardElement, useStripe, useElements, PaymentRequestButtonElement } from '@stripe/react-stripe-js';
 import { Event, TicketTier, Order } from '../types';
 import { /* trackPageView, */ trackBeginCheckout, trackPurchase } from '../lib/googleAnalytics';
 // import { formatPrice } from '../lib/stripe';
@@ -129,6 +129,8 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentRequest, setPaymentRequest] = useState<any>(null);
+  const [canMakePayment, setCanMakePayment] = useState(false);
   // const [currentStep, setCurrentStep] = useState<'tickets' | 'customer' | 'payment' | 'processing'>('tickets');
   // const [progress, setProgress] = useState(0);
 
@@ -147,16 +149,6 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     }
   }, [event]);
 
-  const updateTicketQuantity = (tierId: string, quantity: number) => {
-    setTicketSelections(prev =>
-      prev.map(selection =>
-        selection.tierId === tierId
-          ? { ...selection, quantity: Math.max(0, quantity) }
-          : selection
-      )
-    );
-  };
-
   const getTotalAmount = () => {
     const subtotal = ticketSelections.reduce((total, selection) => {
       return total + (selection.tier.price * selection.quantity);
@@ -165,6 +157,152 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     // Add £1.50 fixed fee (in pence: 150)
     const fee = 150;
     return subtotal + fee;
+  };
+
+  // Initialize Apple Pay
+  useEffect(() => {
+    if (stripe && getTotalAmount() > 0) {
+      const pr = stripe.paymentRequest({
+        country: 'GB',
+        currency: 'gbp',
+        total: {
+          label: `${event.title} Tickets`,
+          amount: getTotalAmount(),
+        },
+        requestPayerName: true,
+        requestPayerEmail: true,
+        requestPayerPhone: true,
+      });
+
+      pr.canMakePayment().then((result) => {
+        setCanMakePayment(!!result);
+      });
+
+      pr.on('paymentmethod', async (ev) => {
+        // Create payment intent
+        try {
+          const response = await fetch('/api/create-payment-intent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              eventId: event.id,
+              tickets: ticketSelections.filter(s => s.quantity > 0),
+              customerInfo: {
+                ...customerInfo,
+                name: ev.payerName || customerInfo.name,
+                email: ev.payerEmail || customerInfo.email,
+                phone: ev.payerPhone || customerInfo.phone,
+              },
+              totalAmount: getTotalAmount(),
+              affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create payment intent');
+          }
+
+          const { clientSecret } = await response.json();
+
+          // Confirm payment with Apple Pay
+          const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+            clientSecret,
+            { payment_method: ev.paymentMethod.id },
+            { handleActions: false }
+          );
+
+          if (confirmError) {
+            ev.complete('fail');
+            setError(confirmError.message || 'Payment failed');
+            return;
+          }
+
+          ev.complete('success');
+
+          if (paymentIntent.status === 'succeeded') {
+            // Create order record
+            const orderResponse = await fetch('/api/confirm-payment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                paymentIntentId: paymentIntent.id,
+                eventId: event.id,
+                tickets: ticketSelections.filter(s => s.quantity > 0),
+                customerInfo: {
+                  ...customerInfo,
+                  name: ev.payerName || customerInfo.name,
+                  email: ev.payerEmail || customerInfo.email,
+                  phone: ev.payerPhone || customerInfo.phone,
+                },
+                totalAmount: getTotalAmount(),
+                affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
+              }),
+            });
+
+            if (orderResponse.ok) {
+              const orderData = await orderResponse.json();
+
+              const order = {
+                id: orderData.order?.id || `order_${Date.now()}`,
+                eventId: event.id,
+                userId: ev.payerEmail || customerInfo.email,
+                stripePaymentIntentId: orderData.paymentIntentId,
+                status: 'completed' as const,
+                totalAmount: getTotalAmount(),
+                currency: 'gbp',
+                tickets: ticketSelections.filter(s => s.quantity > 0).map(selection => ({
+                  id: `ticket_${Date.now()}_${selection.tierId}`,
+                  orderId: orderData.order?.id || `order_${Date.now()}`,
+                  ticketTierId: selection.tierId,
+                  quantity: selection.quantity,
+                  unitPrice: selection.tier.price,
+                  totalPrice: selection.tier.price * selection.quantity,
+                })),
+                customerEmail: ev.payerEmail || customerInfo.email,
+                customerName: ev.payerName || customerInfo.name,
+                customerPhone: ev.payerPhone || customerInfo.phone,
+                customerDateOfBirth: customerInfo.dateOfBirth,
+                customerGender: customerInfo.gender || undefined,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              // Track successful purchase for analytics
+              const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
+              const totalValue = getTotalAmount();
+              const items = selectedTickets.map(selection => ({
+                tier: selection.tier.name,
+                price: selection.tier.price,
+                quantity: selection.quantity
+              }));
+
+              trackPurchase(order.id, event.id, event.title, totalValue, items);
+
+              onSuccess(order);
+            }
+          }
+        } catch (err) {
+          ev.complete('fail');
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        }
+      });
+
+      setPaymentRequest(pr);
+    }
+  }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo]);
+
+  const updateTicketQuantity = (tierId: string, quantity: number) => {
+    setTicketSelections(prev =>
+      prev.map(selection =>
+        selection.tierId === tierId
+          ? { ...selection, quantity: Math.max(0, quantity) }
+          : selection
+      )
+    );
   };
 
   // Check if event has any free tickets available
@@ -641,6 +779,28 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       {getTotalAmount() > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment</h3>
+          
+          {/* Apple Pay Button */}
+          {canMakePayment && paymentRequest && (
+            <div className="mb-4">
+              <PaymentRequestButtonElement
+                options={{
+                  paymentRequest,
+                  style: {
+                    paymentRequestButton: {
+                      theme: 'dark',
+                      height: '48px',
+                    },
+                  },
+                }}
+              />
+              <div className="text-center text-sm text-gray-500 mt-2">
+                or pay with card below
+              </div>
+            </div>
+          )}
+          
+          {/* Card Payment */}
           <div className="border rounded-lg p-4">
             <CardElement
               options={{

@@ -113,7 +113,12 @@ module.exports = async function handler(req: any, res: any) {
         affiliateLinkId: affiliateLinkId || null, // Include affiliate link ID
         ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
         tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity })))
-      }
+      },
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'never',
+      },
+      payment_method_types: ['card', 'apple_pay', 'google_pay'],
     });
 
     res.status(200).json({
