@@ -302,7 +302,10 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
         });
         
-        if (result) {
+        // Check specifically for Apple Pay availability
+        const isApplePayAvailable = result && result.applePay === true;
+        
+        if (isApplePayAvailable) {
           console.log('Apple Pay is available');
           setCanMakePayment(true);
         } else {
