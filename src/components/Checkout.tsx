@@ -174,11 +174,14 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         requestPayerPhone: true,
       });
 
+      // Check if Apple Pay is available before setting up the payment request
       pr.canMakePayment().then((result) => {
-        setCanMakePayment(!!result);
-      });
-
-      pr.on('paymentmethod', async (ev) => {
+        if (result) {
+          setCanMakePayment(true);
+          setPaymentRequest(pr);
+          
+          // Set up payment method handler only if Apple Pay is available
+          pr.on('paymentmethod', async (ev) => {
         // Create payment intent
         try {
           const response = await fetch('/api/create-payment-intent', {
@@ -290,8 +293,16 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           setError(err instanceof Error ? err.message : 'An error occurred');
         }
       });
-
-      setPaymentRequest(pr);
+        } else {
+          // Apple Pay not available, don't set payment request
+          setCanMakePayment(false);
+          setPaymentRequest(null);
+        }
+      });
+    } else {
+      // Reset states when conditions aren't met
+      setCanMakePayment(false);
+      setPaymentRequest(null);
     }
   }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo]);
 
