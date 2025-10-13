@@ -158,16 +158,26 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     return subtotal + fee;
   };
 
+  // Check if any tickets are actually selected
+  const hasSelectedTickets = ticketSelections.some(selection => selection.quantity > 0);
+
   // Create stable payment request using useMemo
   const paymentRequest = useMemo(() => {
-    if (!stripe || getTotalAmount() <= 0) return null;
+    if (!stripe || !hasSelectedTickets || getTotalAmount() <= 0) return null;
+
+    const totalAmount = getTotalAmount();
+    console.log('🍎 Creating Apple Pay request:', {
+      hasSelectedTickets,
+      totalAmount,
+      ticketSelections: ticketSelections.filter(s => s.quantity > 0)
+    });
 
     const pr = stripe.paymentRequest({
       country: 'GB',
       currency: 'gbp',
       total: {
         label: `${event.title} Tickets`,
-        amount: getTotalAmount(),
+        amount: totalAmount,
       },
       requestPayerName: true,
       requestPayerEmail: true,
@@ -289,7 +299,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       });
 
     return pr;
-  }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo]);
+  }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo, hasSelectedTickets]);
 
   // Check Apple Pay availability
   useEffect(() => {
