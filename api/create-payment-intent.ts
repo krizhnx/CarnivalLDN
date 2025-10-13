@@ -118,7 +118,6 @@ module.exports = async function handler(req: any, res: any) {
         enabled: true,
         allow_redirects: 'never',
       },
-      payment_method_types: ['card', 'apple_pay', 'google_pay'],
     });
 
     res.status(200).json({
