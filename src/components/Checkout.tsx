@@ -152,7 +152,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     const subtotal = ticketSelections.reduce((total, selection) => {
       return total + (selection.tier.price * selection.quantity);
     }, 0);
-    
+
     // Add £1.50 fixed fee (in pence: 150)
     const fee = 150;
     return subtotal + fee;
@@ -161,7 +161,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   // Create stable payment request using useMemo
   const paymentRequest = useMemo(() => {
     if (!stripe || getTotalAmount() <= 0) return null;
-    
+
     const pr = stripe.paymentRequest({
       country: 'GB',
       currency: 'gbp',
@@ -295,23 +295,35 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   useEffect(() => {
     if (paymentRequest) {
       paymentRequest.canMakePayment().then((result) => {
-        console.log('Apple Pay availability check:', result);
-        console.log('Device info:', {
+        console.log('🍎 Apple Pay availability check:', result);
+        console.log('🔍 Device info:', {
           userAgent: navigator.userAgent,
           isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-          isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+          isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent),
+          isMac: /Mac/.test(navigator.userAgent),
+          domain: window.location.hostname,
+          protocol: window.location.protocol,
+          isHTTPS: window.location.protocol === 'https:'
         });
-        
+
         // Check specifically for Apple Pay availability
         const isApplePayAvailable = result && result.applePay === true;
-        
+
         if (isApplePayAvailable) {
-          console.log('Apple Pay is available');
+          console.log('✅ Apple Pay is available');
           setCanMakePayment(true);
         } else {
-          console.log('Apple Pay is NOT available');
+          console.log('❌ Apple Pay is NOT available');
+          console.log('📋 Requirements check:');
+          console.log('- Safari browser:', /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent));
+          console.log('- HTTPS:', window.location.protocol === 'https:');
+          console.log('- Domain registered:', 'Check Stripe dashboard');
+          console.log('- Cards in wallet:', 'User must have cards in Apple Wallet');
           setCanMakePayment(false);
         }
+      }).catch((error) => {
+        console.error('❌ Error checking Apple Pay:', error);
+        setCanMakePayment(false);
       });
     } else {
       setCanMakePayment(false);
@@ -807,7 +819,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       {getTotalAmount() > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment</h3>
-          
+
           {/* Apple Pay Button */}
           {canMakePayment && paymentRequest && (
             <div className="mb-4">
@@ -827,7 +839,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               </div>
             </div>
           )}
-          
+
           {/* Card Payment */}
           <div className="border rounded-lg p-4">
             <CardElement
