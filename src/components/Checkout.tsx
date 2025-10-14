@@ -209,6 +209,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               },
               totalAmount: getTotalAmount(),
               affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
+              isApplePay: true, // Flag to indicate this is an Apple Pay transaction
             }),
           });
 
@@ -384,7 +385,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     if (!customerInfo.name?.trim()) validationErrors.push('Name is required');
     if (!customerInfo.email?.trim()) validationErrors.push('Email is required');
     if (!customerInfo.phone?.trim()) validationErrors.push('Phone number is required');
-    if (!customerInfo.dateOfBirth) validationErrors.push('Date of birth is required');
+    if (!customerInfo.dateOfBirth || customerInfo.dateOfBirth.trim() === '') {
+      validationErrors.push('Date of birth is required');
+    }
     if (!customerInfo.gender) validationErrors.push('Gender is required');
 
     // Age validation - must be 18 or older
@@ -502,22 +505,29 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         }
 
         // Create payment intent
+        const requestBody = {
+          eventId: event.id,
+          tickets: ticketSelections.filter(s => s.quantity > 0),
+          customerInfo,
+          totalAmount: getTotalAmount(),
+          affiliateLinkId: sessionStorage.getItem('affiliate_link_id'), // Include affiliate link ID
+        };
+
+        console.log('🚀 Creating payment intent with data:', requestBody);
+        console.log('📅 Date of birth value:', customerInfo.dateOfBirth, 'Type:', typeof customerInfo.dateOfBirth);
+
         const response = await fetch('/api/create-payment-intent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            eventId: event.id,
-            tickets: ticketSelections.filter(s => s.quantity > 0),
-            customerInfo,
-            totalAmount: getTotalAmount(),
-            affiliateLinkId: sessionStorage.getItem('affiliate_link_id'), // Include affiliate link ID
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create payment intent');
+          const errorData = await response.json();
+          console.error('❌ Payment intent creation failed:', errorData);
+          throw new Error(errorData.error || 'Failed to create payment intent');
         }
 
         const { clientSecret } = await response.json();
@@ -768,7 +778,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
 
           <div>
             <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
-              Date of Birth *
+              Date of Birth * <span className="text-red-500">(Required)</span>
             </label>
             <div className="relative">
               <input
@@ -777,7 +787,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                 value={customerInfo.dateOfBirth}
                 onChange={(e) => setCustomerInfo({ ...customerInfo, dateOfBirth: e.target.value })}
                 placeholder="Select date of birth"
-                className="w-full h-12 px-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer hover:border-blue-400 transition-colors shadow-sm"
+                className={`w-full h-12 px-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer hover:border-blue-400 transition-colors shadow-sm ${
+                  !customerInfo.dateOfBirth ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
                 style={{
                   WebkitAppearance: 'none',
                   MozAppearance: 'none',
