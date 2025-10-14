@@ -148,13 +148,18 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     }
   }, [event]);
 
+  const getTotalTickets = () => {
+    return ticketSelections.reduce((total, selection) => total + selection.quantity, 0);
+  };
+
   const getTotalAmount = () => {
     const subtotal = ticketSelections.reduce((total, selection) => {
       return total + (selection.tier.price * selection.quantity);
     }, 0);
 
-    // Add £1.50 fixed fee (in pence: 150)
-    const fee = 150;
+    // Calculate processing fee: £1.00 base + £0.50 per ticket (in pence: 100 + 50 per ticket)
+    const totalTickets = getTotalTickets();
+    const fee = 100 + (totalTickets * 50);
     return subtotal + fee;
   };
 
@@ -364,10 +369,6 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const isAllFreeTickets = () => {
     const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
     return selectedTickets.length > 0 && selectedTickets.every(s => s.tier.price === 0);
-  };
-
-  const getTotalTickets = () => {
-    return ticketSelections.reduce((total, selection) => total + selection.quantity, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -904,7 +905,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             </div>
             <div className="flex justify-between text-sm">
               <span>Processing Fee</span>
-              <span>£1.50</span>
+              <span>£{((100 + (getTotalTickets() * 50)) / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
