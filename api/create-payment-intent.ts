@@ -7,8 +7,8 @@ module.exports = async function handler(req: any, res: any) {
 
   try {
     console.log('Request body:', req.body);
-    const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId } = req.body;
-    
+    const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId, isApplePay } = req.body;
+
     console.log('🔍 Affiliate tracking in create-payment-intent:', {
       affiliateLinkId,
       hasAffiliateLinkId: !!affiliateLinkId,
@@ -17,38 +17,49 @@ module.exports = async function handler(req: any, res: any) {
 
     if (!eventId || !tickets || !customerInfo || !totalAmount) {
       console.log('Missing fields:', { eventId, tickets, customerInfo, totalAmount });
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing required fields',
         received: { eventId, tickets, customerInfo, totalAmount }
       });
     }
-    
+
     // Validate customer info
-    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.dateOfBirth) {
-      return res.status(400).json({ 
+    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone) {
+      return res.status(400).json({
         error: 'Missing required customer information',
         missing: {
           name: !customerInfo.name,
           email: !customerInfo.email,
-          phone: !customerInfo.phone,
-          dateOfBirth: !customerInfo.dateOfBirth
+          phone: !customerInfo.phone
         }
       });
     }
-    
-    // Age validation - must be 18 or older
-    if (customerInfo.dateOfBirth) {
+
+    // Date of birth validation - required for regular payments, optional for Apple Pay
+    if (!isApplePay) {
+      if (!customerInfo.dateOfBirth || customerInfo.dateOfBirth.trim() === '') {
+        return res.status(400).json({
+          error: 'Date of birth is required for this payment method',
+          received: customerInfo.dateOfBirth
+        });
+      }
+    } else {
+      console.log('🍎 Apple Pay transaction - DOB validation skipped');
+    }
+
+    // Age validation - must be 18 or older (only if DOB is provided)
+    if (customerInfo.dateOfBirth && customerInfo.dateOfBirth.trim() !== '') {
       const today = new Date();
       const birthDate = new Date(customerInfo.dateOfBirth);
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
-      
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       if (age < 18) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'You must be 18 years or older to purchase tickets',
           age: age
         });
@@ -70,10 +81,10 @@ module.exports = async function handler(req: any, res: any) {
 
     // Get ticket tier details from Supabase
     const { createClient } = require('@supabase/supabase-js');
-    
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Supabase configuration missing. SUPABASE_URL:', !!process.env.SUPABASE_URL, 'SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
       return res.status(500).json({ error: 'Database configuration error' });
@@ -108,9 +119,10 @@ module.exports = async function handler(req: any, res: any) {
         customerName: customerInfo.name,
         customerEmail: customerInfo.email,
         customerPhone: customerInfo.phone,
-        customerDateOfBirth: customerInfo.dateOfBirth,
+        customerDateOfBirth: customerInfo.dateOfBirth || null,
         customerGender: customerInfo.gender,
         affiliateLinkId: affiliateLinkId || null, // Include affiliate link ID
+        isApplePay: isApplePay ? 'true' : 'false', // Include Apple Pay flag
         ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
         tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity })))
       },
