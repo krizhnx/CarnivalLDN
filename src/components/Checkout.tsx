@@ -653,8 +653,8 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="font-medium text-gray-900">{tier.name}</h4>
-                    <p className="text-sm text-gray-600">{tier.description}</p>
-                    {tier.benefits && tier.benefits.length > 0 && (
+                    {!isSoldOut && <p className="text-sm text-gray-600">{tier.description}</p>}
+                    {!isSoldOut && tier.benefits && tier.benefits.length > 0 && (
                       <div className="mt-2">
                         {tier.benefits.map((benefit, index) => (
                           <div key={index} className="text-sm text-green-600 flex items-center gap-1">
@@ -680,7 +680,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                   </div>
                 </div>
                 {isSoldOut ? (
-                  <div className="text-sm text-gray-500">This tier is currently unavailable.</div>
+                  <div className="text-sm text-gray-500">This Tier is Sold Out</div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
