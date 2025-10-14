@@ -506,29 +506,48 @@ const EventsPage = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                          {event.ticketTiers.sort((a, b) => a.price - b.price).slice(0, 2).map((tier) => (
-                            <div key={tier.id} className="flex items-center justify-between p-2.5 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100">
-                              <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="text-sm font-medium text-gray-800">{tier.name}</span>
+                          {event.ticketTiers.sort((a, b) => a.price - b.price).slice(0, 3).map((tier) => {
+                            const remaining = tier.capacity - tier.soldCount;
+                            const isSoldOut = remaining <= 0 || tier.isActive === false;
+                            
+                            return (
+                              <div key={tier.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${
+                                isSoldOut 
+                                  ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-200' 
+                                  : 'bg-gradient-to-r from-gray-50 to-white border-gray-100'
+                              }`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    isSoldOut ? 'bg-red-500' : 'bg-blue-500'
+                                  }`}></div>
+                                  <span className={`text-sm font-medium ${
+                                    isSoldOut ? 'text-red-800' : 'text-gray-800'
+                                  }`}>{tier.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isSoldOut ? (
+                                    <span className="text-sm font-bold text-red-700">Sold out</span>
+                                  ) : (
+                                    <>
+                                      {tier.originalPrice && tier.originalPrice > tier.price && (
+                                        <span className="text-xs text-gray-400 line-through">
+                                          £{(tier.originalPrice / 100).toFixed(2)}
+                                        </span>
+                                      )}
+                                      <span className="text-lg font-bold text-gray-900">
+                                        {tier.price === 0 ? 'Free' : `£${(tier.price / 100).toFixed(2)}`}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {tier.originalPrice && tier.originalPrice > tier.price && (
-                                  <span className="text-xs text-gray-400 line-through">
-                                    £{(tier.originalPrice / 100).toFixed(2)}
-                                  </span>
-                                )}
-                                <span className="text-lg font-bold text-gray-900">
-                                  {tier.price === 0 ? 'Free' : `£${(tier.price / 100).toFixed(2)}`}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
 
-                          {event.ticketTiers.length > 2 && (
+                          {event.ticketTiers.length > 3 && (
                             <div className="text-center">
                               <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
-                                +{event.ticketTiers.length - 2} more options
+                                +{event.ticketTiers.length - 3} more options
                               </span>
                             </div>
                           )}
