@@ -105,9 +105,9 @@ const HalloweenPage = () => {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 w-full max-w-3xl mx-auto px-4">
+        <div className="relative z-10 w-full max-w-3xl mx-auto px-4 pt-10">
           {/* Top white text logo */}
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 md:-top-16">
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 md:-top-16">
             <img
               src="/carntext-b.svg"
               alt="Carnival LDN"
@@ -116,20 +116,20 @@ const HalloweenPage = () => {
             />
           </div>
           <div className="text-center mb-6">
-            <h1 className="text-7xl md:text-8xl font-extrabold text-orange-400 tracking-wider drop-shadow-[0_0_25px_rgba(251,146,60,0.45)]" style={{ fontFamily: 'Creepster, Eater, ui-sans-serif' }}>HALLOWEEN</h1>
+            <h1 className="text-6xl md:text-8xl font-extrabold text-orange-400 tracking-wider drop-shadow-[0_0_25px_rgba(251,146,60,0.45)]" style={{ fontFamily: 'Creepster, Eater, ui-sans-serif' }}>HALLOWEEN</h1>
             <div className="mt-2 text-orange-300" style={{ fontFamily: 'Eater, Creepster, ui-serif' }}>
-              <span className="inline-block text-3xl md:text-3xl tracking-widest">TRICK</span>
+              <span className="inline-block text-2xl md:text-3xl tracking-widest">TRICK</span>
               <span className="inline-block mx-3 text-xl md:text-2xl tracking-widest">•</span>
               <span className="inline-block text-2xl md:text-2xl tracking-widest">OR</span>
               <span className="inline-block mx-3 text-xl md:text-2xl tracking-widest">•</span>
-              <span className="inline-block text-3xl md:text-3xl tracking-widest">TREAT</span>
+              <span className="inline-block text-2xl md:text-3xl tracking-widest">TREAT</span>
             </div>
             <p className="mt-2 text-white/90 max-w-xl mx-auto">
               Secure your spot early. Waitlisters get priority access and exclusive launch discounts.
             </p>
           </div>
 
-          <div className="glass-card bg-white/10 md:bg-white/70 border-white/30 backdrop-blur-lg">
+          <div className="glass-card bg-white/10 md:bg-white/70 border-white/60 backdrop-blur-lg">
             {!submitted ? (
               <form onSubmit={handleSubmit} className="p-5 md:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -195,7 +195,7 @@ const HalloweenPage = () => {
             )}
           </div>
 
-          <div className="mt-6 text-center text-white text-md">
+          <div className="mt-4 text-center text-white text-md">
             <p>Want in early? Share this page with your group!</p>
           </div>
         </div>
