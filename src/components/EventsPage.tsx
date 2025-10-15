@@ -506,7 +506,10 @@ const EventsPage = () => {
                         </div>
 
                         <div className="space-y-1.5">
-                          {event.ticketTiers.sort((a, b) => a.price - b.price).slice(0, 3).map((tier) => {
+                          {event.ticketTiers
+                            .sort((a, b) => a.price - b.price)
+                            .slice(-3)
+                            .map((tier) => {
                             const remaining = tier.capacity - tier.soldCount;
                             const isSoldOut = remaining <= 0 || tier.isActive === false;
                             
