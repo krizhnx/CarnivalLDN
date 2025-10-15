@@ -24,6 +24,7 @@ import TermsOfService from './components/TermsOfService'
 import CookiePolicy from './components/CookiePolicy'
 import SEO from './components/SEO'
 import { useAppStore } from './store/supabaseStore'
+import HalloweenPage from './pages/HalloweenPage'
 
 function HomePage() {
   const { getEvents, subscribeToEvents } = useAppStore()
@@ -78,6 +79,7 @@ function App() {
                        <Route path="/" element={<HomePage />} />
                <Route path="/events" element={<EventsPage />} />
                <Route path="/gallery" element={<GalleryPage />} />
+               <Route path="/halloween" element={<HalloweenPage />} />
                <Route path="/admin" element={<Login />} />
         <Route
           path="/admin/dashboard"

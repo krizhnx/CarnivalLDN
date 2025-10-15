@@ -844,6 +844,43 @@ app.post('/api/create-free-order', async (req, res) => {
   }
 });
 
+// Halloween waitlist (local dev support)
+app.post('/api/halloween-waitlist', async (req, res) => {
+  try {
+    const { email, name, phone, source } = req.body || {}
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email is required' })
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not connected' })
+    }
+
+    const insertRes = await supabase
+      .from('waitlist_halloween')
+      .insert({
+        email: String(email).toLowerCase().trim(),
+        name: (name ? String(name) : '').trim() || null,
+        phone: phone ? String(phone).trim() : null,
+        source: source ? String(source) : null
+      })
+
+    if (insertRes.error) {
+      if (insertRes.error.code === '23505') {
+        return res.status(200).json({ success: true, alreadyRegistered: true })
+      }
+      console.error('Error saving waitlist:', insertRes.error)
+      return res.status(500).json({ error: 'Failed to save' })
+    }
+
+    res.status(200).json({ success: true })
+  } catch (e) {
+    console.error('Halloween waitlist error:', e)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 app.listen(port, () => {
   console.log(`🚀 Stripe API server running on port ${port}`);
   console.log(`📡 API endpoints:`);
