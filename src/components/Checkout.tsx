@@ -193,9 +193,13 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   // Check if any tickets are actually selected
   const hasSelectedTickets = ticketSelections.some(selection => selection.quantity > 0);
 
+  // Check if email is filled (required to enable Apple Pay)
+  const hasEmailForApplePay = customerInfo.email?.trim() !== '';
+
   // Create stable payment request using useMemo
   const paymentRequest = useMemo(() => {
-    if (!stripe || !hasSelectedTickets || getTotalAmount() <= 0) return null;
+    // Only enable Apple Pay if email is provided in the form
+    if (!stripe || !hasSelectedTickets || getTotalAmount() <= 0 || !hasEmailForApplePay) return null;
 
     const totalAmount = getTotalAmount();
     console.log('🍎 Creating Apple Pay request:', {
@@ -230,9 +234,10 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               tickets: ticketSelections.filter(s => s.quantity > 0),
               customerInfo: {
                 ...customerInfo,
-                name: ev.payerName || customerInfo.name,
-                email: ev.payerEmail || customerInfo.email,
-                phone: ev.payerPhone || customerInfo.phone,
+                name: customerInfo.name || ev.payerName || '',
+                email: customerInfo.email, // PRIMARY: Always use form email to avoid Apple's Hide My Email
+                applePayEmail: ev.payerEmail || null, // SECONDARY: Store Apple Pay email separately
+                phone: customerInfo.phone || ev.payerPhone || '',
               },
               totalAmount: getTotalAmount(),
               affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
@@ -241,7 +246,12 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           });
 
           if (!response.ok) {
-            throw new Error('Failed to create payment intent');
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error || 'Failed to create payment intent';
+            console.error('❌ Payment intent creation failed:', errorData);
+            ev.complete('fail');
+            setError(errorMessage);
+            return;
           }
 
           const { clientSecret } = await response.json();
@@ -274,9 +284,10 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                 tickets: ticketSelections.filter(s => s.quantity > 0),
                 customerInfo: {
                   ...customerInfo,
-                  name: ev.payerName || customerInfo.name,
-                  email: ev.payerEmail || customerInfo.email,
-                  phone: ev.payerPhone || customerInfo.phone,
+                  name: customerInfo.name || ev.payerName || '',
+                  email: customerInfo.email, // PRIMARY: Always use form email to avoid Apple's Hide My Email
+                  applePayEmail: ev.payerEmail || null, // SECONDARY: Store Apple Pay email separately
+                  phone: customerInfo.phone || ev.payerPhone || '',
                 },
                 totalAmount: getTotalAmount(),
                 affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
@@ -289,7 +300,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               const order = {
                 id: orderData.order?.id || `order_${Date.now()}`,
                 eventId: event.id,
-                userId: ev.payerEmail || customerInfo.email,
+                userId: customerInfo.email, // Always use form email
                 stripePaymentIntentId: orderData.paymentIntentId,
                 status: 'completed' as const,
                 totalAmount: getTotalAmount(),
@@ -302,9 +313,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                   unitPrice: selection.tier.price,
                   totalPrice: selection.tier.price * selection.quantity,
                 })),
-                customerEmail: ev.payerEmail || customerInfo.email,
-                customerName: ev.payerName || customerInfo.name,
-                customerPhone: ev.payerPhone || customerInfo.phone,
+                customerEmail: customerInfo.email, // Always use form email
+                customerName: customerInfo.name || ev.payerName || '',
+                customerPhone: customerInfo.phone || ev.payerPhone || '',
                 customerDateOfBirth: customerInfo.dateOfBirth,
                 customerGender: customerInfo.gender || undefined,
                 createdAt: new Date(),
@@ -332,7 +343,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       });
 
     return pr;
-  }, [stripe, getTotalAmount(), event.id, ticketSelections, customerInfo, hasSelectedTickets]);
+  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay]);
 
   // Check Apple Pay availability
   useEffect(() => {
@@ -869,6 +880,15 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       {getTotalAmount() > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment</h3>
+
+          {/* Apple Pay availability notice */}
+          {!hasEmailForApplePay && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                💳 Please enter your email address above to enable Apple Pay
+              </p>
+            </div>
+          )}
 
           {/* Apple Pay Button */}
           {canMakePayment && paymentRequest && (

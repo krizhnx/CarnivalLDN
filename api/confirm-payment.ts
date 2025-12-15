@@ -69,8 +69,17 @@ module.exports = async function handler(req: any, res: any) {
 
     // Extract metadata from payment intent
     // Note: Customer info validation (including age 18+) was already performed in create-payment-intent
-    const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender, affiliateLinkId } = paymentIntent.metadata;
+    const { eventId, tickets: ticketsMetadata, customerName, customerEmail, customerPhone, customerDateOfBirth, customerGender, affiliateLinkId, applePayRelayEmail } = paymentIntent.metadata;
     const tickets: TicketMetadata[] = JSON.parse(ticketsMetadata);
+    
+    // Always prioritize form email from customerInfo if provided (safety check)
+    // The metadata should already have the correct form email, but this ensures we never use Apple's relay email
+    const finalEmail = customerInfo.email || customerEmail;
+    
+    if (applePayRelayEmail && applePayRelayEmail !== finalEmail) {
+      console.log('🍎 Apple Pay relay email detected in metadata:', applePayRelayEmail);
+      console.log('✅ Using form email instead:', finalEmail);
+    }
     
     console.log('🔍 Affiliate tracking in confirm-payment:', {
       affiliateLinkId,
@@ -87,7 +96,7 @@ module.exports = async function handler(req: any, res: any) {
         status: 'completed',
         total_amount: paymentIntent.amount,
         currency: paymentIntent.currency,
-        customer_email: customerEmail,
+        customer_email: finalEmail, // Always use form email (never Apple's relay email)
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_date_of_birth: customerDateOfBirth,
@@ -161,7 +170,7 @@ module.exports = async function handler(req: any, res: any) {
       if (event && ticketTiers) {
         const emailData = {
           customerName: customerName,
-          customerEmail: customerEmail,
+          customerEmail: finalEmail, // Always use form email for ticket delivery
           customerPhone: customerPhone,
           customerDateOfBirth: customerDateOfBirth,
           customerGender: customerGender,

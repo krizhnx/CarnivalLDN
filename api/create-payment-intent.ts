@@ -9,6 +9,21 @@ module.exports = async function handler(req: any, res: any) {
     console.log('Request body:', req.body);
     const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId, isApplePay } = req.body;
 
+    // Helper to detect Apple relay emails
+    const isAppleRelayEmail = (email?: string) => {
+      return email?.endsWith('@inbox.appleid.apple.com');
+    };
+
+    // Always prioritize form email over Apple Pay email
+    const finalEmail = customerInfo.email;
+    const applePayEmail = customerInfo.applePayEmail || null;
+
+    // Log if we detect a relay email
+    if (isApplePay && applePayEmail && isAppleRelayEmail(applePayEmail)) {
+      console.log('🍎 Apple Pay relay email detected:', applePayEmail);
+      console.log('✅ Using form email instead:', finalEmail);
+    }
+
     console.log('🔍 Affiliate tracking in create-payment-intent:', {
       affiliateLinkId,
       hasAffiliateLinkId: !!affiliateLinkId,
@@ -23,16 +38,25 @@ module.exports = async function handler(req: any, res: any) {
       });
     }
 
-    // Validate customer info
-    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone) {
+    // Validate customer info - email is always required, name/phone optional for Apple Pay
+    if (!finalEmail || finalEmail.trim() === '') {
       return res.status(400).json({
-        error: 'Missing required customer information',
-        missing: {
-          name: !customerInfo.name,
-          email: !customerInfo.email,
-          phone: !customerInfo.phone
-        }
+        error: 'Email is required',
+        missing: { email: true }
       });
+    }
+
+    // For non-Apple Pay, require name and phone
+    if (!isApplePay) {
+      if (!customerInfo.name || !customerInfo.phone) {
+        return res.status(400).json({
+          error: 'Missing required customer information',
+          missing: {
+            name: !customerInfo.name,
+            phone: !customerInfo.phone
+          }
+        });
+      }
     }
 
     // Date of birth validation - required for regular payments, optional for Apple Pay
@@ -116,11 +140,12 @@ module.exports = async function handler(req: any, res: any) {
       currency: 'gbp',
       metadata: {
         eventId,
-        customerName: customerInfo.name,
-        customerEmail: customerInfo.email,
-        customerPhone: customerInfo.phone,
+        customerName: customerInfo.name || '',
+        customerEmail: finalEmail, // Always use form email (primary)
+        applePayRelayEmail: applePayEmail || null, // Store Apple Pay email separately (secondary)
+        customerPhone: customerInfo.phone || '',
         customerDateOfBirth: customerInfo.dateOfBirth || null,
-        customerGender: customerInfo.gender,
+        customerGender: customerInfo.gender || null,
         affiliateLinkId: affiliateLinkId || null, // Include affiliate link ID
         isApplePay: isApplePay ? 'true' : 'false', // Include Apple Pay flag
         ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
