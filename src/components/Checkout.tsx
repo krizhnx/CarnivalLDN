@@ -153,9 +153,31 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   };
 
   const getProcessingFee = () => {
-    // Calculate £1.10 transaction fee per ticket (in pence: 110 per ticket)
-    const totalTickets = getTotalTickets();
-    return totalTickets * 110; // £1.10 = 110 pence per ticket
+    // Calculate tiered transaction fee per ticket based on ticket price:
+    // Up to £40: £1.50 per ticket
+    // £40-50: £2.00 per ticket
+    // Above £50: £2.50 per ticket
+    let totalFee = 0;
+    ticketSelections.forEach(selection => {
+      if (selection.quantity > 0) {
+        const ticketPrice = selection.tier.price; // Price in pence
+        let feePerTicket;
+        
+        if (ticketPrice <= 4000) {
+          // Up to £40: £1.50 per ticket
+          feePerTicket = 150; // £1.50 = 150 pence
+        } else if (ticketPrice <= 5000) {
+          // £40-50: £2.00 per ticket
+          feePerTicket = 200; // £2.00 = 200 pence
+        } else {
+          // Above £50: £2.50 per ticket
+          feePerTicket = 250; // £2.50 = 250 pence
+        }
+        
+        totalFee += feePerTicket * selection.quantity;
+      }
+    });
+    return totalFee;
   };
 
   const getTotalAmount = () => {
@@ -921,7 +943,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               <span>£{((ticketSelections.reduce((total, selection) => total + (selection.tier.price * selection.quantity), 0)) / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Processing Fee (£1.10 per ticket)</span>
+              <span>Processing Fee</span>
               <span>£{(getProcessingFee() / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
