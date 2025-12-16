@@ -1,6 +1,9 @@
 const { Resend } = require('resend');
 const { jsPDF } = require('jspdf');
 const QRCode = require('qrcode');
+const https = require('https');
+const sharp = require('sharp');
+const { generateTicketConfirmationHTML: generateTicketConfirmationHTMLTemplate } = require('./emailTemplates');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -73,248 +76,7 @@ const formatDate = (dateString) => {
 };
 
 const generateTicketConfirmationHTML = (data) => {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Your tickets are here</title>
-  <style>
-    body, table, td, a {
-      -webkit-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
-    }
-    table {
-      border-collapse: collapse !important;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #f3f4f6;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, Helvetica, Arial, sans-serif;
-      color: #111827;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #ffffff;
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .content {
-      padding: 32px 28px;
-    }
-    .logo-container {
-      text-align: center;
-      padding: 32px 28px 0;
-    }
-    .logo-container img {
-      max-width: 100px;
-      height: auto;
-      padding-right: 25px;
-    }
-    h1 {
-      font-size: 30px;
-      margin: 0 0 10px;
-      font-weight: 700;
-    }
-    .subtext {
-      color: #6b7280;
-      font-size: 16px;
-      margin-bottom: 28px;
-    }
-    .card {
-      background: #f9fafb;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
-    }
-    .card h2 {
-      font-size: 20px;
-      margin: 0 0 16px;
-      font-weight: 600;
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 15px;
-    }
-    .row:last-child {
-      border-bottom: none;
-    }
-    .label {
-      color: #6b7280;
-    }
-    .value {
-      font-weight: 500;
-      text-align: right;
-    }
-    .plan {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #ffffff;
-      border-radius: 10px;
-      padding: 16px;
-      margin-top: 12px;
-    }
-    .plan-name {
-      font-weight: 600;
-    }
-    .price {
-      font-size: 22px;
-      font-weight: 700;
-    }
-    .footer {
-      text-align: center;
-      font-size: 13px;
-      color: #9ca3af;
-      padding: 24px;
-      background: #f3f4f6;
-    }
-    @media (max-width: 600px) {
-      .row {
-        flex-direction: column;
-        gap: 6px;
-      }
-      .value {
-        text-align: left;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div style="padding: 24px">
-    <div class="container">
-      <!-- Logo -->
-      <div class="logo-container">
-        <img src="https://carnivalldn.com/carnival-logo.svg" alt="Carnival LDN Logo" style="max-width: 80px; height: auto;" />
-      </div>
-
-      <div class="content">
-        <h1>${data.customerName}, your tickets are here!</h1>
-        <p class="subtext">
-          Hi ${data.customerName}, please take a moment to review your order.
-        </p>
-
-        <!-- Event summary -->
-        <div class="card">
-          <h2>Event summary</h2>
-
-          <div class="row">
-            <span class="label">Event</span>
-            <span class="value">${data.eventName}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Date</span>
-            <span class="value">${formatDate(data.eventDate)}</span>
-          </div>
-
-          <div class="row">
-            <span class="label">Location</span>
-            <span class="value">${data.eventLocation}</span>
-          </div>
-
-          ${data.tickets.some(t => t.lastEntryTime) ? `
-          <div class="row">
-            <span class="label" style="font-weight: bold;">Last Entry Time</span>
-            <span class="value" style="font-weight: bold;">${data.tickets.find(t => t.lastEntryTime)?.lastEntryTime || 'N/A'}</span>
-          </div>
-          ` : ''}
-
-          <div class="row">
-            <span class="label">Order ID</span>
-            <span class="value">${data.orderId}</span>
-          </div>
-
-          <div style="margin-top: 16px">
-            <span class="label" style="display:block;margin-bottom:8px;">
-              Purchased Tickets
-            </span>
-
-            ${data.tickets.map(ticket => `
-              <div class="plan">
-                <div>
-                  <div class="plan-name">${ticket.tierName}</div>
-                  <div style="color:#6b7280;font-size:14px;">
-                    ${ticket.quantity} ticket(s)
-                  </div>
-                  ${ticket.lastEntryTime ? `
-                  <div style="color:#111827;font-size:14px;font-weight:bold;margin-top:4px;">
-                    Last Entry: ${ticket.lastEntryTime}
-                  </div>
-                  ` : ''}
-                </div>
-                <div class="price">
-                  ${formatCurrency(ticket.totalPrice, data.currency)}
-                </div>
-              </div>
-            `).join('')}
-            
-            ${data.tickets.length > 1 ? `
-              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 600; font-size: 16px;">Total</span>
-                <span class="price">${formatCurrency(data.totalAmount, data.currency)}</span>
-              </div>
-            ` : ''}
-          </div>
-        </div>
-
-        <p style="font-size:14px;color:#6b7280; text-align:center; font-weight:bold">
-          Your tickets are attached as a PDF. Please keep them safe for event
-          entry.
-        </p>
-      </div>
-
-      <!-- Footer -->
-      <div style="background:#ffffff;border-top:1px solid #e5e7eb;">
-        <div style="max-width:600px;margin:0 auto;padding:28px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-
-          <!-- Social icons -->
-          <div style="margin-bottom:18px;">
-            <a href="https://www.instagram.com/carnivalldn/" style="margin:0 6px;text-decoration:none;">
-              <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" width="36" alt="Instagram" />
-            </a>
-            <a href="https://wa.me/1234567890" style="margin:0 6px;text-decoration:none;">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/733/733585.png"
-                width="36"
-                alt="WhatsApp"
-                style="display:inline-block;border-radius:50%;"
-              />
-            </a>
-          </div>
-
-          <!-- Brand -->
-          <div style="margin-bottom:18px;">
-            <strong style="font-size:20px;color:#111827;">Carnival LDN</strong>
-          </div>
-
-          <!-- Bottom legal -->
-          <div style="border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;color:#9ca3af;">
-            © ${new Date().getFullYear()} Carnival LDN. All rights reserved
-            <br /><br />
-            <a href="https://www.carnivalldn.com/terms-of-service" style="color:#84cc16;text-decoration:none;font-weight:500;">Terms of Service</a>
-            &nbsp;•&nbsp;
-            <a href="https://www.carnivalldn.com/privacy-policy" style="color:#84cc16;text-decoration:none;font-weight:500;">Privacy policy</a>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="footer">
-        © ${new Date().getFullYear()} Carnival LDN. All rights reserved.
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-  `;
+  return generateTicketConfirmationHTMLTemplate(data, formatCurrency, formatDate);
 };
 
 const generateTicketConfirmationText = (data) => {
@@ -350,6 +112,47 @@ Thank you for choosing Carnival LDN!
   `;
 };
 
+// Helper function to fetch image from URL and convert to data URL
+// Converts SVG to PNG for jsPDF compatibility
+const fetchImageAsDataURL = (url) => {
+  return new Promise((resolve, reject) => {
+    https.get(url, async (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to fetch image: ${res.statusCode}`));
+        return;
+      }
+      
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', async () => {
+        try {
+          const buffer = Buffer.concat(chunks);
+          const contentType = res.headers['content-type'] || '';
+          
+          // Check if it's an SVG file
+          if (contentType.includes('svg') || url.endsWith('.svg')) {
+            // Convert SVG to PNG using sharp
+            const pngBuffer = await sharp(buffer)
+              .png()
+              .toBuffer();
+            
+            const base64 = pngBuffer.toString('base64');
+            const dataUrl = `data:image/png;base64,${base64}`;
+            resolve(dataUrl);
+          } else {
+            // For non-SVG images, return as-is
+            const base64 = buffer.toString('base64');
+            const dataUrl = `data:${contentType};base64,${base64}`;
+            resolve(dataUrl);
+          }
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }).on('error', reject);
+  });
+};
+
 // Generate PDF tickets for email attachment
 const generateTicketsPDF = async (data) => {
   try {
@@ -361,99 +164,196 @@ const generateTicketsPDF = async (data) => {
 
     // Header bar
     doc.setFillColor(17, 24, 39); // gray-900
-    doc.rect(0, 0, pageWidth, 90, 'F');
+    doc.rect(0, 0, pageWidth, 110, 'F');
+
+    // Text right aligned
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('Carnival LDN - Tickets', pageWidth / 2, 40, { align: 'center' });
+    doc.setFontSize(24);
+    doc.text('Carnival LDN', pageWidth - margin, 45, { align: 'right' });
+
+    doc.setFontSize(14);
+    doc.text('TICKETS', pageWidth - margin, 65, { align: 'right' });
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(13);
-    doc.text(data.eventName, pageWidth / 2, 62, { align: 'center' });
-
-    y = 110;
-    doc.setTextColor(55, 65, 81); // gray-700
     doc.setFontSize(12);
-    doc.text(`Order: ${data.orderId}`, margin, y); y += 16;
-    doc.text(`Name: ${data.customerName}`, margin, y); y += 16;
-    doc.text(`Email: ${data.customerEmail}`, margin, y); y += 16;
-    doc.text(`Status: Completed`, margin, y); y += 16;
-    doc.text(`Total: ${formatCurrency(data.totalAmount, data.currency)}`, margin, y); y += 20;
+    doc.text(data.eventName, pageWidth - margin, 85, { align: 'right' });
 
-    // Add event details
-    doc.text(`Event: ${data.eventName}`, margin, y); y += 16;
-    doc.text(`Date: ${formatDate(data.eventDate)}`, margin, y); y += 16;
-    doc.text(`Location: ${data.eventLocation}`, margin, y); y += 20;
+    y = 130;
+
+    // Order Summary Box
+    const boxY = y;
+    const boxHeight = 140;
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(1);
+    doc.rect(margin, boxY, pageWidth - margin * 2, boxHeight, 'FD');
+
+    y += 25;
+
+    // Two column layout
+    const leftCol = margin + 25;
+    const rightCol = pageWidth / 2 + 25;
+
+    // Left column - Order details
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text('ORDER DETAILS', leftCol, y);
+
+    y += 22;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(13);
+    doc.setTextColor(51, 65, 85); // slate-700
+    doc.text(`Order #${data.orderId.slice(0, 8).toUpperCase()}`, leftCol, y); y += 18;
+    doc.text(data.customerName, leftCol, y); y += 18;
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139);
+    doc.text(data.customerEmail, leftCol, y); y += 20;
+
+    // Order total
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`Total: ${formatCurrency(data.totalAmount, data.currency)}`, leftCol, y);
+
+    // Right column - Event details
+    y = boxY + 25;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139);
+    doc.text('EVENT INFORMATION', rightCol, y);
+
+    y += 22;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(17, 24, 39); // gray-900
+    doc.text(data.eventName, rightCol, y); y += 20;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+    doc.text(formatDate(data.eventDate), rightCol, y); y += 16;
+    doc.text(data.eventLocation, rightCol, y);
+
+    y = boxY + boxHeight + 30;
 
     // Generate tickets
     for (let i = 0; i < data.tickets.length; i++) {
       const ticket = data.tickets[i];
-      
+
       // Page break check
-      if (y + 180 > pageHeight - margin) {
+      if (y + 200 > pageHeight - margin) {
         doc.addPage();
         y = margin;
       }
 
-      // Ticket card
+      // Ticket card with gradient-like effect
       const cardX = margin;
       const cardW = pageWidth - margin * 2;
-      const cardH = 150;
-      doc.setDrawColor(229, 231, 235); // gray-200 border
-      doc.setFillColor(249, 250, 251); // gray-50 bg
+      const cardH = 170;
+
+      // Main card background
+      doc.setDrawColor(17, 24, 39); // dark border
+      doc.setLineWidth(2);
+      doc.setFillColor(255, 255, 255); // white bg
       doc.rect(cardX, y, cardW, cardH, 'FD');
 
-      // Left column text
-      let ty = y + 24;
-      doc.setTextColor(31, 41, 55); // gray-800
+      // Colored accent bar on left
+      doc.setFillColor(17, 24, 39); // gray-900
+      doc.rect(cardX, y, 8, cardH, 'F');
+
+      // Ticket header section
+      let ty = y + 25;
+      const textX = cardX + 25;
+
+      // Tier name - left aligned, no box
+      doc.setTextColor(17, 24, 39);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.text(`Ticket ${i + 1}`, cardX + 16, ty); ty += 18;
+      doc.setFontSize(16);
+      doc.text(ticket.tierName, textX, ty);
+
+      ty += 25;
+
+      // Quantity and price info
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(12);
-      doc.text(`Tier: ${ticket.tierName}`, cardX + 16, ty); ty += 14;
-      doc.text(`Quantity: ${ticket.quantity}`, cardX + 16, ty); ty += 14;
-      doc.text(`Unit: ${formatCurrency(ticket.unitPrice, data.currency)}   Total: ${formatCurrency(ticket.totalPrice, data.currency)}`, cardX + 16, ty); ty += 14;
-      // Add last entry time in bold if available
-      if (ticket.lastEntryTime) {
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(17, 24, 39); // gray-900 for bold text
-        doc.text(`Last Entry: ${ticket.lastEntryTime}`, cardX + 16, ty); ty += 18;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(31, 41, 55); // Reset to gray-800
-      } else {
-        ty += 4; // Add spacing if no last entry time
-      }
-      doc.setTextColor(75, 85, 99); // gray-600
-      doc.text(`Order Ref: ${data.orderId.slice(0, 8)}...`, cardX + 16, ty);
+      doc.setTextColor(17, 24, 39);
+      doc.text(`Quantity: ${ticket.quantity}`, textX, ty); ty += 25;
 
-      // Generate QR code for each ticket
-      const qrPayload = JSON.stringify({
-        orderId: data.orderId,
-        ticketTierId: ticket.tierId, // Use tierId instead of tierName
-        quantity: ticket.quantity,
-        customer: data.customerEmail,
-      });
-      
-      // Debug: Log the QR payload to help troubleshoot
-      console.log('🔍 Email Service QR Payload:', qrPayload);
-      console.log('🔍 Email ticket data:', ticket);
-      console.log('🔍 Email order data:', data);
+      // Unit price
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(17, 24, 39);
+      doc.text(`Unit Price: ${formatCurrency(ticket.unitPrice, data.currency)}`, textX, ty); ty += 18;
+
+      // Total price - prominent
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(17, 24, 39);
+      doc.text(`Total: ${formatCurrency(ticket.totalPrice, data.currency)}`, textX, ty); ty += 25;
+
+      // Last entry time - highlighted
+      if (ticket.lastEntryTime) {
+        const badgeWidth = 120;
+        doc.setFillColor(254, 243, 199); // amber-100
+        doc.roundedRect(textX - 5, ty - 8, badgeWidth, 20, 3, 3, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(146, 64, 14); // amber-900
+        doc.text(`Last Entry: ${ticket.lastEntryTime}`, textX, ty + 5);
+        ty += 25;
+      }
+
+      // Order reference at bottom
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(156, 163, 175); // gray-400
+      doc.text(`Order #${data.orderId.slice(0, 8).toUpperCase()}`, textX, ty);
+
+      // QR code with label
+      const qrSize = 130;
+      const qrX = pageWidth - margin - qrSize - 20;
+      const qrY = y + 20;
 
       try {
-        const qrDataUrl = await QRCode.toDataURL(qrPayload, { 
-          width: 120, 
-          margin: 1, 
-          color: { dark: '#111827', light: '#FFFFFFFF' } 
+        const qrPayload = JSON.stringify({
+          orderId: data.orderId,
+          ticketTierId: ticket.tierId,
+          quantity: ticket.quantity,
+          customer: data.customerEmail,
         });
-        doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 136, y + 15, 120, 120);
-      } catch (qrError) {
-        console.error('Error generating QR code:', qrError);
-        // Continue without QR code if it fails
+
+        const qrDataUrl = await QRCode.toDataURL(qrPayload, {
+          width: 120,
+          margin: 1,
+          color: { dark: '#111827', light: '#FFFFFFFF' }
+        });
+
+        // QR code background
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(qrX - 5, qrY - 5, qrSize + 10, qrSize + 10, 5, 5, 'F');
+
+        // QR code
+        doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+      } catch (err) {
+        console.error('Error generating QR code:', err);
+        // Draw placeholder if QR fails
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(qrX, qrY, qrSize, qrSize);
       }
 
-      y += cardH + 14;
+      y += cardH + 20;
     }
+
+    // Add footer with copyright
+    const footerY = pageHeight - 50;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128); // gray-500
+    const currentYear = new Date().getFullYear();
+    doc.text(`© ${currentYear} Carnival LDN. All Rights Reserved.`, pageWidth / 2, footerY, { align: 'center' });
 
     // Convert to buffer for email attachment
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
