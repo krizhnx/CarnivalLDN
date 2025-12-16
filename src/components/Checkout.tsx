@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Lock, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
@@ -127,6 +127,12 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     dateOfBirth: '',
     gender: 'male',
   });
+  // Use ref to always get the latest customerInfo (fixes stale closure issue)
+  const customerInfoRef = useRef(customerInfo);
+  useEffect(() => {
+    customerInfoRef.current = customerInfo;
+  }, [customerInfo]);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canMakePayment, setCanMakePayment] = useState(false);
@@ -223,6 +229,11 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     // Set up payment method handler
     pr.on('paymentmethod', async (ev) => {
         // Create payment intent
+        // IMPORTANT: Use ref to get the latest customerInfo (fixes stale closure issue)
+        const latestCustomerInfo = customerInfoRef.current;
+        console.log('🍎 Apple Pay triggered - latestCustomerInfo.email:', latestCustomerInfo.email);
+        console.log('🍎 Full latestCustomerInfo:', JSON.stringify(latestCustomerInfo, null, 2));
+        
         try {
           const response = await fetch('/api/create-payment-intent', {
             method: 'POST',
@@ -233,11 +244,11 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               eventId: event.id,
               tickets: ticketSelections.filter(s => s.quantity > 0),
               customerInfo: {
-                ...customerInfo,
-                name: customerInfo.name || ev.payerName || '',
-                email: customerInfo.email, // PRIMARY: Always use form email to avoid Apple's Hide My Email
+                ...latestCustomerInfo,
+                name: latestCustomerInfo.name || ev.payerName || '',
+                email: latestCustomerInfo.email || '', // PRIMARY: Always use form email to avoid Apple's Hide My Email
                 applePayEmail: ev.payerEmail || null, // SECONDARY: Store Apple Pay email separately
-                phone: customerInfo.phone || ev.payerPhone || '',
+                phone: latestCustomerInfo.phone || ev.payerPhone || '',
               },
               totalAmount: getTotalAmount(),
               affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
@@ -273,6 +284,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
 
           if (paymentIntent.status === 'succeeded') {
             // Create order record
+            // Get latest customerInfo again for confirm-payment
+            const latestCustomerInfoForConfirm = customerInfoRef.current;
+            
             const orderResponse = await fetch('/api/confirm-payment', {
               method: 'POST',
               headers: {
@@ -283,11 +297,11 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                 eventId: event.id,
                 tickets: ticketSelections.filter(s => s.quantity > 0),
                 customerInfo: {
-                  ...customerInfo,
-                  name: customerInfo.name || ev.payerName || '',
-                  email: customerInfo.email, // PRIMARY: Always use form email to avoid Apple's Hide My Email
+                  ...latestCustomerInfoForConfirm,
+                  name: latestCustomerInfoForConfirm.name || ev.payerName || '',
+                  email: latestCustomerInfoForConfirm.email, // PRIMARY: Always use form email to avoid Apple's Hide My Email
                   applePayEmail: ev.payerEmail || null, // SECONDARY: Store Apple Pay email separately
-                  phone: customerInfo.phone || ev.payerPhone || '',
+                  phone: latestCustomerInfoForConfirm.phone || ev.payerPhone || '',
                 },
                 totalAmount: getTotalAmount(),
                 affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
@@ -297,10 +311,13 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             if (orderResponse.ok) {
               const orderData = await orderResponse.json();
 
+              // Get latest customerInfo for order object
+              const latestCustomerInfoForOrder = customerInfoRef.current;
+              
               const order = {
                 id: orderData.order?.id || `order_${Date.now()}`,
                 eventId: event.id,
-                userId: customerInfo.email, // Always use form email
+                userId: latestCustomerInfoForOrder.email, // Always use form email
                 stripePaymentIntentId: orderData.paymentIntentId,
                 status: 'completed' as const,
                 totalAmount: getTotalAmount(),
@@ -313,11 +330,11 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                   unitPrice: selection.tier.price,
                   totalPrice: selection.tier.price * selection.quantity,
                 })),
-                customerEmail: customerInfo.email, // Always use form email
-                customerName: customerInfo.name || ev.payerName || '',
-                customerPhone: customerInfo.phone || ev.payerPhone || '',
-                customerDateOfBirth: customerInfo.dateOfBirth,
-                customerGender: customerInfo.gender || undefined,
+                customerEmail: latestCustomerInfoForOrder.email, // Always use form email
+                customerName: latestCustomerInfoForOrder.name || ev.payerName || '',
+                customerPhone: latestCustomerInfoForOrder.phone || ev.payerPhone || '',
+                customerDateOfBirth: latestCustomerInfoForOrder.dateOfBirth,
+                customerGender: latestCustomerInfoForOrder.gender || undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
               };
