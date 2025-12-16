@@ -283,6 +283,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           ev.complete('success');
 
           if (paymentIntent.status === 'succeeded') {
+            // Show loading state after Apple Pay UI closes
+            setIsProcessing(true);
+            
             // Create order record
             // Get latest customerInfo again for confirm-payment
             const latestCustomerInfoForConfirm = customerInfoRef.current;
@@ -351,11 +354,17 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
               trackPurchase(order.id, event.id, event.title, totalValue, items);
 
               onSuccess(order);
+            } else {
+              // Order creation failed
+              const errorData = await orderResponse.json().catch(() => ({}));
+              setError(errorData.error || 'Failed to confirm order');
+              setIsProcessing(false);
             }
           }
         } catch (err) {
           ev.complete('fail');
           setError(err instanceof Error ? err.message : 'An error occurred');
+          setIsProcessing(false);
         }
       });
 
