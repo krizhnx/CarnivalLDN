@@ -31,6 +31,7 @@ export interface TicketTier {
   description?: string;
   benefits?: string[]; // e.g., ["VIP seating", "Free drinks"]
   isActive: boolean;
+  lastEntryTime?: string; // Last entry time for this tier (e.g., "11:00 PM", "23:00")
 }
 
 export interface Order {

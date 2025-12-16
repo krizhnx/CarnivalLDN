@@ -709,6 +709,11 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                   <div>
                     <h4 className="font-medium text-gray-900">{tier.name}</h4>
                     {!isSoldOut && <p className="text-sm text-gray-600">{tier.description}</p>}
+                    {!isSoldOut && tier.lastEntryTime && (
+                      <p className="text-sm font-bold text-gray-900 mt-1">
+                        Last Entry: {tier.lastEntryTime}
+                      </p>
+                    )}
                     {!isSoldOut && tier.benefits && tier.benefits.length > 0 && (
                       <div className="mt-2">
                         {tier.benefits.map((benefit, index) => (
@@ -969,9 +974,16 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           {ticketSelections
             .filter(s => s.quantity > 0)
             .map((selection) => (
-              <div key={selection.tierId} className="flex justify-between text-sm">
-                <span>{selection.quantity}x {selection.tier.name}</span>
-                <span>£{((selection.tier.price * selection.quantity) / 100).toFixed(2)}</span>
+              <div key={selection.tierId}>
+                <div className="flex justify-between text-sm">
+                  <span>{selection.quantity}x {selection.tier.name}</span>
+                  <span>£{((selection.tier.price * selection.quantity) / 100).toFixed(2)}</span>
+                </div>
+                {selection.tier.lastEntryTime && (
+                  <div className="text-sm font-bold text-gray-900 mt-1">
+                    Last Entry: {selection.tier.lastEntryTime}
+                  </div>
+                )}
               </div>
             ))}
           <div className="border-t pt-2 mt-2">

@@ -157,7 +157,7 @@ module.exports = async function handler(req: any, res: any) {
     const ticketTierIds = tickets.map((t: TicketMetadata) => t.tierId);
     const { data: ticketTiers, error: tiersError } = await supabase
       .from('ticket_tiers')
-      .select('id, name, price')
+      .select('id, name, price, last_entry_time')
       .in('id', ticketTierIds);
 
     if (tiersError) {
@@ -185,7 +185,8 @@ module.exports = async function handler(req: any, res: any) {
               tierName: tier?.name || 'Unknown Tier',
               quantity: parseInt(ticket.quantity.toString()),
               unitPrice: tier?.price || 0,
-              totalPrice: (tier?.price || 0) * parseInt(ticket.quantity.toString())
+              totalPrice: (tier?.price || 0) * parseInt(ticket.quantity.toString()),
+              lastEntryTime: tier?.last_entry_time || undefined
             };
           }),
           totalAmount: paymentIntent.amount,

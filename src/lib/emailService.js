@@ -74,184 +74,246 @@ const formatDate = (dateString) => {
 
 const generateTicketConfirmationHTML = (data) => {
   return `
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket Confirmation - ${data.eventName}</title>
-    <style>
-      /* General resets for email clients */
-      body, table, td, a {
-        -webkit-text-size-adjust: 100%;
-        -ms-text-size-adjust: 100%;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your tickets are here</title>
+  <style>
+    body, table, td, a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table {
+      border-collapse: collapse !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Helvetica, Arial, sans-serif;
+      color: #111827;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .content {
+      padding: 32px 28px;
+    }
+    .logo-container {
+      text-align: center;
+      padding: 32px 28px 0;
+    }
+    .logo-container img {
+      max-width: 100px;
+      height: auto;
+      padding-right: 25px;
+    }
+    h1 {
+      font-size: 30px;
+      margin: 0 0 10px;
+      font-weight: 700;
+    }
+    .subtext {
+      color: #6b7280;
+      font-size: 16px;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .card h2 {
+      font-size: 20px;
+      margin: 0 0 16px;
+      font-weight: 600;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 15px;
+    }
+    .row:last-child {
+      border-bottom: none;
+    }
+    .label {
+      color: #6b7280;
+    }
+    .value {
+      font-weight: 500;
+      text-align: right;
+    }
+    .plan {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .plan-name {
+      font-weight: 600;
+    }
+    .price {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .footer {
+      text-align: center;
+      font-size: 13px;
+      color: #9ca3af;
+      padding: 24px;
+      background: #f3f4f6;
+    }
+    @media (max-width: 600px) {
+      .row {
+        flex-direction: column;
+        gap: 6px;
       }
-      table {
-        border-collapse: collapse !important;
-      }
-      img {
-        border: 0;
-        line-height: 100%;
-        outline: none;
-        text-decoration: none;
-        max-width: 100%;
-      }
-      body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100% !important;
-        background-color: #f4f4f4;
-        font-family: Arial, sans-serif;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        background: #ffffff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      }
-      .header {
-        background: linear-gradient(135deg, #000000, #434343);
-        color: #ffffff;
-        padding: 40px 20px;
-        text-align: center;
-      }
-      .header h1 {
-        margin: 0;
-        font-size: 28px;
-        letter-spacing: 1px;
-      }
-      .content {
-        padding: 30px 25px;
-        color: #333333;
+      .value {
         text-align: left;
       }
-      .content h2 {
-        font-size: 22px;
-        margin-top: 0;
-      }
-      .highlight {
-        font-size: 18px;
-        margin-bottom: 25px;
-      }
-      .ticket-details {
-        background: #fafafa;
-        padding: 20px;
-        border-radius: 8px;
-        margin: 25px 0;
-        border: 1px solid #eaeaea;
-      }
-      .ticket-details h3 {
-        font-size: 18px;
-        margin-top: 0;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #000000;
-        display: inline-block;
-        padding-bottom: 4px;
-      }
-      .ticket-item {
-        display: flex;
-        justify-content: space-between;
-        font-size: 16px;
-        padding: 10px 0;
-        border-bottom: 1px dashed #ddd;
-      }
-      .ticket-item:last-child {
-        border-bottom: none;
-      }
-      .total {
-        text-align: right;
-        font-size: 18px;
-        font-weight: bold;
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 2px solid #000000;
-      }
-      .button {
-        display: inline-block;
-        background: #000000;
-        color: #ffffff !important;
-        padding: 14px 28px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: bold;
-        margin: 25px auto;
-        text-align: center;
-      }
-      .footer {
-        text-align: center;
-        padding: 25px 15px;
-        font-size: 13px;
-        color: #999999;
-        background: #f4f4f4;
-        border-top: 1px solid #e0e0e0;
-      }
-      @media screen and (max-width: 600px) {
-        .content, .header, .footer {
-          padding: 20px !important;
-        }
-        .ticket-item {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-        .ticket-item span {
-          margin-bottom: 5px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div style="padding:20px;">
-      <div class="container">
-        <!-- Header -->
-        <div class="header">
-          <h1>🎟️ Ticket Confirmation</h1>
-          <p style="margin:10px 0 0;font-size:16px;">Thank you for your purchase!</p>
-        </div>
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: 24px">
+    <div class="container">
+      <!-- Logo -->
+      <div class="logo-container">
+        <img src="https://carnivalldn.com/carnival-logo.svg" alt="Carnival LDN Logo" style="max-width: 80px; height: auto;" />
+      </div>
 
-        <!-- Body -->
-        <div class="content">
-          <h2>Hello ${data.customerName},</h2>
-          <p class="highlight">Your tickets for <strong>${data.eventName}</strong> are confirmed!</p>
+      <div class="content">
+        <h1>${data.customerName}, your tickets are here!</h1>
+        <p class="subtext">
+          Hi ${data.customerName}, please take a moment to review your order.
+        </p>
 
-          <!-- Event Details -->
-          <div class="ticket-details">
-            <h3>Event Details</h3>
-            <p><strong>Event:</strong> ${data.eventName}</p>
-            <p><strong>Date:</strong> ${formatDate(data.eventDate)}</p>
-            <p><strong>Location:</strong> ${data.eventLocation}</p>
-            <p><strong>Order ID:</strong> ${data.orderId}</p>
+        <!-- Event summary -->
+        <div class="card">
+          <h2>Event summary</h2>
+
+          <div class="row">
+            <span class="label">Event</span>
+            <span class="value">${data.eventName}</span>
           </div>
 
-          <!-- Ticket Summary -->
-          <div class="ticket-details">
-            <h3>Ticket Summary</h3>
+          <div class="row">
+            <span class="label">Date</span>
+            <span class="value">${formatDate(data.eventDate)}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">Location</span>
+            <span class="value">${data.eventLocation}</span>
+          </div>
+
+          ${data.tickets.some(t => t.lastEntryTime) ? `
+          <div class="row">
+            <span class="label" style="font-weight: bold;">Last Entry Time</span>
+            <span class="value" style="font-weight: bold;">${data.tickets.find(t => t.lastEntryTime)?.lastEntryTime || 'N/A'}</span>
+          </div>
+          ` : ''}
+
+          <div class="row">
+            <span class="label">Order ID</span>
+            <span class="value">${data.orderId}</span>
+          </div>
+
+          <div style="margin-top: 16px">
+            <span class="label" style="display:block;margin-bottom:8px;">
+              Purchased Tickets
+            </span>
+
             ${data.tickets.map(ticket => `
-              <div class="ticket-item">
-                <span>${ticket.tierName} × ${ticket.quantity}</span>
+              <div class="plan">
+                <div>
+                  <div class="plan-name">${ticket.tierName}</div>
+                  <div style="color:#6b7280;font-size:14px;">
+                    ${ticket.quantity} ticket(s)
+                  </div>
+                  ${ticket.lastEntryTime ? `
+                  <div style="color:#111827;font-size:14px;font-weight:bold;margin-top:4px;">
+                    Last Entry: ${ticket.lastEntryTime}
+                  </div>
+                  ` : ''}
+                </div>
+                <div class="price">
+                  ${formatCurrency(ticket.totalPrice, data.currency)}
+                </div>
               </div>
             `).join('')}
-            <div class="total">
-              Total: ${formatCurrency(data.totalAmount, data.currency)}
-            </div>
+            
+            ${data.tickets.length > 1 ? `
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; font-size: 16px;">Total</span>
+                <span class="price">${formatCurrency(data.totalAmount, data.currency)}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <p style="font-size:14px;color:#6b7280; text-align:center; font-weight:bold">
+          Your tickets are attached as a PDF. Please keep them safe for event
+          entry.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background:#ffffff;border-top:1px solid #e5e7eb;">
+        <div style="max-width:600px;margin:0 auto;padding:28px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+          <!-- Social icons -->
+          <div style="margin-bottom:18px;">
+            <a href="https://www.instagram.com/carnivalldn/" style="margin:0 6px;text-decoration:none;">
+              <img src="https://cdn-icons-png.flaticon.com/512/733/733558.png" width="36" alt="Instagram" />
+            </a>
+            <a href="https://wa.me/1234567890" style="margin:0 6px;text-decoration:none;">
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/733/733585.png"
+                width="36"
+                alt="WhatsApp"
+                style="display:inline-block;border-radius:50%;"
+              />
+            </a>
           </div>
 
-          <!-- Important Information -->
-          <p style="font-size:15px;text-align:center;margin-top:15px;">
-            🎫 Your tickets are attached as a PDF. Please keep them safe for event entry.
-          </p>
-        </div>
+          <!-- Brand -->
+          <div style="margin-bottom:18px;">
+            <strong style="font-size:20px;color:#111827;">Carnival LDN</strong>
+          </div>
 
-        <!-- Footer -->
-        <div class="footer">
-          <p>Thank you for choosing <strong>Carnival LDN</strong>!</p>
-          <p>© ${new Date().getFullYear()} Carnival LDN. All rights reserved.</p>
+          <!-- Bottom legal -->
+          <div style="border-top:1px solid #e5e7eb;padding-top:16px;font-size:12px;color:#9ca3af;">
+            © ${new Date().getFullYear()} Carnival LDN. All rights reserved
+            <br /><br />
+            <a href="https://www.carnivalldn.com/terms-of-service" style="color:#84cc16;text-decoration:none;font-weight:500;">Terms of Service</a>
+            &nbsp;•&nbsp;
+            <a href="https://www.carnivalldn.com/privacy-policy" style="color:#84cc16;text-decoration:none;font-weight:500;">Privacy policy</a>
+          </div>
+
         </div>
       </div>
+
+      <div class="footer">
+        © ${new Date().getFullYear()} Carnival LDN. All rights reserved.
+      </div>
     </div>
-  </body>
-  </html>
+  </div>
+</body>
+</html>
   `;
 };
 
@@ -271,7 +333,7 @@ Event Details:
 - Order ID: ${data.orderId}
 
 Ticket Summary:
-${data.tickets.map(ticket => `- ${ticket.tierName} × ${ticket.quantity}: ${formatCurrency(ticket.totalPrice, data.currency)}`).join('\n')}
+${data.tickets.map(ticket => `- ${ticket.tierName} × ${ticket.quantity}: ${formatCurrency(ticket.totalPrice, data.currency)}${ticket.lastEntryTime ? ` (Last Entry: ${ticket.lastEntryTime})` : ''}`).join('\n')}
 
 Total: ${formatCurrency(data.totalAmount, data.currency)}
 
@@ -351,7 +413,17 @@ const generateTicketsPDF = async (data) => {
       doc.setFontSize(12);
       doc.text(`Tier: ${ticket.tierName}`, cardX + 16, ty); ty += 14;
       doc.text(`Quantity: ${ticket.quantity}`, cardX + 16, ty); ty += 14;
-      doc.text(`Unit: ${formatCurrency(ticket.unitPrice, data.currency)}   Total: ${formatCurrency(ticket.totalPrice, data.currency)}`, cardX + 16, ty); ty += 18;
+      doc.text(`Unit: ${formatCurrency(ticket.unitPrice, data.currency)}   Total: ${formatCurrency(ticket.totalPrice, data.currency)}`, cardX + 16, ty); ty += 14;
+      // Add last entry time in bold if available
+      if (ticket.lastEntryTime) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(17, 24, 39); // gray-900 for bold text
+        doc.text(`Last Entry: ${ticket.lastEntryTime}`, cardX + 16, ty); ty += 18;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(31, 41, 55); // Reset to gray-800
+      } else {
+        ty += 4; // Add spacing if no last entry time
+      }
       doc.setTextColor(75, 85, 99); // gray-600
       doc.text(`Order Ref: ${data.orderId.slice(0, 8)}...`, cardX + 16, ty);
 

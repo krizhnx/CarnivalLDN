@@ -317,7 +317,8 @@ app.post('/api/confirm-payment', async (req, res) => {
                 tierName: ticket.tier.name,
                 quantity: ticket.quantity,
                 unitPrice: ticket.tier.price,
-                totalPrice: ticket.tier.price * ticket.quantity
+                totalPrice: ticket.tier.price * ticket.quantity,
+                lastEntryTime: ticket.tier.lastEntryTime || undefined
               })),
               totalAmount: totalAmount,
               currency: 'gbp'
@@ -777,7 +778,7 @@ app.post('/api/create-free-order', async (req, res) => {
     const ticketTierIds = tickets.map((t) => t.tierId);
     const { data: ticketTiers, error: tiersError } = await supabase
       .from('ticket_tiers')
-      .select('id, name, price')
+      .select('id, name, price, last_entry_time')
       .in('id', ticketTierIds);
 
     if (tiersError) {
@@ -805,7 +806,8 @@ app.post('/api/create-free-order', async (req, res) => {
               tierName: tier?.name || 'Unknown Tier',
               quantity: parseInt(ticket.quantity.toString()),
               unitPrice: 0, // Free tickets
-              totalPrice: 0 // Free tickets
+              totalPrice: 0, // Free tickets
+              lastEntryTime: tier?.last_entry_time || undefined
             };
           }),
           totalAmount: 0,

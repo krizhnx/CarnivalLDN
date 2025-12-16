@@ -146,6 +146,7 @@ export const useAppStore = create<AppState>()(
                 description: tier.description,
                 benefits: tier.benefits,
                 isActive: tier.is_active,
+                lastEntryTime: tier.last_entry_time || undefined,
               })).sort((a, b) => a.price - b.price) // Sort by price in ascending order
             }
           })
@@ -209,6 +210,7 @@ export const useAppStore = create<AppState>()(
               description: tier.description || null,
               benefits: tier.benefits || [],
               is_active: tier.isActive !== false, // Default to true if not specified
+              last_entry_time: tier.lastEntryTime || null,
             }))
 
             console.log('Inserting ticket tiers:', ticketTiersToInsert)
@@ -293,6 +295,7 @@ export const useAppStore = create<AppState>()(
                 description: tier.description,
                 benefits: tier.benefits,
                 is_active: tier.isActive,
+                last_entry_time: tier.lastEntryTime || null,
               }))
 
               console.log('Updating ticket tiers:', ticketTiersToInsert)

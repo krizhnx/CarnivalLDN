@@ -23,6 +23,7 @@ const TicketTierForm = ({ ticketTiers, eventId, onSave, onClose }: TicketTierFor
     description: '',
     benefits: [],
     isActive: true,
+    lastEntryTime: '',
   });
 
   const addTier = () => {
@@ -54,6 +55,7 @@ const TicketTierForm = ({ ticketTiers, eventId, onSave, onClose }: TicketTierFor
         description: newTier.description || '',
         benefits: (newTier.benefits || []).filter(b => b.trim()),
         isActive: newTier.isActive !== false,
+        lastEntryTime: newTier.lastEntryTime || undefined,
       };
       
       console.log('Created tier:', tier);
@@ -71,6 +73,7 @@ const TicketTierForm = ({ ticketTiers, eventId, onSave, onClose }: TicketTierFor
         description: '',
         benefits: [],
         isActive: true,
+        lastEntryTime: '',
       });
     } else {
       console.log('Validation failed - missing required fields');
@@ -220,6 +223,17 @@ const TicketTierForm = ({ ticketTiers, eventId, onSave, onClose }: TicketTierFor
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last Entry Time (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g., 11:00 PM, 23:00, 10:30 PM"
+                  value={newTier.lastEntryTime || ''}
+                  onChange={(e) => setNewTier({ ...newTier, lastEntryTime: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Time when entry closes for this tier</p>
+              </div>
             </div>
             <textarea
               placeholder="Description (optional)"
@@ -259,19 +273,33 @@ const TicketTierForm = ({ ticketTiers, eventId, onSave, onClose }: TicketTierFor
                         value={tier.name}
                         onChange={(e) => updateTier(tier.id, { name: e.target.value })}
                         className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Tier Name"
                       />
                       <input
                         type="number"
                         value={tier.price / 100}
                         onChange={(e) => updateTier(tier.id, { price: (parseFloat(e.target.value) || 0) * 100 })}
                         className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Price"
                       />
                       <input
                         type="number"
                         value={tier.capacity}
                         onChange={(e) => updateTier(tier.id, { capacity: parseInt(e.target.value) || 0 })}
                         className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Capacity"
                       />
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Entry Time (Optional)</label>
+                      <input
+                        type="text"
+                        value={tier.lastEntryTime || ''}
+                        onChange={(e) => updateTier(tier.id, { lastEntryTime: e.target.value })}
+                        placeholder="e.g., 11:00 PM, 23:00, 10:30 PM"
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Time when entry closes for this tier</p>
                     </div>
                     
                     <div className="mt-4">
