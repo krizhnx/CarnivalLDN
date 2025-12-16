@@ -605,9 +605,26 @@ export const useAppStore = create<AppState>()(
         try {
           console.log('🔍 Validating ticket:', { orderId, ticketTierId, customerEmail });
 
+          // Get ticket quantity from order_tickets
+          const { data: orderTicket, error: orderTicketError } = await supabase
+            .from('order_tickets')
+            .select('quantity')
+            .eq('order_id', orderId)
+            .eq('ticket_tier_id', ticketTierId)
+            .single();
+
+          if (orderTicketError || !orderTicket) {
+            console.error('Error fetching order ticket quantity:', orderTicketError);
+            // Fallback: assume quantity is 1 if we can't find it
+            console.log('⚠️ Could not find order ticket, assuming quantity 1');
+          }
+
+          const ticketQuantity = orderTicket?.quantity || 1;
+          console.log('🎫 Ticket quantity:', ticketQuantity);
+
           // Check existing scans based on scan type
           if (scanType === 'entry') {
-            // For entry scans, check if already scanned for entry
+            // For entry scans, check how many times it's been scanned
             const { data: existingEntryScans, error: scanError } = await supabase
               .from('ticket_scans')
               .select('*')
@@ -619,17 +636,20 @@ export const useAppStore = create<AppState>()(
               console.error('Error checking existing entry scans:', scanError);
             }
 
-            // If already scanned for entry, return error
-            if (existingEntryScans && existingEntryScans.length > 0) {
-              console.log('❌ Ticket already scanned for entry');
+            const scanCount = existingEntryScans?.length || 0;
+            console.log(`🔢 Entry scans: ${scanCount}/${ticketQuantity}`);
+
+            // If already scanned the maximum number of times, return error
+            if (scanCount >= ticketQuantity) {
+              console.log(`❌ Ticket already scanned ${scanCount} times (max: ${ticketQuantity})`);
               return {
                 isValid: false,
-                message: 'Ticket already scanned for entry',
+                message: `Ticket already scanned ${scanCount} time${scanCount > 1 ? 's' : ''} (maximum: ${ticketQuantity})`,
                 orderStatus: 'completed',
                 eventDate: 'unknown',
                 customerName: 'unknown',
                 customerEmail: customerEmail,
-                eventId: existingEntryScans[0].event_id
+                eventId: existingEntryScans?.[0]?.event_id
               };
             }
           } else if (scanType === 'exit') {
@@ -658,7 +678,7 @@ export const useAppStore = create<AppState>()(
               };
             }
 
-            // Check if already scanned for exit
+            // Check how many times it's been scanned for exit
             const { data: existingExitScans, error: exitScanError } = await supabase
               .from('ticket_scans')
               .select('*')
@@ -670,12 +690,15 @@ export const useAppStore = create<AppState>()(
               console.error('Error checking existing exit scans:', exitScanError);
             }
 
-            // If already scanned for exit, return error
-            if (existingExitScans && existingExitScans.length > 0) {
-              console.log('❌ Ticket already scanned for exit');
+            const exitScanCount = existingExitScans?.length || 0;
+            console.log(`🔢 Exit scans: ${exitScanCount}/${ticketQuantity}`);
+
+            // If already scanned the maximum number of times for exit, return error
+            if (exitScanCount >= ticketQuantity) {
+              console.log(`❌ Ticket already scanned for exit ${exitScanCount} times (max: ${ticketQuantity})`);
               return {
                 isValid: false,
-                message: 'Ticket already scanned for exit',
+                message: `Ticket already scanned for exit ${exitScanCount} time${exitScanCount > 1 ? 's' : ''} (maximum: ${ticketQuantity})`,
                 orderStatus: 'completed',
                 eventDate: 'unknown',
                 customerName: 'unknown',
