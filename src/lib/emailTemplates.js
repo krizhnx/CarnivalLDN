@@ -42,31 +42,6 @@ const generateTicketConfirmationHTML = (data, formatCurrency, formatDate) => {
     .content {
       padding: 32px 28px;
     }
-    .logo-container {
-      text-align: center;
-      padding: 32px 28px 0;
-    }
-    .logo-container img {
-      max-width: 100px;
-      height: auto;
-      padding-right: 25px;
-    }
-    /* Default: Light logo is shown, dark logo is hidden */
-    .logo-light {
-      display: inline-block !important;
-    }
-    .logo-dark {
-      display: none !important;
-    }
-    /* Only show dark logo when dark mode is explicitly detected */
-    @media (prefers-color-scheme: dark) {
-      .logo-light {
-        display: none !important;
-      }
-      .logo-dark {
-        display: inline-block !important;
-      }
-    }
     h1 {
       font-size: 30px;
       margin: 0 0 10px;
@@ -168,17 +143,6 @@ const generateTicketConfirmationHTML = (data, formatCurrency, formatDate) => {
       }
       .content {
         padding: 24px 20px;
-      }
-      .logo-container {
-        padding: 24px 20px 0;
-      }
-      .logo-container img {
-        max-width: 70px;
-        padding-right: 0;
-      }
-      .logo-dark,
-      .logo-light {
-        max-width: 70px !important;
       }
       h1 {
         font-size: 24px;
@@ -297,12 +261,6 @@ const generateTicketConfirmationHTML = (data, formatCurrency, formatDate) => {
 <body>
   <div style="padding: 24px 12px;">
     <div class="container">
-      <!-- Logo -->
-      <div class="logo-container">
-        <img class="logo-light" src="https://carnivalldn.com/carnival-logo.svg" alt="Carnival LDN Logo" style="max-width: 80px; height: auto;" />
-        <img class="logo-dark" src="https://carnivalldn.com/carnival-logo-w.svg" alt="Carnival LDN Logo" style="max-width: 80px; height: auto;" />
-      </div>
-
       <div class="content">
         <h1>${data.customerName}, your tickets are here!</h1>
         <p class="subtext">
