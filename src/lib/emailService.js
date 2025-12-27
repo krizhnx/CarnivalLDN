@@ -526,10 +526,6 @@ const generateGuestlistPDF = async (data) => {
     doc.text(`Date: ${formatDate(data.eventDate)}`, margin, y); y += 16;
     doc.text(`Location: ${data.eventLocation}`, margin, y); y += 20;
 
-    if (data.notes) {
-      doc.text(`Notes: ${data.notes}`, margin, y); y += 20;
-    }
-
     // Important instructions
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
