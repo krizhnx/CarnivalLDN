@@ -156,17 +156,13 @@ const EventsPage = () => {
 
       {/* Hero Section with Video Background */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
-        {/* Video Background */}
+        {/* Image Background */}
         <div className="absolute inset-0 w-full h-full">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
+          <img
+            src="/main-hero.jpg"
+            alt="Carnival LDN Hero Background"
             className="w-full h-full object-cover"
-          >
-            <source src="/vid.mp4" type="video/mp4" />
-          </video>
+          />
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-black/60"></div>
         </div>
@@ -318,17 +314,13 @@ const EventsPage = () => {
 
       {/* Events Grid Section */}
       <section id="events-grid" className="py-16 md:py-20 relative px-4 overflow-hidden">
-        {/* Video Background for Events Section */}
+        {/* Image Background for Events Section */}
         <div className="absolute inset-0 w-full h-full">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
+          <img
+            src="/events-bg-f.jpg"
+            alt="Events Background"
             className="w-full h-full object-cover scale-150"
-          >
-            <source src="/vid-ev.mp4" type="video/mp4" />
-          </video>
+          />
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-gray-900/70"></div>
         </div>

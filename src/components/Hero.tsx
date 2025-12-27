@@ -78,17 +78,13 @@ const Hero = () => {
 
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
-      {/* Video Background */}
+      {/* Image Background */}
       <div className="absolute inset-0 w-full h-full">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
+        <img
+          src="/main-hero.jpg"
+          alt="Carnival LDN Hero Background"
           className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src="/vid.mp4" type="video/mp4" />
-        </video>
+        />
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-black/50" />
       </div>

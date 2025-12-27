@@ -28,17 +28,13 @@ const Events = () => {
 
   return (
     <section id="events" className="py-16 md:py-20 relative px-4 overflow-hidden">
-      {/* Video Background */}
+      {/* Image Background */}
       <div className="absolute inset-0 w-full h-full">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
+        <img
+          src="/events-bg-f.jpg"
+          alt="Events Background"
           className="w-full h-full object-cover scale-150"
-        >
-          <source src="/vid-ev.mp4" type="video/mp4" />
-        </video>
+        />
         {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-gray-900/70"></div>
       </div>
