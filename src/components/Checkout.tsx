@@ -138,6 +138,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const [canMakePayment, setCanMakePayment] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
+  const [paymentRequestReady, setPaymentRequestReady] = useState(false);
   
   // Use ref to always get the latest discountApplied (fixes stale closure issue)
   const discountAppliedRef = useRef(discountApplied);
@@ -244,28 +245,32 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   // Create stable payment request using useMemo
   const paymentRequest = useMemo(() => {
     // Only enable Apple Pay if email is provided in the form
-    if (!stripe || !hasSelectedTickets || getTotalAmount() <= 0 || !hasEmailForApplePay) return null;
+    if (!stripe || !hasSelectedTickets || getTotalAmount() <= 0 || !hasEmailForApplePay) {
+      setPaymentRequestReady(false);
+      return null;
+    }
 
-    const totalAmount = getTotalAmount();
-    console.log('🍎 Creating Apple Pay request:', {
-      hasSelectedTickets,
-      totalAmount,
-      discountApplied,
-      discountCode,
-      ticketSelections: ticketSelections.filter(s => s.quantity > 0)
-    });
+    try {
+      const totalAmount = getTotalAmount();
+      console.log('🍎 Creating Apple Pay request:', {
+        hasSelectedTickets,
+        totalAmount,
+        discountApplied,
+        discountCode,
+        ticketSelections: ticketSelections.filter(s => s.quantity > 0)
+      });
 
-    const pr = stripe.paymentRequest({
-      country: 'GB',
-      currency: 'gbp',
-      total: {
-        label: `${event.title} Tickets`,
-        amount: totalAmount,
-      },
-      requestPayerName: true,
-      requestPayerEmail: true,
-      requestPayerPhone: true,
-    });
+      const pr = stripe.paymentRequest({
+        country: 'GB',
+        currency: 'gbp',
+        total: {
+          label: `${event.title} Tickets`,
+          amount: totalAmount,
+        },
+        requestPayerName: true,
+        requestPayerEmail: true,
+        requestPayerPhone: true,
+      });
 
     // Set up payment method handler
     pr.on('paymentmethod', async (ev) => {
@@ -409,12 +414,21 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         }
       });
 
-    return pr;
+      return pr;
+    } catch (err) {
+      console.error('❌ Error creating payment request:', err);
+      setPaymentRequestReady(false);
+      setError('Failed to initialize payment method. Please refresh the page.');
+      return null;
+    }
   }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied, discountCode]);
 
   // Check Apple Pay availability
   useEffect(() => {
     if (paymentRequest) {
+      // Reset ready state when payment request changes
+      setPaymentRequestReady(false);
+      
       paymentRequest.canMakePayment().then((result) => {
         console.log('🍎 Apple Pay availability check:', result);
         console.log('🔍 Device info:', {
@@ -442,12 +456,18 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           console.log('- Cards in wallet:', 'User must have cards in Apple Wallet');
           setCanMakePayment(false);
         }
+        
+        // Mark as ready after availability check completes (with small delay for stability on mobile)
+        setTimeout(() => setPaymentRequestReady(true), 150);
       }).catch((error) => {
         console.error('❌ Error checking Apple Pay:', error);
         setCanMakePayment(false);
+        // Mark as ready to prevent blank screen even on error
+        setTimeout(() => setPaymentRequestReady(true), 150);
       });
     } else {
       setCanMakePayment(false);
+      setPaymentRequestReady(false);
     }
   }, [paymentRequest]);
 
@@ -986,10 +1006,10 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           )}
 
           {/* Apple Pay Button */}
-          {canMakePayment && paymentRequest && (
+          {canMakePayment && paymentRequest && paymentRequestReady && (
             <div className="mb-4">
               <PaymentRequestButtonElement
-                key={`apple-pay-${discountApplied}-${getTotalAmount()}`}
+                key={`apple-pay-${getTotalAmount()}`}
                 options={{
                   paymentRequest,
                   style: {
