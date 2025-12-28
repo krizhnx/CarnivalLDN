@@ -256,7 +256,6 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         hasSelectedTickets,
         totalAmount,
         discountApplied,
-        discountCode,
         ticketSelections: ticketSelections.filter(s => s.quantity > 0)
       });
 
@@ -421,7 +420,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       setError('Failed to initialize payment method. Please refresh the page.');
       return null;
     }
-  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied, discountCode]);
+  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied]);
 
   // Check Apple Pay availability
   useEffect(() => {
