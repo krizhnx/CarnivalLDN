@@ -136,6 +136,8 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canMakePayment, setCanMakePayment] = useState(false);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountApplied, setDiscountApplied] = useState(false);
   // const [currentStep, setCurrentStep] = useState<'tickets' | 'customer' | 'payment' | 'processing'>('tickets');
   // const [progress, setProgress] = useState(0);
 
@@ -186,14 +188,38 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     return totalFee;
   };
 
-  const getTotalAmount = () => {
-    const subtotal = ticketSelections.reduce((total, selection) => {
+  const getSubtotal = () => {
+    return ticketSelections.reduce((total, selection) => {
       return total + (selection.tier.price * selection.quantity);
     }, 0);
+  };
 
-    // Calculate 1.1% transaction fee per ticket
+  const getDiscountAmount = () => {
+    if (!discountApplied) return 0;
+    const subtotal = getSubtotal();
+    // 10% discount on subtotal
+    return Math.round(subtotal * 0.1);
+  };
+
+  const getTotalAmount = () => {
+    const subtotal = getSubtotal();
+    const discount = getDiscountAmount();
     const fee = getProcessingFee();
-    return subtotal + fee;
+    return subtotal - discount + fee;
+  };
+
+  const handleDiscountCode = () => {
+    const code = discountCode.trim().toUpperCase();
+    if (code === 'NYECARNIVAL') {
+      setDiscountApplied(true);
+      setError(null);
+    } else if (code === '') {
+      setDiscountApplied(false);
+      setError(null);
+    } else {
+      setDiscountApplied(false);
+      setError('Invalid discount code');
+    }
   };
 
   // Check if any tickets are actually selected
@@ -907,6 +933,44 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         </div>
       </div>
 
+      {/* Discount Code */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Discount Code</h3>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Enter discount code"
+            value={discountCode}
+            onChange={(e) => {
+              setDiscountCode(e.target.value);
+              if (discountApplied && e.target.value.trim().toUpperCase() !== 'NYECARNIVAL') {
+                setDiscountApplied(false);
+              }
+            }}
+            onBlur={handleDiscountCode}
+            className="flex-1 h-12 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            style={{
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              appearance: 'none'
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleDiscountCode}
+            className="px-6 h-12 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+          >
+            Apply
+          </button>
+        </div>
+        {discountApplied && (
+          <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+            <CheckCircle className="h-4 w-4" />
+            Discount code applied! 10% off your order.
+          </div>
+        )}
+      </div>
+
       {/* Payment - Only show for paid events */}
       {getTotalAmount() > 0 && (
         <div>
@@ -998,8 +1062,14 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           <div className="border-t pt-2 mt-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal</span>
-              <span>£{((ticketSelections.reduce((total, selection) => total + (selection.tier.price * selection.quantity), 0)) / 100).toFixed(2)}</span>
+              <span>£{(getSubtotal() / 100).toFixed(2)}</span>
             </div>
+            {discountApplied && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Discount (10%)</span>
+                <span>-£{(getDiscountAmount() / 100).toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span>Processing Fee</span>
               <span>£{(getProcessingFee() / 100).toFixed(2)}</span>
