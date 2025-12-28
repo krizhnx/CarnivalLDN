@@ -420,7 +420,19 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       setError('Failed to initialize payment method. Please refresh the page.');
       return null;
     }
-  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied]);
+  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay]);
+
+  useEffect(() => {
+    if(paymentRequest) {
+      const totalAmount = getTotalAmount();
+      paymentRequest.update({
+        total: {
+          label: `${event.title} Tickets`,
+          amount: totalAmount,
+        },
+      });
+    }
+  }, [discountApplied, paymentRequest, event.title]);
 
   // Check Apple Pay availability
   useEffect(() => {
