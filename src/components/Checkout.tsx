@@ -208,8 +208,9 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     return subtotal - discount + fee;
   };
 
-  const handleDiscountCode = () => {
-    const code = discountCode.trim().toUpperCase();
+  const handleDiscountCodeChange = (value: string) => {
+    setDiscountCode(value);
+    const code = value.trim().toUpperCase();
     if (code === 'NYECARNIVAL') {
       setDiscountApplied(true);
       setError(null);
@@ -218,7 +219,12 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       setError(null);
     } else {
       setDiscountApplied(false);
-      setError('Invalid discount code');
+      // Only show error if they've typed something but it's not valid
+      if (value.trim().length > 0) {
+        setError('Invalid discount code');
+      } else {
+        setError(null);
+      }
     }
   };
 
@@ -936,33 +942,18 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       {/* Discount Code */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Discount Code</h3>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Enter discount code"
-            value={discountCode}
-            onChange={(e) => {
-              setDiscountCode(e.target.value);
-              if (discountApplied && e.target.value.trim().toUpperCase() !== 'NYECARNIVAL') {
-                setDiscountApplied(false);
-              }
-            }}
-            onBlur={handleDiscountCode}
-            className="flex-1 h-12 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-            style={{
-              WebkitAppearance: 'none',
-              MozAppearance: 'none',
-              appearance: 'none'
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleDiscountCode}
-            className="px-6 h-12 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors"
-          >
-            Apply
-          </button>
-        </div>
+        <input
+          type="text"
+          placeholder="Enter discount code"
+          value={discountCode}
+          onChange={(e) => handleDiscountCodeChange(e.target.value)}
+          className="w-full h-12 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-base"
+          style={{
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            appearance: 'none'
+          }}
+        />
         {discountApplied && (
           <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
             <CheckCircle className="h-4 w-4" />
