@@ -138,6 +138,12 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const [canMakePayment, setCanMakePayment] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
+  
+  // Use ref to always get the latest discountApplied (fixes stale closure issue)
+  const discountAppliedRef = useRef(discountApplied);
+  useEffect(() => {
+    discountAppliedRef.current = discountApplied;
+  }, [discountApplied]);
   // const [currentStep, setCurrentStep] = useState<'tickets' | 'customer' | 'payment' | 'processing'>('tickets');
   // const [progress, setProgress] = useState(0);
 
@@ -401,7 +407,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       });
 
     return pr;
-  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay]);
+  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied]);
 
   // Check Apple Pay availability
   useEffect(() => {
