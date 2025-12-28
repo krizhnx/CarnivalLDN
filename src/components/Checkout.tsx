@@ -200,16 +200,17 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     }, 0);
   };
 
-  const getDiscountAmount = () => {
-    if (!discountApplied) return 0;
+  const getDiscountAmount = (useRef = false) => {
+    const isApplied = useRef ? discountAppliedRef.current : discountApplied;
+    if (!isApplied) return 0;
     const subtotal = getSubtotal();
     // 10% discount on subtotal
     return Math.round(subtotal * 0.1);
   };
 
-  const getTotalAmount = () => {
+  const getTotalAmount = (useRef = false) => {
     const subtotal = getSubtotal();
-    const discount = getDiscountAmount();
+    const discount = getDiscountAmount(useRef);
     const fee = getProcessingFee();
     return subtotal - discount + fee;
   };
@@ -249,6 +250,8 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     console.log('🍎 Creating Apple Pay request:', {
       hasSelectedTickets,
       totalAmount,
+      discountApplied,
+      discountCode,
       ticketSelections: ticketSelections.filter(s => s.quantity > 0)
     });
 
@@ -288,7 +291,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                 applePayEmail: ev.payerEmail || null, // SECONDARY: Store Apple Pay email separately
                 phone: latestCustomerInfo.phone || ev.payerPhone || '',
               },
-              totalAmount: getTotalAmount(),
+              totalAmount: getTotalAmount(true), // Use ref to get latest discount
               affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
               isApplePay: true, // Flag to indicate this is an Apple Pay transaction
             }),
@@ -344,7 +347,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                   applePayEmail: ev.payerEmail || null, // SECONDARY: Store Apple Pay email separately
                   phone: latestCustomerInfoForConfirm.phone || ev.payerPhone || '',
                 },
-                totalAmount: getTotalAmount(),
+                totalAmount: getTotalAmount(true), // Use ref to get latest discount
                 affiliateLinkId: sessionStorage.getItem('affiliate_link_id'),
               }),
             });
@@ -361,7 +364,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
                 userId: latestCustomerInfoForOrder.email, // Always use form email
                 stripePaymentIntentId: orderData.paymentIntentId,
                 status: 'completed' as const,
-                totalAmount: getTotalAmount(),
+                totalAmount: getTotalAmount(true), // Use ref to get latest discount
                 currency: 'gbp',
                 tickets: ticketSelections.filter(s => s.quantity > 0).map(selection => ({
                   id: `ticket_${Date.now()}_${selection.tierId}`,
@@ -382,7 +385,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
 
               // Track successful purchase for analytics
               const selectedTickets = ticketSelections.filter(s => s.quantity > 0);
-              const totalValue = getTotalAmount();
+              const totalValue = getTotalAmount(true); // Use ref to get latest discount
               const items = selectedTickets.map(selection => ({
                 tier: selection.tier.name,
                 price: selection.tier.price,
@@ -407,7 +410,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
       });
 
     return pr;
-  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied]);
+  }, [stripe, event.id, event.title, ticketSelections, customerInfo, hasSelectedTickets, hasEmailForApplePay, discountApplied, discountCode]);
 
   // Check Apple Pay availability
   useEffect(() => {
@@ -986,6 +989,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
           {canMakePayment && paymentRequest && (
             <div className="mb-4">
               <PaymentRequestButtonElement
+                key={`apple-pay-${discountApplied}-${getTotalAmount()}`}
                 options={{
                   paymentRequest,
                   style: {
