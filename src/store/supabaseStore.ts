@@ -856,17 +856,10 @@ export const useAppStore = create<AppState>()(
 
           console.log('✅ Ticket tier found:', tierData);
 
-          if (!tierData.is_active) {
-            console.log('❌ Ticket tier is inactive');
-            return {
-              isValid: false,
-              message: 'Ticket tier is inactive',
-              orderStatus: orderData.status,
-              eventDate: eventDate || 'unknown',
-              customerName: orderData.customer_name || 'unknown',
-              customerEmail: customerEmail
-            };
-          }
+          // Note: We don't check is_active here because it only controls whether new tickets
+          // can be purchased, not whether existing tickets are valid for entry.
+          // Tickets purchased when the tier was active should remain valid even if
+          // the tier is later marked as inactive (e.g., sold out).
 
           // All validations passed
           console.log('✅ Ticket validation successful');
