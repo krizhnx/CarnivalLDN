@@ -193,6 +193,33 @@ BEGIN
 END;
 $$;
 
+-- Function to decrement remaining scans for a guestlist by a specific amount
+CREATE OR REPLACE FUNCTION decrement_guestlist_scans_by_amount(guestlist_uuid uuid, scan_count integer)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  current_remaining integer;
+  actual_decrement integer;
+BEGIN
+  -- Get current remaining scans
+  SELECT remaining_scans INTO current_remaining
+  FROM guestlists
+  WHERE id = guestlist_uuid;
+  
+  -- Calculate actual decrement (can't go below 0)
+  actual_decrement := LEAST(scan_count, current_remaining);
+  
+  -- Update remaining scans
+  UPDATE guestlists 
+  SET remaining_scans = GREATEST(0, remaining_scans - actual_decrement)
+  WHERE id = guestlist_uuid;
+  
+  -- Return the actual number of scans that were decremented
+  RETURN actual_decrement;
+END;
+$$;
+
 -- Function to check if guestlist can be scanned
 CREATE OR REPLACE FUNCTION can_scan_guestlist(guestlist_uuid uuid)
 RETURNS boolean

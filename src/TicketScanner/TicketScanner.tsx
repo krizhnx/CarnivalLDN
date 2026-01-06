@@ -12,9 +12,14 @@ const TicketScanner: React.FC = () => {
   const [scanResult, setScanResult] = useState<TicketValidationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanHistory, setScanHistory] = useState<TicketValidationResult[]>([]);
+  const [isGuestlistBulkMode, setIsGuestlistBulkMode] = useState(false);
+  const [guestlistId, setGuestlistId] = useState<string | null>(null);
+  const [remainingScans, setRemainingScans] = useState<number>(0);
+  const [bulkScanCount, setBulkScanCount] = useState<number>(1);
+  const [isRecordingBulk, setIsRecordingBulk] = useState(false);
 
   
-  const { validateTicket, recordTicketScan, validateGuestlist, recordGuestlistScan } = useAppStore();
+  const { validateTicket, recordTicketScan, validateGuestlist, recordMultipleGuestlistScans } = useAppStore();
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,25 +88,22 @@ const TicketScanner: React.FC = () => {
         console.log('🔍 Guestlist validation result:', validation);
         
         if (validation.isValid) {
-          // Guestlist is valid and has remaining scans
-          await recordGuestlistScan({
-            guestlistId: qrData.guestlistId,
-            eventId: validation.eventId || '',
-            scanType: 'entry',
-            location: '',
-            notes: '',
-            scannedBy: 'admin' // Add the missing scannedBy field
-          });
-          
-          // Get the updated guestlist data to show the correct remaining count after the scan
-          const { data: updatedGuestlist } = await supabase
+          // Get current remaining scans
+          const { data: guestlist } = await supabase
             .from('guestlists')
             .select('remaining_scans')
             .eq('id', qrData.guestlistId)
             .single();
           
-          // Update the message to show the correct remaining count after the scan
-          const remainingCount = updatedGuestlist?.remaining_scans || 0;
+          const remainingCount = guestlist?.remaining_scans || 0;
+          
+          // Set up bulk scan mode instead of recording immediately
+          setGuestlistId(qrData.guestlistId);
+          setRemainingScans(remainingCount);
+          setBulkScanCount(1);
+          setIsGuestlistBulkMode(true);
+          
+          // Update the message to show remaining count
           const updatedMessage = remainingCount === 1 
             ? '1 ticket remaining'
             : `${remainingCount} tickets remaining`;
@@ -112,16 +114,13 @@ const TicketScanner: React.FC = () => {
             message: updatedMessage
           };
           
-          // Add to scan history with updated validation
-          const scanWithMetadata = {
-            ...updatedValidation,
-            scanType: 'entry',
-            timestamp: new Date().toISOString()
-          };
-          setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
-          
-          // Update the scan result to show the correct remaining count
+          // Update the scan result to show validation (but don't record scan yet)
           setScanResult(updatedValidation);
+          
+          // Don't auto-hide for guestlist - user will use bulk scan UI
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
         }
       } else {
         // Regular ticket QR code
@@ -153,18 +152,18 @@ const TicketScanner: React.FC = () => {
         }
       }
       
-      // Only set scan result if it hasn't been set yet (for guestlists)
-      if (!scanResult) {
+      // Only set scan result if it hasn't been set yet (for regular tickets)
+      if (!scanResult && qrData.type !== 'guestlist') {
         setScanResult(validation);
+        
+        // Auto-hide result after 3 seconds for regular tickets
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+          setScanResult(null);
+        }, 3000);
       }
-      
-      // Auto-hide result after 1 second
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        setScanResult(null);
-      }, 3000);
       
     } catch (error) {
       console.error('Scan error:', error);
@@ -205,6 +204,85 @@ const TicketScanner: React.FC = () => {
       clearTimeout(timeoutRef.current);
     }
     setScanResult(null);
+    setIsGuestlistBulkMode(false);
+    setGuestlistId(null);
+    setRemainingScans(0);
+    setBulkScanCount(1);
+  };
+
+  const handleBulkScan = async () => {
+    if (!guestlistId || bulkScanCount <= 0 || bulkScanCount > remainingScans) {
+      return;
+    }
+
+    setIsRecordingBulk(true);
+    try {
+      // Get the validation result to get eventId
+      const validation = scanResult;
+      if (!validation || !validation.isValid || !validation.eventId) {
+        throw new Error('Invalid validation data');
+      }
+
+      // Record multiple scans
+      const actualCount = await recordMultipleGuestlistScans({
+        guestlistId: guestlistId,
+        eventId: validation.eventId,
+        scanType: 'entry',
+        location: '',
+        notes: '',
+        scannedBy: 'admin'
+      }, bulkScanCount);
+
+      // Get updated remaining scans
+      const { data: updatedGuestlist } = await supabase
+        .from('guestlists')
+        .select('remaining_scans')
+        .eq('id', guestlistId)
+        .single();
+
+      const newRemaining = updatedGuestlist?.remaining_scans || 0;
+      setRemainingScans(newRemaining);
+
+      // Add to scan history
+      const scanWithMetadata = {
+        ...validation,
+        message: `Registered ${actualCount} scan${actualCount > 1 ? 's' : ''} - ${newRemaining} remaining`,
+        scanType: 'entry' as const,
+        timestamp: new Date().toISOString()
+      };
+      setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
+
+      // Update scan result message
+      const updatedMessage = newRemaining === 0
+        ? 'All tickets used'
+        : newRemaining === 1
+        ? '1 ticket remaining'
+        : `${newRemaining} tickets remaining`;
+
+      setScanResult({
+        ...validation,
+        message: `✅ Registered ${actualCount} scan${actualCount > 1 ? 's' : ''}. ${updatedMessage}`
+      });
+
+      // If no more scans remaining, auto-close after 2 seconds
+      if (newRemaining === 0) {
+        setTimeout(() => {
+          closeOverlay();
+        }, 2000);
+      } else {
+        // Reset bulk scan count to 1 for next group
+        setBulkScanCount(1);
+      }
+    } catch (error) {
+      console.error('Error recording bulk scans:', error);
+      setScanResult({
+        ...scanResult!,
+        isValid: false,
+        message: 'Error recording scans. Please try again.'
+      });
+    } finally {
+      setIsRecordingBulk(false);
+    }
   };
 
   return (
@@ -264,8 +342,8 @@ const TicketScanner: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer"
-              onClick={closeOverlay}
+              className={`fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 ${!isGuestlistBulkMode ? 'cursor-pointer' : ''}`}
+              onClick={!isGuestlistBulkMode ? closeOverlay : undefined}
             >
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -338,8 +416,89 @@ const TicketScanner: React.FC = () => {
                   )}
                 </div>
 
-                {/* Tap to close hint */}
-                <p className="text-sm text-gray-500 mt-6">Tap anywhere to close</p>
+                {/* Bulk Scan UI for Guestlist */}
+                {isGuestlistBulkMode && scanResult.isValid && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                      <p className="text-sm font-medium text-blue-900 mb-2">
+                        Group Pass Detected
+                      </p>
+                      <p className="text-lg font-bold text-blue-800">
+                        {remainingScans} {remainingScans === 1 ? 'ticket' : 'tickets'} remaining
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="bulkScanCount" className="block text-sm font-medium text-gray-700 mb-2">
+                          How many people are entering?
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setBulkScanCount(Math.max(1, bulkScanCount - 1))}
+                            disabled={bulkScanCount <= 1 || isRecordingBulk}
+                            className="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold text-lg"
+                          >
+                            −
+                          </button>
+                          <input
+                            id="bulkScanCount"
+                            type="number"
+                            min="1"
+                            max={remainingScans}
+                            value={bulkScanCount}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              setBulkScanCount(Math.max(1, Math.min(value, remainingScans)));
+                            }}
+                            disabled={isRecordingBulk}
+                            className="flex-1 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setBulkScanCount(Math.min(remainingScans, bulkScanCount + 1))}
+                            disabled={bulkScanCount >= remainingScans || isRecordingBulk}
+                            className="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold text-lg"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          Out of {remainingScans} available
+                        </p>
+                      </div>
+                      
+                      <button
+                        onClick={handleBulkScan}
+                        disabled={bulkScanCount <= 0 || bulkScanCount > remainingScans || isRecordingBulk}
+                        className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg text-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        {isRecordingBulk ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            Recording...
+                          </>
+                        ) : (
+                          `Register ${bulkScanCount} ${bulkScanCount === 1 ? 'Person' : 'People'}`
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={closeOverlay}
+                        disabled={isRecordingBulk}
+                        className="w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-700 font-medium rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tap to close hint - only show if not in bulk mode */}
+                {!isGuestlistBulkMode && (
+                  <p className="text-sm text-gray-500 mt-6">Tap anywhere to close</p>
+                )}
               </motion.div>
             </motion.div>
           </AnimatePresence>

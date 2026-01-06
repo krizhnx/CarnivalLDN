@@ -39,6 +39,7 @@ interface AppState extends AuthState {
       validateGuestlist: (guestlistId: string, scanType?: 'entry' | 'exit') => Promise<TicketValidationResult>
       recordTicketScan: (scanData: Omit<TicketScan, 'id' | 'scannedAt'>) => Promise<void>
       recordGuestlistScan: (scanData: Omit<GuestlistScan, 'id' | 'scannedAt'>) => Promise<void>
+      recordMultipleGuestlistScans: (scanData: Omit<GuestlistScan, 'id' | 'scannedAt'>, count: number) => Promise<number>
       debugTicketData: (orderId: string, ticketTierId: string) => Promise<string>
       // Ticket search actions
       searchTickets: (searchTerm: string) => Promise<TicketSearchResult[]>
@@ -1238,6 +1239,66 @@ export const useAppStore = create<AppState>()(
           }
         } catch (error) {
           console.error('Error recording guestlist scan:', error);
+          throw error;
+        }
+      },
+
+      // Record multiple guestlist scans at once
+      recordMultipleGuestlistScans: async (scanData: Omit<GuestlistScan, 'id' | 'scannedAt'>, count: number) => {
+        try {
+          // First, check current remaining scans
+          const { data: guestlist, error: guestlistError } = await supabase
+            .from('guestlists')
+            .select('remaining_scans')
+            .eq('id', scanData.guestlistId)
+            .single();
+
+          if (guestlistError || !guestlist) {
+            throw new Error('Guestlist not found');
+          }
+
+          const remainingScans = guestlist.remaining_scans || 0;
+          const actualCount = Math.min(count, remainingScans);
+
+          if (actualCount <= 0) {
+            throw new Error('No remaining scans available');
+          }
+
+          // Decrement the remaining scans by the actual count
+          const { error: decrementError } = await supabase
+            .rpc('decrement_guestlist_scans_by_amount', { 
+              guestlist_uuid: scanData.guestlistId,
+              scan_count: actualCount
+            });
+
+          if (decrementError) {
+            console.error('Error decrementing guestlist scans:', decrementError);
+            throw decrementError;
+          }
+
+          // Record multiple scans
+          const scansToInsert = Array.from({ length: actualCount }, () => ({
+            guestlist_id: scanData.guestlistId,
+            event_id: scanData.eventId,
+            scan_type: scanData.scanType,
+            scanned_by: scanData.scannedBy || 'admin',
+            location: scanData.location || '',
+            notes: scanData.notes || '',
+            scanned_at: new Date().toISOString()
+          }));
+
+          const { error } = await supabase
+            .from('guestlist_scans')
+            .insert(scansToInsert);
+
+          if (error) {
+            console.error('Error recording multiple guestlist scans:', error);
+            throw error;
+          }
+
+          return actualCount;
+        } catch (error) {
+          console.error('Error recording multiple guestlist scans:', error);
           throw error;
         }
       },
