@@ -11,7 +11,6 @@ const TicketScanner: React.FC = () => {
   const navigate = useNavigate();
   const [scanResult, setScanResult] = useState<TicketValidationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [scanHistory, setScanHistory] = useState<TicketValidationResult[]>([]);
   const [isGuestlistBulkMode, setIsGuestlistBulkMode] = useState(false);
   const [guestlistId, setGuestlistId] = useState<string | null>(null);
   const [remainingScans, setRemainingScans] = useState<number>(0);
@@ -121,6 +120,18 @@ const TicketScanner: React.FC = () => {
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
           }
+        } else {
+          // Guestlist is invalid (e.g., all tickets used) - show error overlay
+          setScanResult(validation);
+          setIsGuestlistBulkMode(false);
+          
+          // Auto-hide error result after 3 seconds
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+          timeoutRef.current = setTimeout(() => {
+            setScanResult(null);
+          }, 3000);
         }
       } else {
         // Regular ticket QR code
@@ -142,13 +153,6 @@ const TicketScanner: React.FC = () => {
             notes: ''
           });
           
-          // Add to scan history
-          const scanWithMetadata = {
-            ...validation,
-            scanType: 'entry',
-            timestamp: new Date().toISOString()
-          };
-          setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
         }
       }
       
@@ -243,15 +247,6 @@ const TicketScanner: React.FC = () => {
       const newRemaining = updatedGuestlist?.remaining_scans || 0;
       setRemainingScans(newRemaining);
 
-      // Add to scan history
-      const scanWithMetadata = {
-        ...validation,
-        message: `Registered ${actualCount} scan${actualCount > 1 ? 's' : ''} - ${newRemaining} remaining`,
-        scanType: 'entry' as const,
-        timestamp: new Date().toISOString()
-      };
-      setScanHistory(prev => [scanWithMetadata, ...prev.slice(0, 9)]);
-
       // Update scan result message
       const updatedMessage = newRemaining === 0
         ? 'All tickets used'
@@ -264,15 +259,10 @@ const TicketScanner: React.FC = () => {
         message: `✅ Registered ${actualCount} scan${actualCount > 1 ? 's' : ''}. ${updatedMessage}`
       });
 
-      // If no more scans remaining, auto-close after 2 seconds
-      if (newRemaining === 0) {
-        setTimeout(() => {
-          closeOverlay();
-        }, 2000);
-      } else {
-        // Reset bulk scan count to 1 for next group
-        setBulkScanCount(1);
-      }
+      // Auto-close after 4 seconds when registration is complete
+      setTimeout(() => {
+        closeOverlay();
+      }, 4000);
     } catch (error) {
       console.error('Error recording bulk scans:', error);
       setScanResult({
@@ -342,58 +332,59 @@ const TicketScanner: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className={`fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 ${!isGuestlistBulkMode ? 'cursor-pointer' : ''}`}
+              className={`fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 ${!isGuestlistBulkMode ? 'cursor-pointer' : ''}`}
               onClick={!isGuestlistBulkMode ? closeOverlay : undefined}
             >
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
-                className={`p-8 rounded-2xl border-2 max-w-lg w-full mx-4 text-center ${
+                className={`rounded-xl border-2 max-w-lg w-full mx-auto text-center max-h-[95vh] overflow-y-auto ${
                   scanResult.isValid 
                     ? 'border-green-300 bg-white shadow-green-100' 
                     : 'border-red-300 bg-white shadow-red-100'
                 } shadow-2xl`}
                 onClick={(e) => e.stopPropagation()}
               >
+                <div className="p-4 sm:p-6">
                 {/* Large Icon */}
-                <div className="mb-6">
+                <div className="mb-3 sm:mb-4">
                   {scanResult.isValid ? (
-                    <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
+                    <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-500 mx-auto" />
                   ) : (
-                    <XCircle className="h-20 w-20 text-red-500 mx-auto" />
+                    <XCircle className="h-12 w-12 sm:h-16 sm:w-16 text-red-500 mx-auto" />
                   )}
                 </div>
 
                 {/* Main Status */}
-                <div className="mb-6">
-                  <h3 className={`text-3xl font-bold mb-2 ${
+                <div className="mb-3 sm:mb-4">
+                  <h3 className={`text-xl sm:text-2xl font-bold mb-1 ${
                     scanResult.isValid ? 'text-green-800' : 'text-red-800'
                   }`}>
                     {scanResult.isValid ? 'VALID TICKET' : 'INVALID TICKET'}
                   </h3>
-                  <p className={`text-lg ${
+                  <p className={`text-sm sm:text-base ${
                     scanResult.isValid ? 'text-green-700' : 'text-red-700'
                   }`}>
                     {scanResult.message}
                   </p>
                   {scanResult.message.includes('already scanned') && (
-                    <p className="text-orange-600 mt-2 font-medium">
+                    <p className="text-orange-600 mt-2 font-medium text-xs sm:text-sm">
                        ⚠️ Already Scanned for Entry
                     </p>
                   )}
                 </div>
 
                 {/* Customer Details */}
-                <div className="space-y-4 text-left bg-gray-50 p-4 rounded-xl">
-                  <div className="flex items-center justify-center gap-3">
-                    <User className="h-5 w-5 text-gray-600" />
-                    <span className="font-semibold text-lg text-gray-900">{scanResult.customerName}</span>
+                <div className="space-y-2 sm:space-y-3 text-left bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 sm:mb-4">
+                  <div className="flex items-center justify-center gap-2">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
+                    <span className="font-semibold text-sm sm:text-base text-gray-900">{scanResult.customerName}</span>
                   </div>
                   
-                  <div className="flex items-center justify-center gap-3">
-                    <Calendar className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-700">
+                  <div className="flex items-center justify-center gap-2">
+                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm text-gray-700">
                       {scanResult.eventDate && scanResult.eventDate !== 'unknown' 
                         ? new Date(scanResult.eventDate).toLocaleDateString()
                         : 'Unknown Date'
@@ -402,43 +393,43 @@ const TicketScanner: React.FC = () => {
                   </div>
                   
                   {scanResult.eventTitle && (
-                    <div className="flex items-center justify-center gap-3">
-                      <MapPin className="h-5 w-5 text-gray-600" />
-                      <span className="font-medium text-gray-900">{scanResult.eventTitle}</span>
+                    <div className="flex items-center justify-center gap-2">
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
+                      <span className="font-medium text-sm sm:text-base text-gray-900">{scanResult.eventTitle}</span>
                     </div>
                   )}
                   
                   {scanResult.ticketTierName && (
-                    <div className="flex items-center justify-center gap-3">
-                      <Ticket className="h-5 w-5 text-gray-600" />
-                      <span className="text-gray-700">{scanResult.ticketTierName}</span>
+                    <div className="flex items-center justify-center gap-2">
+                      <Ticket className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-gray-700">{scanResult.ticketTierName}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Bulk Scan UI for Guestlist */}
                 {isGuestlistBulkMode && scanResult.isValid && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                      <p className="text-sm font-medium text-blue-900 mb-2">
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+                    <div className="bg-blue-50 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
+                      <p className="text-xs sm:text-sm font-medium text-blue-900 mb-1">
                         Group Pass Detected
                       </p>
-                      <p className="text-lg font-bold text-blue-800">
+                      <p className="text-base sm:text-lg font-bold text-blue-800">
                         {remainingScans} {remainingScans === 1 ? 'ticket' : 'tickets'} remaining
                       </p>
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <div>
-                        <label htmlFor="bulkScanCount" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="bulkScanCount" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                           How many people are entering?
                         </label>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           <button
                             type="button"
                             onClick={() => setBulkScanCount(Math.max(1, bulkScanCount - 1))}
                             disabled={bulkScanCount <= 1 || isRecordingBulk}
-                            className="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold text-lg"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold text-base sm:text-lg"
                           >
                             −
                           </button>
@@ -453,18 +444,18 @@ const TicketScanner: React.FC = () => {
                               setBulkScanCount(Math.max(1, Math.min(value, remainingScans)));
                             }}
                             disabled={isRecordingBulk}
-                            className="flex-1 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="flex-1 text-center text-xl sm:text-2xl font-bold border-2 border-gray-300 rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
                           <button
                             type="button"
                             onClick={() => setBulkScanCount(Math.min(remainingScans, bulkScanCount + 1))}
                             disabled={bulkScanCount >= remainingScans || isRecordingBulk}
-                            className="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold text-lg"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold text-base sm:text-lg"
                           >
                             +
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
+                        <p className="text-xs text-gray-500 mt-1.5 sm:mt-2 text-center">
                           Out of {remainingScans} available
                         </p>
                       </div>
@@ -472,7 +463,7 @@ const TicketScanner: React.FC = () => {
                       <button
                         onClick={handleBulkScan}
                         disabled={bulkScanCount <= 0 || bulkScanCount > remainingScans || isRecordingBulk}
-                        className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg text-lg transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-2.5 sm:py-3 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg text-base sm:text-lg transition-colors flex items-center justify-center gap-2"
                       >
                         {isRecordingBulk ? (
                           <>
@@ -487,7 +478,7 @@ const TicketScanner: React.FC = () => {
                       <button
                         onClick={closeOverlay}
                         disabled={isRecordingBulk}
-                        className="w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-700 font-medium rounded-lg transition-colors"
+                        className="w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-700 font-medium rounded-lg text-sm sm:text-base transition-colors"
                       >
                         Cancel
                       </button>
@@ -497,61 +488,15 @@ const TicketScanner: React.FC = () => {
 
                 {/* Tap to close hint - only show if not in bulk mode */}
                 {!isGuestlistBulkMode && (
-                  <p className="text-sm text-gray-500 mt-6">Tap anywhere to close</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">Tap anywhere to close</p>
                 )}
+                </div>
               </motion.div>
             </motion.div>
           </AnimatePresence>
         )}
 
-        {/* Scan History */}
-        {scanHistory.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">Recent Scans</h2>
-            <div className="space-y-4">
-              {scanHistory.map((scan, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-xl border-2 ${
-                    scan.isValid ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-4 mb-3">
-                    {scan.isValid ? (
-                      <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-                    ) : (
-                      <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-semibold text-lg ${
-                        scan.isValid ? 'text-green-800' : 'text-red-800'
-                      }`}>
-                        {scan.customerName}
-                      </p>
-                      <p className="text-gray-600">{scan.customerEmail}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white p-3 rounded-lg">
-                    <p className="font-medium text-gray-900 mb-1">
-                      {scan.eventTitle || 'Unknown Event'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Entry • {
-                        (scan as any).timestamp 
-                          ? new Date((scan as any).timestamp).toLocaleTimeString()
-                          : (scan.eventDate && scan.eventDate !== 'unknown' 
-                              ? new Date(scan.eventDate).toLocaleDateString()
-                              : 'Unknown Date'
-                            )
-                      }
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );
