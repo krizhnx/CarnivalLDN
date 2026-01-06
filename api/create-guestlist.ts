@@ -18,7 +18,7 @@ module.exports = async function handler(req: any, res: any) {
     console.log('🚀 Starting guestlist creation...');
     console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
     
-    const { eventId, leadName, leadEmail, leadPhone, totalTickets, notes } = req.body;
+    const { eventId, leadName, leadEmail, leadPhone, totalTickets, notes, category } = req.body;
 
     if (!eventId || !leadName || !leadEmail || !totalTickets || totalTickets < 1) {
       console.error('❌ Validation failed:', { eventId, leadName, leadEmail, totalTickets });
@@ -117,6 +117,7 @@ module.exports = async function handler(req: any, res: any) {
         lead_phone: leadPhone || null,
         total_tickets: totalTickets,
         notes: notes || null,
+        category: category || 'other',
         qr_code_data: qrCodeData,
         remaining_scans: totalTickets,
         created_by: 'admin'
@@ -170,6 +171,7 @@ module.exports = async function handler(req: any, res: any) {
         leadPhone: leadPhone,
         totalTickets: totalTickets,
         notes: notes,
+        category: category || 'other',
         qrCodeData: qrCodeData,
         remainingScans: totalTickets,
         createdAt: new Date().toISOString(),

@@ -44,6 +44,7 @@ module.exports = async function handler(req: any, res: any) {
       leadPhone: guestlist.lead_phone,
       totalTickets: guestlist.total_tickets,
       notes: guestlist.notes,
+      category: guestlist.category || 'other',
       qrCodeData: guestlist.qr_code_data,
       remainingScans: guestlist.remaining_scans,
       createdAt: guestlist.created_at,

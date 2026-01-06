@@ -16,7 +16,6 @@ import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import EventsPage from './components/EventsPage'
 import ScannerPage from './pages/ScannerPage'
-import AnalyticsDashboard from './components/AnalyticsDashboard'
 import GalleryPage from './pages/GalleryPage'
 import NotFound from './components/NotFound'
 import PrivacyPolicy from './components/PrivacyPolicy'
@@ -92,10 +91,6 @@ function App() {
         <Route
           path="/scanner"
           element={<ScannerPage />}
-        />
-        <Route
-          path="/analytics"
-          element={<AnalyticsDashboard />}
         />
 
         {/* Legal Pages */}

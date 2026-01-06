@@ -1,5 +1,5 @@
 module.exports = async function handler(req: any, res: any) {
-  if (req.method !== 'DELETE') {
+  if (req.method !== 'DELETE' && req.method !== 'PATCH') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -23,24 +23,62 @@ module.exports = async function handler(req: any, res: any) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Delete guestlist (cascade will handle related records)
-    const { error: deleteError } = await supabase
-      .from('guestlists')
-      .delete()
-      .eq('id', id);
+    if (req.method === 'PATCH') {
+      const { category } = req.body;
 
-    if (deleteError) {
-      console.error('Error deleting guestlist:', deleteError);
-      return res.status(500).json({ error: 'Failed to delete guestlist' });
+      // Validate category if provided
+      if (category && !['free', 'GL', 'tables', 'other'].includes(category)) {
+        return res.status(400).json({ error: 'Invalid category' });
+      }
+
+      // Update guestlist
+      const updateData = {};
+      if (category !== undefined) {
+        updateData.category = category;
+      }
+
+      const { data, error: updateError } = await supabase
+        .from('guestlists')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating guestlist:', updateError);
+        return res.status(500).json({ error: 'Failed to update guestlist' });
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        guestlist: {
+          ...data,
+          category: data.category || 'other'
+        },
+        message: 'Guestlist updated successfully' 
+      });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Guestlist deleted successfully'
-    });
+    if (req.method === 'DELETE') {
+      // Delete guestlist (cascade will handle related records)
+      const { error: deleteError } = await supabase
+        .from('guestlists')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) {
+        console.error('Error deleting guestlist:', deleteError);
+        return res.status(500).json({ error: 'Failed to delete guestlist' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Guestlist deleted successfully'
+      });
+    }
 
   } catch (error) {
-    console.error('Error deleting guestlist:', error);
-    res.status(500).json({ error: 'Failed to delete guestlist' });
+    console.error('Error processing guestlist request:', error);
+    res.status(500).json({ error: 'Failed to process request' });
   }
 };

@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import {
-  TrendingUp,
   Users,
   Ticket,
   DollarSign,
@@ -12,6 +11,7 @@ import {
 interface DashboardStatsProps {
   stats: {
     totalRevenue: number;
+    netRevenue: number;
     totalOrders: number;
     totalTickets: number;
     conversionRate: number;
@@ -40,14 +40,14 @@ const DashboardStats = ({ stats, onExportAll, quickEventButtons }: DashboardStat
   // Simulate previous period data (in real app, this would come from historical data)
   // These calculations are now more realistic and dynamic
   const previousRevenue = Math.floor(stats.totalRevenue * (0.7 + Math.random() * 0.3)); // 70-100% of current
+  const previousNetRevenue = Math.floor(stats.netRevenue * (0.7 + Math.random() * 0.3)); // 70-100% of current
   const previousOrders = Math.floor(stats.totalOrders * (0.6 + Math.random() * 0.4)); // 60-100% of current
   const previousTickets = Math.floor(stats.totalTickets * (0.65 + Math.random() * 0.35)); // 65-100% of current
-  const previousConversion = stats.conversionRate * (0.8 + Math.random() * 0.2); // 80-100% of current
 
   const revenueGrowth = calculateGrowthPercentage(stats.totalRevenue, previousRevenue);
+  const netRevenueGrowth = calculateGrowthPercentage(stats.netRevenue, previousNetRevenue);
   const ordersGrowth = calculateGrowthPercentage(stats.totalOrders, previousOrders);
   const ticketsGrowth = calculateGrowthPercentage(stats.totalTickets, previousTickets);
-  const conversionGrowth = calculateGrowthPercentage(stats.conversionRate, previousConversion);
 
   const getGrowthColor = (growth: number) => {
     if (growth >= 15) return 'text-green-600 bg-green-100 border-green-200';
@@ -132,6 +132,40 @@ const DashboardStats = ({ stats, onExportAll, quickEventButtons }: DashboardStat
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Net Revenue</p>
+              <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.netRevenue)}</p>
+            </div>
+            <div className="p-3 bg-emerald-100 rounded-full">
+              <DollarSign className="h-6 w-6 text-emerald-600" />
+            </div>
+          </div>
+          <div className="flex items-center mt-4 text-sm">
+            {getGrowthIcon(netRevenueGrowth)}
+            <span className={`font-medium px-2 py-1 rounded-full text-xs border ${getGrowthColor(netRevenueGrowth)}`}>
+              {netRevenueGrowth >= 0 ? '+' : ''}{formatPercentage(netRevenueGrowth)}
+            </span>
+            <span className="text-gray-500 ml-2">from last period</span>
+          </div>
+          <div className="mt-2">
+            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${
+              netRevenueGrowth >= 15 ? 'bg-green-100 text-green-800 border-green-200' :
+              netRevenueGrowth >= 5 ? 'bg-blue-100 text-blue-800 border-blue-200' :
+              netRevenueGrowth >= 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+              'bg-red-100 text-red-800 border-red-200'
+            }`}>
+              {getGrowthLabel(netRevenueGrowth)}
+            </span>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
         >
@@ -193,40 +227,6 @@ const DashboardStats = ({ stats, onExportAll, quickEventButtons }: DashboardStat
               'bg-red-100 text-red-800 border-red-200'
             }`}>
               {getGrowthLabel(ticketsGrowth)}
-            </span>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-              <p className="text-3xl font-bold text-gray-900">{formatPercentage(stats.conversionRate)}</p>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-full">
-              <TrendingUp className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-          <div className="flex items-center mt-4 text-sm">
-            {getGrowthIcon(conversionGrowth)}
-            <span className={`font-medium px-2 py-1 rounded-full text-xs border ${getGrowthColor(conversionGrowth)}`}>
-              {conversionGrowth >= 0 ? '+' : ''}{formatPercentage(conversionGrowth)}
-            </span>
-            <span className="text-gray-500 ml-2">from last period</span>
-          </div>
-          <div className="mt-2">
-            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${
-              conversionGrowth >= 15 ? 'bg-green-100 text-green-800 border-green-200' :
-              conversionGrowth >= 5 ? 'bg-blue-100 text-blue-800 border-blue-200' :
-              conversionGrowth >= 0 ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-              'bg-red-100 text-red-800 border-red-200'
-            }`}>
-              {getGrowthLabel(conversionGrowth)}
             </span>
           </div>
         </motion.div>

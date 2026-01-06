@@ -168,6 +168,7 @@ export interface Guestlist {
   remainingScans: number;
   createdAt: Date;
   createdBy: string;
+  category?: 'free' | 'GL' | 'tables' | 'other';
 }
 
 export interface GuestlistScan {
@@ -187,6 +188,7 @@ export interface GuestlistFormData {
   leadPhone?: string;
   totalTickets: number;
   notes?: string;
+  category?: 'free' | 'GL' | 'tables' | 'other';
 }
 
 export interface GuestlistQRData {

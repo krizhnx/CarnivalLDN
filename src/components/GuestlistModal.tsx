@@ -16,7 +16,8 @@ const GuestlistModal: React.FC<GuestlistModalProps> = ({ event, onClose, onSucce
     leadEmail: '',
     leadPhone: '',
     totalTickets: 1,
-    notes: ''
+    notes: '',
+    category: 'free'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +141,30 @@ const GuestlistModal: React.FC<GuestlistModalProps> = ({ event, onClose, onSucce
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="+44 123 456 7890"
               />
+            </div>
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Category
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {(['free', 'GL', 'tables', 'other'] as const).map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => handleInputChange('category', category)}
+                  className={`px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                    formData.category === category
+                      ? 'border-blue-600 bg-blue-50 text-blue-900'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
 

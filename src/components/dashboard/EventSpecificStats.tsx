@@ -88,9 +88,39 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
     return { text: 'Not Scanned', color: 'text-gray-500', icon: Clock };
   };
 
+  // Calculate processing fee per ticket based on ticket price
+  const calculateProcessingFee = (ticketPrice: number): number => {
+    // Up to £40: £1.50 per ticket
+    if (ticketPrice <= 4000) {
+      return 150; // £1.50 = 150 pence
+    }
+    // £40-50: £2.00 per ticket
+    if (ticketPrice <= 5000) {
+      return 200; // £2.00 = 200 pence
+    }
+    // Above £50: £2.50 per ticket
+    return 250; // £2.50 = 250 pence
+  };
+
   // Calculate event-specific stats
+  const totalRevenue = eventOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  
+  // Calculate total processing fees for this event
+  const totalProcessingFees = eventOrders.reduce((sum, order) => {
+    if (!order.tickets) return sum;
+    return sum + order.tickets.reduce((ticketSum, ticket) => {
+      const ticketPrice = ticket.unitPrice || 0;
+      const quantity = ticket.quantity || 0;
+      const feePerTicket = calculateProcessingFee(ticketPrice);
+      return ticketSum + (feePerTicket * quantity);
+    }, 0);
+  }, 0);
+  
+  const netRevenue = totalRevenue - totalProcessingFees;
+  
   const eventStats = {
-    totalRevenue: eventOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+    totalRevenue,
+    netRevenue,
     totalOrders: eventOrders.length,
     totalTickets: eventOrders.reduce((sum, order) =>
       sum + (order.tickets?.reduce((tSum, ticket) => tSum + (ticket.quantity || 0), 0) || 0), 0),
@@ -307,6 +337,23 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Net Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(eventStats.netRevenue)}</p>
+                </div>
+                <div className="p-3 bg-emerald-100 rounded-full">
+                  <DollarSign className="h-5 w-5 text-emerald-600" />
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
             >
@@ -337,27 +384,6 @@ const EventSpecificStats = ({ events, orders, selectedEvent, onExportEventData }
                 </div>
               </div>
             </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Performance</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {eventStats.utilizationRate >= 80 ? 'Excellent' :
-                 eventStats.utilizationRate >= 50 ? 'Good' :
-                 eventStats.utilizationRate >= 20 ? 'Fair' : 'Poor'}
-              </p>
-              </div>
-            <div className="p-3 bg-orange-100 rounded-full">
-              <Star className="h-5 w-5 text-orange-600" />
-                    </div>
-                  </div>
-        </motion.div>
             </div>
 
              {/* Customer Demographics Charts */}

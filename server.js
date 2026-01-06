@@ -394,7 +394,7 @@ app.post('/api/test-email', async (req, res) => {
 // Guestlist API endpoints
 app.post('/api/create-guestlist', async (req, res) => {
   try {
-    const { eventId, leadName, leadEmail, leadPhone, totalTickets, notes } = req.body;
+    const { eventId, leadName, leadEmail, leadPhone, totalTickets, notes, category } = req.body;
 
     if (!eventId || !leadName || !leadEmail || !totalTickets || totalTickets < 1) {
       return res.status(400).json({
@@ -441,6 +441,7 @@ app.post('/api/create-guestlist', async (req, res) => {
         lead_phone: leadPhone || null,
         total_tickets: totalTickets,
         notes: notes || null,
+        category: category || 'other',
         qr_code_data: qrCodeData,
         remaining_scans: totalTickets,
         created_by: 'admin'
@@ -485,6 +486,7 @@ app.post('/api/create-guestlist', async (req, res) => {
         leadPhone: leadPhone,
         totalTickets: totalTickets,
         notes: notes,
+        category: category || 'other',
         qrCodeData: qrCodeData,
         remainingScans: totalTickets,
         createdAt: new Date().toISOString(),
@@ -538,6 +540,7 @@ app.get('/api/guestlists', async (req, res) => {
       leadPhone: guestlist.lead_phone,
       totalTickets: guestlist.total_tickets,
       notes: guestlist.notes,
+      category: guestlist.category || 'other',
       qrCodeData: guestlist.qr_code_data,
       remainingScans: guestlist.remaining_scans,
       createdAt: guestlist.created_at,
@@ -609,6 +612,52 @@ app.post('/api/resend-guestlist-qr', async (req, res) => {
   } catch (error) {
     console.error('Error resending guestlist QR:', error);
     res.status(500).json({ error: 'Failed to resend QR code' });
+  }
+});
+
+app.patch('/api/guestlists/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category } = req.body;
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not connected' });
+    }
+
+    // Validate category if provided
+    if (category && !['free', 'GL', 'tables', 'other'].includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+
+    // Update guestlist
+    const updateData = {};
+    if (category !== undefined) {
+      updateData.category = category;
+    }
+
+    const { data, error } = await supabase
+      .from('guestlists')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating guestlist:', error);
+      return res.status(500).json({ error: 'Failed to update guestlist' });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      guestlist: {
+        ...data,
+        category: data.category || 'other'
+      },
+      message: 'Guestlist updated successfully' 
+    });
+  } catch (error) {
+    console.error('Error updating guestlist:', error);
+    res.status(500).json({ error: 'Failed to update guestlist' });
   }
 });
 

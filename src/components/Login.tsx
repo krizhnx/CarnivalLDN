@@ -42,18 +42,22 @@ const Login = () => {
       >
         <div>
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="mx-auto h-12 w-12 bg-gray-900 rounded-full flex items-center justify-center"
+            className="flex justify-center mb-6"
           >
-            <Lock className="h-6 w-6 text-white" />
+            <img
+              src="/carnival-logo.svg"
+              alt="Carnival LDN"
+              className="h-14 w-auto pr-5 mb-8"
+            />
           </motion.div>
           <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-6 text-center text-3xl font-extrabold text-gray-900"
+            className="text-center text-3xl font-extrabold text-gray-900"
           >
             Admin Login
           </motion.h2>
@@ -171,12 +175,6 @@ const Login = () => {
                 'Sign in'
               )}
             </motion.button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-xs text-gray-500">
-              Demo credentials: admin@carnival.com / admin123
-            </p>
           </div>
         </motion.form>
       </motion.div>

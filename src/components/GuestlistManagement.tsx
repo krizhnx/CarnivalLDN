@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Mail, Phone, FileText, Calendar, Send, Trash2, X } from 'lucide-react';
+import { Users, Mail, Phone, FileText, Calendar, Send, Trash2, X, Folder, ChevronDown, ChevronRight, Edit2 } from 'lucide-react';
 import { Event, Guestlist } from '../types';
 
 interface GuestlistManagementProps {
@@ -12,6 +12,8 @@ interface GuestlistManagementProps {
 const GuestlistManagement: React.FC<GuestlistManagementProps> = ({ event, onClose, onCreateNew }) => {
   const [guestlists, setGuestlists] = useState<Guestlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -91,6 +93,77 @@ const GuestlistManagement: React.FC<GuestlistManagementProps> = ({ event, onClos
     }, 0);
   };
 
+  // Group guestlists by category
+  const guestlistsByCategory = useMemo(() => {
+    const categories: Record<string, Guestlist[]> = {
+      free: [],
+      GL: [],
+      tables: [],
+      other: []
+    };
+
+    guestlists.forEach(guestlist => {
+      const category = guestlist.category || 'other';
+      if (categories[category]) {
+        categories[category].push(guestlist);
+      } else {
+        categories.other.push(guestlist);
+      }
+    });
+
+    return categories;
+  }, [guestlists]);
+
+  const toggleFolder = (category: string) => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  const updateGuestlistCategory = async (guestlistId: string, newCategory: 'free' | 'GL' | 'tables' | 'other') => {
+    try {
+      const response = await fetch(`/api/guestlists/${guestlistId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ category: newCategory }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update category');
+      }
+
+      // Update local state
+      setGuestlists(prev => prev.map(g => 
+        g.id === guestlistId ? { ...g, category: newCategory } : g
+      ));
+      setEditingCategory(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update category');
+    }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    return category.charAt(0).toUpperCase() + category.slice(1);
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, { bg: string; border: string; text: string }> = {
+      free: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+      GL: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700' },
+      tables: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' },
+      other: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700' }
+    };
+    return colors[category] || colors.other;
+  };
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -166,7 +239,7 @@ const GuestlistManagement: React.FC<GuestlistManagementProps> = ({ event, onClos
             </div>
           </div>
 
-          {/* Guestlists Table */}
+          {/* Folder-based Guestlist View */}
           {guestlists.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -174,109 +247,175 @@ const GuestlistManagement: React.FC<GuestlistManagementProps> = ({ event, onClos
               <p className="text-gray-500">Create your first guestlist to get started.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Group Leader
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tickets
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {guestlists.map((guestlist) => (
-                    <tr key={guestlist.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {guestlist.leadName}
-                          </div>
-                          {guestlist.notes && (
-                            <div className="text-sm text-gray-500 truncate max-w-xs">
-                              {guestlist.notes}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-4 w-4 text-gray-400" />
-                            {guestlist.leadEmail}
-                          </div>
-                          {guestlist.leadPhone && (
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <Phone className="h-4 w-4 text-gray-400" />
-                              {guestlist.leadPhone}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          <div className="font-medium">{guestlist.totalTickets}</div>
-                          <div className="text-gray-500">
-                            {guestlist.remainingScans} remaining
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          guestlist.remainingScans === 0
-                            ? 'bg-red-100 text-red-800'
-                            : guestlist.remainingScans < guestlist.totalTickets
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {guestlist.remainingScans === 0
-                            ? 'All Used'
-                            : guestlist.remainingScans < guestlist.totalTickets
-                            ? 'Partially Used'
-                            : 'Unused'}
+            <div className="space-y-5">
+              {(['free', 'GL', 'tables', 'other'] as const).map((category) => {
+                const categoryGuestlists = guestlistsByCategory[category];
+                const isExpanded = expandedFolders.has(category);
+                const colors = getCategoryColor(category);
+                const totalTickets = categoryGuestlists.reduce((sum, gl) => sum + gl.totalTickets, 0);
+
+                if (categoryGuestlists.length === 0) return null;
+
+                return (
+                  <div key={category} className={`${colors.border} border-2 rounded-lg overflow-hidden`}>
+                    {/* Folder Header */}
+                    <button
+                      onClick={() => toggleFolder(category)}
+                      className={`w-full ${colors.bg} px-6 py-5 flex items-center justify-between hover:opacity-90 transition-opacity`}
+                    >
+                      <div className="flex items-center gap-4">
+                        {isExpanded ? (
+                          <ChevronDown className={`h-5 w-5 ${colors.text}`} />
+                        ) : (
+                          <ChevronRight className={`h-5 w-5 ${colors.text}`} />
+                        )}
+                        <Folder className={`h-5 w-5 ${colors.text}`} />
+                        <span className={`font-semibold text-lg ${colors.text}`}>
+                          {getCategoryLabel(category)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(guestlist.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => resendQRCode(guestlist.id)}
-                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                            title="Resend QR Code"
-                          >
-                            <Send className="h-4 w-4" />
-                            Resend
-                          </button>
-                          <button
-                            onClick={() => deleteGuestlist(guestlist.id)}
-                            className="text-red-600 hover:text-red-900 flex items-center gap-1"
-                            title="Delete Guestlist"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </button>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${colors.text} bg-white/60`}>
+                            {categoryGuestlists.length} {categoryGuestlists.length === 1 ? 'guestlist' : 'guestlists'}
+                          </span>
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${colors.text} bg-white/60`}>
+                            {totalTickets} {totalTickets === 1 ? 'ticket' : 'tickets'}
+                          </span>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </button>
+
+                    {/* Folder Content */}
+                    {isExpanded && (
+                      <div className="bg-white">
+                        {/* Table Headings */}
+                        <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                            <div className="lg:col-span-4 text-center">
+                              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Group Leader</span>
+                            </div>
+                            <div className="lg:col-span-3 text-center">
+                              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</span>
+                            </div>
+                            <div className="lg:col-span-3 text-center">
+                              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Tickets & Status</span>
+                            </div>
+                            <div className="lg:col-span-2 text-center">
+                              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Guestlist Items */}
+                        <div className="divide-y divide-gray-200">
+                          {categoryGuestlists.map((guestlist) => (
+                            <div key={guestlist.id} className="px-6 py-5 hover:bg-gray-50 transition-colors">
+                              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                                {/* Group Leader & Notes */}
+                                <div className="lg:col-span-4 flex flex-col items-center justify-center text-center">
+                                  <div className="text-base font-semibold text-gray-900 mb-1">
+                                    {guestlist.leadName}
+                                  </div>
+                                  {guestlist.notes && (
+                                    <div className="text-sm text-gray-600 mt-2 line-clamp-2">
+                                      {guestlist.notes}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Contact Information */}
+                                <div className="lg:col-span-3 flex flex-col items-center justify-center">
+                                  <div className="space-y-2 text-center">
+                                    <div className="flex items-center justify-center gap-2 text-sm text-gray-900">
+                                      <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                      <span className="break-words">{guestlist.leadEmail}</span>
+                                    </div>
+                                    {guestlist.leadPhone && (
+                                      <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                                        <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                        <span>{guestlist.leadPhone}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Tickets & Status */}
+                                <div className="lg:col-span-3 flex flex-col items-center justify-center text-center">
+                                  <div className="space-y-2">
+                                    <div className="text-sm">
+                                      <span className="font-semibold text-gray-900">{guestlist.totalTickets}</span>
+                                      <span className="text-gray-600 ml-1">tickets</span>
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {guestlist.remainingScans} remaining
+                                    </div>
+                                    <div className="mt-2 flex justify-center">
+                                      <span className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-full ${
+                                        guestlist.remainingScans === 0
+                                          ? 'bg-red-100 text-red-800'
+                                          : guestlist.remainingScans < guestlist.totalTickets
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : 'bg-green-100 text-green-800'
+                                      }`}>
+                                        {guestlist.remainingScans === 0
+                                          ? 'All Used'
+                                          : guestlist.remainingScans < guestlist.totalTickets
+                                          ? 'Partially Used'
+                                          : 'Unused'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="lg:col-span-2 flex items-center justify-center gap-3">
+                                  {editingCategory === guestlist.id ? (
+                                    <select
+                                      value={guestlist.category || 'other'}
+                                      onChange={(e) => updateGuestlistCategory(guestlist.id, e.target.value as any)}
+                                      className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      autoFocus
+                                      onBlur={() => setEditingCategory(null)}
+                                    >
+                                      <option value="free">Free</option>
+                                      <option value="GL">GL</option>
+                                      <option value="tables">Tables</option>
+                                      <option value="other">Other</option>
+                                    </select>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => setEditingCategory(guestlist.id)}
+                                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                        title="Change Category"
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => resendQRCode(guestlist.id)}
+                                        className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Resend QR Code"
+                                      >
+                                        <Send className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteGuestlist(guestlist.id)}
+                                        className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Delete Guestlist"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

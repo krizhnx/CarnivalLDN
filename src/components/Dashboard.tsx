@@ -7,7 +7,7 @@ import AffiliateLinkGenerator from './AffiliateLinkGenerator';
 import SocietyDetailsModal from './SocietyDetailsModal';
 import SocietyLinksModal from './SocietyLinksModal';
 import toast from 'react-hot-toast';
-import { BarChart3, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import {
   DashboardHeader,
   DashboardStats,
@@ -25,6 +25,7 @@ import { exportCustomerData, exportEventData } from './dashboard/CSVExport';
 
 interface DashboardStats {
   totalRevenue: number;
+  netRevenue: number;
   totalOrders: number;
   totalTickets: number;
   conversionRate: number;
@@ -408,9 +409,24 @@ const Dashboard = () => {
     }
   };
 
+  // Calculate processing fee per ticket based on ticket price
+  const calculateProcessingFee = (ticketPrice: number): number => {
+    // Up to £40: £1.50 per ticket
+    if (ticketPrice <= 4000) {
+      return 150; // £1.50 = 150 pence
+    }
+    // £40-50: £2.00 per ticket
+    if (ticketPrice <= 5000) {
+      return 200; // £2.00 = 200 pence
+    }
+    // Above £50: £2.50 per ticket
+    return 250; // £2.50 = 250 pence
+  };
+
   const calculateStats = (): DashboardStats => {
     if (!events || !orders) return {
       totalRevenue: 0,
+      netRevenue: 0,
       totalOrders: 0,
       totalTickets: 0,
       conversionRate: 0,
@@ -433,6 +449,19 @@ const Dashboard = () => {
     });
 
     const totalRevenue = filteredOrders.reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
+    
+    // Calculate total processing fees
+    const totalProcessingFees = filteredOrders.reduce((sum: number, order: any) => {
+      if (!order.tickets) return sum;
+      return sum + order.tickets.reduce((ticketSum: number, ticket: any) => {
+        const ticketPrice = ticket.unitPrice || 0;
+        const quantity = ticket.quantity || 0;
+        const feePerTicket = calculateProcessingFee(ticketPrice);
+        return ticketSum + (feePerTicket * quantity);
+      }, 0);
+    }, 0);
+    
+    const netRevenue = totalRevenue - totalProcessingFees;
     const totalOrders = filteredOrders.length;
     const totalTickets = filteredOrders.reduce((sum: number, order: any) => sum + (order.tickets?.reduce((tSum: number, ticket: any) => tSum + (ticket.quantity || 0), 0) || 0), 0);
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
@@ -496,6 +525,7 @@ const Dashboard = () => {
 
     return {
       totalRevenue,
+      netRevenue,
       totalOrders,
       totalTickets,
       conversionRate,
@@ -612,28 +642,6 @@ const Dashboard = () => {
         onTabChange={setActiveTab}
         onRefresh={loadDashboardData}
       />
-
-      {/* Analytics Dashboard Link */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
-              <div>
-                <h3 className="text-lg font-semibold text-blue-900">Google Analytics Dashboard</h3>
-                <p className="text-blue-700 text-sm">Track real-time visitor behavior, conversions, and revenue insights</p>
-              </div>
-            </div>
-            <a
-              href="/analytics"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>View Analytics</span>
-            </a>
-          </div>
-        </div>
-      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'analytics' && (
