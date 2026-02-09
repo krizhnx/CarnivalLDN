@@ -205,8 +205,8 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     const isApplied = useRef ? discountAppliedRef.current : discountApplied;
     if (!isApplied) return 0;
     const subtotal = getSubtotal();
-    // 10% discount on subtotal
-    return Math.round(subtotal * 0.1);
+    const discountPence = 500;
+    return Math.min(discountPence, subtotal);
   };
 
   const getTotalAmount = (useRef = false) => {
@@ -997,7 +997,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         {discountApplied && (
           <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
             <CheckCircle className="h-4 w-4" />
-            Discount code applied! 10% off your order.
+            Discount code applied! £5 off your order.
           </div>
         )}
       </div>
@@ -1098,7 +1098,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             </div>
             {discountApplied && (
               <div className="flex justify-between text-sm text-green-600">
-                <span>Discount (10%)</span>
+                <span>Discount (£5 off)</span>
                 <span>-£{(getDiscountAmount() / 100).toFixed(2)}</span>
               </div>
             )}
