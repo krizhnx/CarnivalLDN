@@ -219,7 +219,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const handleDiscountCodeChange = (value: string) => {
     setDiscountCode(value);
     const code = value.trim().toUpperCase();
-    if (code === 'NYECARNIVAL') {
+    if (code === 'FRIENDSWITHBENEFITS') {
       setDiscountApplied(true);
       setError(null);
     } else if (code === '') {
