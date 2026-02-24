@@ -205,7 +205,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     const isApplied = useRef ? discountAppliedRef.current : discountApplied;
     if (!isApplied) return 0;
     const subtotal = getSubtotal();
-    const discountPence = 500;
+    const discountPence = 250; // £2.50 in pence
     return Math.min(discountPence, subtotal);
   };
 
@@ -219,7 +219,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const handleDiscountCodeChange = (value: string) => {
     setDiscountCode(value);
     const code = value.trim().toUpperCase();
-    if (code === 'FRIENDSWITHBENEFITS') {
+    if (code === 'HOLIHAI') {
       setDiscountApplied(true);
       setError(null);
     } else if (code === '') {
@@ -997,7 +997,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         {discountApplied && (
           <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
             <CheckCircle className="h-4 w-4" />
-            Discount code applied! £5 off your order.
+            Discount code applied! £2.50 off your order.
           </div>
         )}
       </div>
