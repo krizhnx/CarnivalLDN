@@ -205,7 +205,15 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
     const isApplied = useRef ? discountAppliedRef.current : discountApplied;
     if (!isApplied) return 0;
     const subtotal = getSubtotal();
-    const discountPence = 250; // £2.50 in pence
+    const code = discountCode.trim().toUpperCase();
+    let discountPence = 0;
+
+    if (code === 'LSEHOLI') {
+      discountPence = 1000; // £10.00 in pence
+    } else if (code === 'HOLIHAI') {
+      discountPence = 250; // £2.50 in pence (original HOLIHAI discount)
+    }
+
     return Math.min(discountPence, subtotal);
   };
 
@@ -219,7 +227,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
   const handleDiscountCodeChange = (value: string) => {
     setDiscountCode(value);
     const code = value.trim().toUpperCase();
-    if (code === 'HOLIHAI') {
+    if (code === 'LSEHOLI' || code === 'HOLIHAI') {
       setDiscountApplied(true);
       setError(null);
     } else if (code === '') {
@@ -997,7 +1005,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
         {discountApplied && (
           <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
             <CheckCircle className="h-4 w-4" />
-            Discount code applied! £2.50 off your order.
+            Discount code applied! £{(getDiscountAmount() / 100).toFixed(2)} off your order.
           </div>
         )}
       </div>
@@ -1098,7 +1106,7 @@ const CheckoutForm = ({ event, onClose: _onClose, onSuccess }: CheckoutProps) =>
             </div>
             {discountApplied && (
               <div className="flex justify-between text-sm text-green-600">
-                <span>Discount (£5 off)</span>
+                <span>Discount</span>
                 <span>-£{(getDiscountAmount() / 100).toFixed(2)}</span>
               </div>
             )}
