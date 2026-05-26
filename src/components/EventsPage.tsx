@@ -406,13 +406,18 @@ const EventsPage = () => {
                     duration: 0.6,
                     delay: highlightedEvent === event.id ? 0.2 : index * 0.1
                   }}
-                  whileHover={{ y: -4 }}
-                  className={`group relative bg-gradient-to-br from-white via-gray-50 to-white border rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer backdrop-blur-sm ${
+                  whileHover={{ y: -8 }}
+                  className={`group relative rounded-3xl font-mono transition-all duration-500 overflow-hidden cursor-pointer backdrop-blur-xl ${
                     highlightedEvent === event.id
-                      ? 'border-blue-500 shadow-blue-500/25 scale-105 ring-2 ring-blue-500/20'
-                      : 'border-gray-100'
+                      ? 'scale-105 ring-2 ring-cyan-300/50 shadow-[0_0_55px_rgba(34,211,238,0.35)]'
+                      : 'ring-1 ring-white/15 shadow-[0_20px_45px_rgba(0,0,0,0.45)] hover:ring-cyan-300/35 hover:shadow-[0_0_50px_rgba(34,211,238,0.22)]'
                   }`}
                 >
+                  {/* Premium outer frame */}
+                  <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br from-cyan-400/25 via-fuchsia-500/15 to-indigo-500/20 opacity-80" />
+                  <div className="pointer-events-none absolute inset-[1px] rounded-[calc(1.5rem-1px)] border border-white/10 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-slate-950/95" />
+                  <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_10%_0%,rgba(255,255,255,0.22),transparent_50%),radial-gradient(circle_at_90%_100%,rgba(6,182,212,0.28),transparent_45%)] mix-blend-screen" />
+
                   {/* Event Image with Overlay */}
                   <div className="relative h-48 md:h-56 overflow-hidden" onClick={() => { setSelectedEvent(event); setShowDetails(true); }}>
                     {/* Featured Event Badge */}
@@ -425,7 +430,7 @@ const EventsPage = () => {
                     <img
                       src={event.image}
                       alt={event.title}
-                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-cover object-[center_15%] transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = `https://via.placeholder.com/400x300/6B7280/FFFFFF?text=${encodeURIComponent(event.title)}`;
@@ -452,20 +457,22 @@ const EventsPage = () => {
                     )}
 
                     {/* Event Title Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight drop-shadow-lg">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pb-2">
+                      <h3
+                        className={`block max-w-full text-lg md:text-xl font-mono font-black uppercase tracking-[0.14em] text-white leading-tight whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-[0_0_14px_rgba(56,189,248,0.6)] glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
+                        data-text={event.title}
+                        style={{
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.14em'
+                        }}
+                      >
                         {event.title}
                       </h3>
                     </div>
                   </div>
 
                   {/* Event Content */}
-                  <div className="p-5 md:p-6 space-y-4" onClick={() => { setSelectedEvent(event); setShowDetails(true); }}>
-                    {/* Description */}
-                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
-                      {event.description}
-                    </p>
-
+                  <div className="relative p-5 md:p-6 space-y-4 bg-white/95 backdrop-blur-sm border-t border-white/70" onClick={() => { setSelectedEvent(event); setShowDetails(true); }}>
                     {/* Event Details Grid */}
                     <div className="space-y-2">
                       {/* Date */}
