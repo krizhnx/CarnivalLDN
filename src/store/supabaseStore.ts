@@ -24,6 +24,7 @@ interface AppState extends AuthState {
   subscribeToEvents: () => any
   // Order actions
   getOrders: () => Promise<void>
+  deleteOrder: (orderId: string) => Promise<void>
   // Affiliate tracking actions
   getAffiliateSocieties: () => Promise<void>
   addAffiliateSociety: (societyData: AffiliateFormData) => Promise<void>
@@ -601,6 +602,66 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error('Error fetching orders:', error)
           set({ orders: [] })
+        }
+      },
+
+      deleteOrder: async (orderId: string) => {
+        try {
+          const { data: orderRow, error: fetchError } = await supabase
+            .from('orders')
+            .select('id, status')
+            .eq('id', orderId)
+            .single()
+
+          if (fetchError) throw fetchError
+
+          const { data: orderTickets, error: ticketsFetchError } = await supabase
+            .from('order_tickets')
+            .select('ticket_tier_id, quantity')
+            .eq('order_id', orderId)
+
+          if (ticketsFetchError) throw ticketsFetchError
+
+          const { error: scansDeleteError } = await supabase
+            .from('ticket_scans')
+            .delete()
+            .eq('order_id', orderId)
+
+          if (scansDeleteError) throw scansDeleteError
+
+          const { error: orderTicketsDeleteError } = await supabase
+            .from('order_tickets')
+            .delete()
+            .eq('order_id', orderId)
+
+          if (orderTicketsDeleteError) throw orderTicketsDeleteError
+
+          const { error: orderDeleteError } = await supabase
+            .from('orders')
+            .delete()
+            .eq('id', orderId)
+
+          if (orderDeleteError) throw orderDeleteError
+
+          if (orderRow.status === 'completed' && orderTickets?.length) {
+            for (const ticket of orderTickets) {
+              const { error: soldCountError } = await supabase.rpc('increment_sold_count', {
+                tier_id: ticket.ticket_tier_id,
+                quantity: -(ticket.quantity || 0),
+              })
+              if (soldCountError) {
+                console.error('Error adjusting sold count after order delete:', soldCountError)
+              }
+            }
+          }
+
+          await get().getOrders()
+          await get().getEvents()
+          toast.success('Order deleted permanently')
+        } catch (error) {
+          console.error('Error deleting order:', error)
+          toast.error('Failed to delete order')
+          throw error
         }
       },
 

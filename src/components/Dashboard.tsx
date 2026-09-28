@@ -46,7 +46,8 @@ const Dashboard = () => {
     affiliateLinks,
     affiliateStats,
     getEvents, 
-    getOrders, 
+    getOrders,
+    deleteOrder,
     addEvent, 
     deleteEvent, 
     archiveEvent,
@@ -68,6 +69,8 @@ const Dashboard = () => {
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [confirm, setConfirm] = useState<{type: 'archive' | 'delete', event: Event} | null>(null);
+  const [orderDeleteConfirm, setOrderDeleteConfirm] = useState<Order | null>(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
   const [isGuestlistModalOpen, setIsGuestlistModalOpen] = useState(false);
   const [isGuestlistManagementOpen, setIsGuestlistManagementOpen] = useState(false);
   const [selectedEventForGuestlist, setSelectedEventForGuestlist] = useState<Event | null>(null);
@@ -689,7 +692,11 @@ const Dashboard = () => {
         )}
 
         {activeTab === 'orders' && (
-          <OrdersTable orders={orders || []} events={events || []} />
+          <OrdersTable
+            orders={orders || []}
+            events={events || []}
+            onDeleteOrder={(order) => setOrderDeleteConfirm(order)}
+          />
         )}
 
         {activeTab === 'affiliate' && (
@@ -911,6 +918,59 @@ const Dashboard = () => {
                     setConfirm(null);
                   }}
       />
+
+      {orderDeleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => !isDeletingOrder && setOrderDeleteConfirm(null)}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete order permanently?</h3>
+            <p className="text-sm text-gray-600 mb-2">
+              This removes the order, its tickets, and scan history from the database. It cannot be undone.
+            </p>
+            <p className="text-sm text-gray-800 mb-6">
+              <span className="font-medium">{orderDeleteConfirm.customerName || 'Customer'}</span>
+              {' · '}
+              {orderDeleteConfirm.customerEmail}
+              {' · '}
+              <span className="font-mono">{orderDeleteConfirm.id.slice(0, 8)}…</span>
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={isDeletingOrder}
+                onClick={() => setOrderDeleteConfirm(null)}
+                className="px-4 py-2 rounded-md border text-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingOrder}
+                onClick={async () => {
+                  setIsDeletingOrder(true);
+                  try {
+                    await deleteOrder(orderDeleteConfirm.id);
+                    setOrderDeleteConfirm(null);
+                    loadDashboardData();
+                  } catch {
+                    // toast handled in store
+                  } finally {
+                    setIsDeletingOrder(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeletingOrder ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Guestlist Modal */}
       {isGuestlistModalOpen && selectedEventForGuestlist && (

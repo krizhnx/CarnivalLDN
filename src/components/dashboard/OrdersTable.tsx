@@ -1,13 +1,14 @@
 import { Order, Event, OrderTicket } from '../../types';
-import { Clock, CheckCircle, XCircle, Search } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 interface OrdersTableProps {
   orders: Order[];
   events: Event[];
+  onDeleteOrder?: (order: Order) => void;
 }
 
-const OrdersTable = ({ orders, events }: OrdersTableProps) => {
+const OrdersTable = ({ orders, events, onDeleteOrder }: OrdersTableProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,6 +124,9 @@ const OrdersTable = ({ orders, events }: OrdersTableProps) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scan Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              {onDeleteOrder && (
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -171,6 +175,19 @@ const OrdersTable = ({ orders, events }: OrdersTableProps) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(order.createdAt as any).toLocaleDateString()}
                   </td>
+                  {onDeleteOrder && (
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <button
+                        type="button"
+                        onClick={() => onDeleteOrder(order)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-700 border border-red-200 rounded-md hover:bg-red-50"
+                        title="Permanently delete order"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
