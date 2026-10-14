@@ -24,6 +24,7 @@ import CookiePolicy from './components/CookiePolicy'
 import SEO from './components/SEO'
 import { useAppStore } from './store/supabaseStore'
 import HalloweenPage from './pages/HalloweenPage'
+import SiteThemeLayer from './components/halloween/SiteThemeLayer'
 
 function HomePage() {
   const { getEvents, subscribeToEvents } = useAppStore()
@@ -102,6 +103,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
 
       </Routes>
+      <SiteThemeLayer />
       <Analytics />
       <SpeedInsights />
       <Toaster

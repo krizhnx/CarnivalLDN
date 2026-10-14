@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion'
+import { useThemeCopy } from '../theme/copy'
+import { HauntedCorners, JackOLantern } from './halloween/decorations'
 
 const Footer = () => {
-
+  const copy = useThemeCopy()
 
   return (
-    <footer className="bg-gradient-to-br from-black via-gray-900 to-black text-white py-12 md:py-16 relative overflow-hidden border-t border-white/10">
+    <footer className="bg-gradient-to-br from-black via-gray-900 to-black text-white py-12 md:py-16 relative overflow-hidden border-t border-white/10 theme-haunted-bg">
+      <HauntedCorners size="h-24 w-24 md:h-32 md:w-32" />
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 gap-8 md:gap-10">
           {/* Brand */}
@@ -29,6 +32,13 @@ const Footer = () => {
             <p className="text-gray-500 text-xs md:text-sm text-center">
               Established in London, 2014
             </p>
+            {copy.footerTagline && (
+              <p className="mt-5 inline-flex items-center gap-2 font-display text-xl tracking-wide text-accent">
+                <JackOLantern className="h-6 w-6" />
+                {copy.footerTagline}
+                <JackOLantern className="h-6 w-6" />
+              </p>
+            )}
           </div>
 
 

@@ -9,8 +9,27 @@ export default {
       fontFamily: {
         sans: ['Poppins', 'sans-serif'],
         serif: ['Poppins', 'sans-serif'],
+        // Seasonal display face (Poppins by default, Creepster for Halloween)
+        display: ['var(--font-display)'],
       },
       colors: {
+        // Seasonal theme tokens - values live in src/index.css (:root / [data-theme])
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        accent2: 'rgb(var(--accent-2) / <alpha-value>)',
+        slime: 'rgb(var(--slime) / <alpha-value>)',
+        glow: {
+          DEFAULT: 'rgb(var(--glow) / <alpha-value>)',
+          2: 'rgb(var(--glow-2) / <alpha-value>)',
+        },
+        cta: {
+          DEFAULT: 'rgb(var(--cta) / <alpha-value>)',
+          fg: 'rgb(var(--cta-fg) / <alpha-value>)',
+          shimmer: 'rgb(var(--cta-shimmer) / <alpha-value>)',
+        },
+        surface: {
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          2: 'rgb(var(--surface-2) / <alpha-value>)',
+        },
         carnival: {
           50: '#fef7ff',
           100: '#fdecfe',
@@ -57,8 +76,13 @@ export default {
         'spin-slow': 'spin 3s linear infinite',
         'float': 'float 6s ease-in-out infinite',
         'glow': 'glow 2s ease-in-out infinite alternate',
+        'shimmer': 'shimmer 2.6s ease-in-out infinite',
       },
       keyframes: {
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '60%, 100%': { transform: 'translateX(100%)' },
+        },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-20px)' },

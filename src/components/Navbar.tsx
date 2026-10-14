@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
+import { useSiteTheme } from '../theme/siteTheme'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const location = useLocation()
+  const { isHalloween } = useSiteTheme()
+  // Light glass bar once scrolled (standard theme only); Halloween keeps a dark bar
+  const light = isScrolled && !isHalloween
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,7 +35,9 @@ const Navbar = () => {
         animate={{ y: 0 }}
         className={`transition-all duration-500 ease-out ${
           isScrolled
-            ? 'bg-white/80 backdrop-blur-xl shadow-2xl border-2 border-slate-200/80 rounded-2xl max-w-4xl md:max-w-7xl mx-auto'
+            ? isHalloween
+              ? 'bg-surface/80 backdrop-blur-xl shadow-[0_20px_50px_-20px_rgb(var(--glow)/0.45)] border-2 border-accent/30 rounded-2xl max-w-4xl md:max-w-7xl mx-auto'
+              : 'bg-white/80 backdrop-blur-xl shadow-2xl border-2 border-slate-200/80 rounded-2xl max-w-4xl md:max-w-7xl mx-auto'
             : 'bg-transparent max-w-4xl md:max-w-7xl mx-auto'
         }`}
       >
@@ -43,7 +49,7 @@ const Navbar = () => {
                src="/carntext-b.svg"
                alt="Carnival LDN"
                className="h-6 md:h-8 w-auto max-w-[120px] md:max-w-[220px] object-contain transition-all duration-300"
-               style={{ filter: isScrolled ? 'none' : 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}
+               style={{ filter: light ? 'none' : 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}
              />
           </div>
 
@@ -54,7 +60,7 @@ const Navbar = () => {
           >
             <div className="relative">
               <img
-                src={isScrolled ? "/carnival-logo.svg" : "/carnival-logo-w.svg"}
+                src={light ? "/carnival-logo.svg" : "/carnival-logo-w.svg"}
                 alt="Carnival LDN Logo"
                 className="w-10 h-10 md:w-12 md:h-12 object-contain transition-all duration-300"
                 style={{ backgroundColor: 'transparent' }}
@@ -68,7 +74,7 @@ const Navbar = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsOpen(!isOpen)}
               className={`p-4 transition-colors rounded-lg ${
-                isScrolled
+                light
                   ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                   : 'text-white hover:text-gray-200 hover:bg-white/10'
               }`}
@@ -86,7 +92,7 @@ const Navbar = () => {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               className={`md:hidden border-t mt-2 overflow-hidden ${
-                isScrolled ? 'border-gray-200/50' : 'border-white/30'
+                light ? 'border-gray-200/50' : 'border-white/30'
               }`}
             >
               <div className="px-2 py-6 space-y-0">
@@ -99,7 +105,7 @@ const Navbar = () => {
                       transition={{ delay: index * 0.1 }}
                       onClick={() => setIsOpen(false)}
                       className={`block text-center text-lg font-medium transition-colors py-3 rounded-lg ${
-                        isScrolled
+                        light
                           ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
                           : 'text-white hover:text-gray-200 hover:bg-white/10'
                       }`}
@@ -108,7 +114,7 @@ const Navbar = () => {
                     </motion.a>
                     {index < navItems.length - 1 && (
                       <div className={`border-b mx-4 ${
-                        isScrolled ? 'border-gray-200' : 'border-white/30'
+                        light ? 'border-gray-200' : 'border-white/30'
                       }`}></div>
                     )}
                   </div>
@@ -118,8 +124,10 @@ const Navbar = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: navItems.length * 0.1 }}
                   className={`w-full py-3 rounded-lg font-medium transition-colors text-base mt-4 ${
-                    isScrolled
+                    light
                       ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                      : isHalloween
+                      ? 'bg-cta hover:bg-cta/90 text-cta-fg'
                       : 'bg-white/90 hover:bg-white text-gray-900'
                   }`}
                 >

@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion'
 import { Award, Heart, Users, Building, Calendar } from 'lucide-react'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
+import { useThemeCopy } from '../theme/copy'
+import { HauntedCorners } from './halloween/decorations'
 
 const About = () => {
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
+  const copy = useThemeCopy()
 
   const stats = [
     { icon: Calendar, number: '500+', label: 'Epic Nights Created' },
@@ -13,11 +16,11 @@ const About = () => {
   ]
 
   return (
-    <section id="about" className="py-16 md:py-20 relative bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden">
+    <section id="about" className="py-16 md:py-20 relative bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden theme-haunted-bg">
       {/* Fancy background elements */}
       <div className="absolute inset-0">
         {/* Subtle gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-gray-900/60 to-black/80"></div>
+        <div className="theme-default-only absolute inset-0 bg-gradient-to-br from-black/80 via-gray-900/60 to-black/80"></div>
         
         {/* Animated grid pattern */}
         <div className="absolute inset-0 opacity-5">
@@ -27,6 +30,8 @@ const About = () => {
           }}></div>
         </div>
         
+        <HauntedCorners />
+
         {/* Subtle light rays */}
         <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
         <div className="absolute top-0 right-1/4 w-px h-full bg-gradient-to-b from-transparent via-white/5 to-transparent"></div>
@@ -56,7 +61,7 @@ const About = () => {
           
           {/* Pill effect subtitle */}
           <motion.p
-            className="text-base sm:text-lg md:text-lg text-white max-w-fit mx-auto leading-relaxed px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20"
+            className="theme-pill text-base sm:text-lg md:text-lg text-white max-w-fit mx-auto leading-relaxed px-6 py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20"
             whileHover={{
               scale: 1.05,
               boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
@@ -75,8 +80,8 @@ const About = () => {
               ease: "easeInOut"
             }}
           >
-            <span className="block sm:hidden">Creating epic nights since 2018</span>
-            <span className="hidden sm:block">We make London's most unforgettable nights happen</span>
+            <span className="block sm:hidden">{copy.aboutPillShort}</span>
+            <span className="hidden sm:block">{copy.aboutPillLong}</span>
           </motion.p>
         </motion.div>
 
@@ -146,25 +151,25 @@ const About = () => {
           </motion.h4>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="text-center group">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 theme-chip bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                 <Award className="w-8 h-8 text-black" />
               </div>
               <span className="text-gray-300 font-medium">Unmatched energy and atmosphere</span>
             </div>
             <div className="text-center group">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 theme-chip bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                 <Heart className="w-8 h-8 text-black" />
               </div>
               <span className="text-gray-300 font-medium">Premium venue and artist partnerships</span>
             </div>
             <div className="text-center group">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 theme-chip bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                 <Heart className="w-8 h-8 text-black" />
               </div>
               <span className="text-gray-300 font-medium">Authentic scene knowledge</span>
             </div>
             <div className="text-center group">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 theme-chip bg-white rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                 <Users className="w-8 h-8 text-black" />
               </div>
               <span className="text-gray-300 font-medium">Community-focused approach</span>

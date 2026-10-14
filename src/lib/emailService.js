@@ -58,6 +58,27 @@ const sendTicketConfirmationEmail = async (data) => {
   }
 };
 
+// jsPDF's built-in Helvetica only covers WinAnsi (cp1252). Emoji and anything else
+// outside that set come out as garbage characters, so strip them from PDF text:
+// "🎃 HOUSE OF SIN – CARNEVIL 🎃" -> "HOUSE OF SIN – CARNEVIL"
+const CP1252_EXTRAS = new Set(
+  '\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178'
+);
+const pdfText = (value, fallback = '') => {
+  let out = '';
+  for (const ch of String(value ?? '').normalize('NFC')) {
+    const code = ch.codePointAt(0);
+    const printable = (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff) || CP1252_EXTRAS.has(ch);
+    out += printable ? ch : ' ';
+  }
+  out = out
+    .replace(/\s+/g, ' ')
+    // separators left dangling where an emoji used to be, e.g. "🎃 - TITLE"
+    .replace(/^[\s\-\u2013\u2014|\u2022:,]+|[\s\-\u2013\u2014|\u2022:,]+$/g, '')
+    .trim();
+  return out || fallback;
+};
+
 // Helper functions for formatting
 const formatCurrency = (amount, currency) => {
   return new Intl.NumberFormat('en-GB', {
@@ -156,6 +177,9 @@ const fetchImageAsDataURL = (url) => {
 // Generate PDF tickets for email attachment
 const generateTicketsPDF = async (data) => {
   try {
+    const eventName = pdfText(data.eventName, 'Carnival LDN event');
+    const customerName = pdfText(data.customerName);
+    const eventLocation = pdfText(data.eventLocation);
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -177,7 +201,7 @@ const generateTicketsPDF = async (data) => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(12);
-    doc.text(data.eventName, pageWidth - margin, 85, { align: 'right' });
+    doc.text(eventName, pageWidth - margin, 85, { align: 'right' });
 
     y = 130;
 
@@ -206,7 +230,7 @@ const generateTicketsPDF = async (data) => {
     doc.setFontSize(13);
     doc.setTextColor(51, 65, 85); // slate-700
     doc.text(`Order #${data.orderId.slice(0, 8).toUpperCase()}`, leftCol, y); y += 18;
-    doc.text(data.customerName, leftCol, y); y += 18;
+    doc.text(customerName, leftCol, y); y += 18;
     doc.setFontSize(11);
     doc.setTextColor(100, 116, 139);
     doc.text(data.customerEmail, leftCol, y); y += 20;
@@ -228,13 +252,13 @@ const generateTicketsPDF = async (data) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(17, 24, 39); // gray-900
-    doc.text(data.eventName, rightCol, y); y += 20;
+    doc.text(eventName, rightCol, y); y += 20;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(51, 65, 85);
     doc.text(formatDate(data.eventDate), rightCol, y); y += 16;
-    doc.text(data.eventLocation, rightCol, y);
+    doc.text(eventLocation, rightCol, y);
 
     y = boxY + boxHeight + 30;
 
@@ -271,7 +295,7 @@ const generateTicketsPDF = async (data) => {
       doc.setTextColor(17, 24, 39);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
-      doc.text(ticket.tierName, textX, ty);
+      doc.text(pdfText(ticket.tierName, 'Ticket'), textX, ty);
 
       ty += 25;
 
@@ -301,7 +325,7 @@ const generateTicketsPDF = async (data) => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.setTextColor(146, 64, 14); // amber-900
-        doc.text(`Last Entry: ${ticket.lastEntryTime}`, textX, ty + 5);
+        doc.text(`Last Entry: ${pdfText(ticket.lastEntryTime)}`, textX, ty + 5);
         ty += 25;
       }
 
@@ -511,20 +535,21 @@ const generateGuestlistPDF = async (data) => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(13);
-    doc.text(data.eventName, pageWidth / 2, 62, { align: 'center' });
+    const eventName = pdfText(data.eventName, 'Carnival LDN event');
+    doc.text(eventName, pageWidth / 2, 62, { align: 'center' });
 
     y = 110;
     doc.setTextColor(55, 65, 81);
     doc.setFontSize(12);
     doc.text(`Group Pass ID: ${data.guestlistId}`, margin, y); y += 16;
-    doc.text(`Lead: ${data.leadName}`, margin, y); y += 16;
+    doc.text(`Lead: ${pdfText(data.leadName)}`, margin, y); y += 16;
     doc.text(`Email: ${data.leadEmail}`, margin, y); y += 16;
     doc.text(`Total Tickets: ${data.totalTickets}`, margin, y); y += 20;
 
     // Add event details
-    doc.text(`Event: ${data.eventName}`, margin, y); y += 16;
+    doc.text(`Event: ${eventName}`, margin, y); y += 16;
     doc.text(`Date: ${formatDate(data.eventDate)}`, margin, y); y += 16;
-    doc.text(`Location: ${data.eventLocation}`, margin, y); y += 20;
+    doc.text(`Location: ${pdfText(data.eventLocation)}`, margin, y); y += 20;
 
     // Important instructions
     doc.setFont('helvetica', 'bold');

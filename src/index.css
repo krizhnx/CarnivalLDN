@@ -3,8 +3,48 @@
 @tailwind utilities;
 
 @layer base {
+  /* Seasonal theme tokens (space-separated RGB so Tailwind can apply alpha).
+     Switched by <html data-theme="..."> - see src/theme/siteTheme.ts */
+  :root {
+    --accent: 103 232 249;        /* cyan-300 */
+    --accent-2: 232 121 249;      /* fuchsia-400 */
+    --slime: 252 211 77;          /* amber-300 */
+    --glow: 34 211 238;           /* cyan-400 */
+    --glow-2: 217 70 239;         /* fuchsia-500 */
+    --cta: 255 255 255;
+    --cta-fg: 9 9 11;
+    --cta-glow: 255 255 255;
+    --cta-shimmer: 165 243 252;   /* cyan-200 */
+    --surface: 9 9 11;            /* zinc-950 */
+    --surface-2: 24 24 27;        /* zinc-900 */
+    --font-display: 'Poppins', sans-serif;
+  }
+
+  html[data-theme='halloween'] {
+    --accent: 255 146 43;         /* pumpkin */
+    --accent-2: 183 132 255;      /* witchy violet */
+    --slime: 163 230 53;          /* toxic green */
+    --glow: 255 122 26;
+    --glow-2: 147 51 234;
+    --cta: 255 122 26;
+    --cta-fg: 26 8 0;
+    --cta-glow: 255 122 26;
+    --cta-shimmer: 255 236 179;
+    --surface: 13 7 20;           /* purple-black */
+    --surface-2: 27 15 39;
+    --font-display: 'Creepster', 'Poppins', cursive;
+    color-scheme: dark;
+  }
+
   html {
     scroll-behavior: smooth;
+  }
+
+  /* Stripe's 3-D Secure lightbox is appended to <body>. Modal sheets set
+     body { pointer-events: none }, so make sure Stripe frames stay clickable. */
+  iframe[name^="__privateStripeFrame"],
+  iframe[src^="https://js.stripe.com"] {
+    pointer-events: auto !important;
   }
 
   body {
@@ -95,6 +135,16 @@
     .animate-spin-slow {
       animation: none;
     }
+  }
+
+  /* Checkout sheet: keep browser autofill on-theme */
+  .checkout-input:-webkit-autofill,
+  .checkout-input:-webkit-autofill:hover,
+  .checkout-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #fff;
+    caret-color: #fff;
+    -webkit-box-shadow: 0 0 0 1000px rgb(var(--surface)) inset;
+    transition: background-color 9999s ease-out 0s;
   }
 
   /* Professional styling */
@@ -735,4 +785,191 @@
   }
 
 
+}
+
+/* ==========================================================================
+   Halloween theme
+   Only active when <html data-theme="halloween">, which siteTheme.ts sets on
+   public routes only (admin/scanner always get "default").
+   ========================================================================== */
+
+html[data-theme='halloween'] body {
+  background-color: rgb(var(--surface));
+}
+
+html[data-theme='halloween'] ::selection {
+  background: rgb(var(--accent) / 0.85);
+  color: #1a0800;
+}
+
+/* Creepster only ships one weight - stop browsers from faux-bolding it */
+html[data-theme='halloween'] .font-display,
+html[data-theme='halloween'] .font-display .glitch-text {
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+/* Brand glitch headings become dripping pumpkin titles */
+html[data-theme='halloween'] h1.glitch-text,
+html[data-theme='halloween'] h2.glitch-text {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: rgb(var(--accent));
+  text-shadow:
+    0 0 28px rgb(var(--glow) / 0.55),
+    0 2px 0 rgb(90 24 0 / 0.9),
+    0 0 2px rgb(0 0 0 / 0.9);
+}
+
+html[data-theme='halloween'] .glitch-text.glitch-active::before {
+  text-shadow: -2px 0 #ff5e00;
+}
+
+html[data-theme='halloween'] .glitch-text.glitch-active::after {
+  text-shadow: -2px 0 #a3e635, 2px 2px #9333ea;
+}
+
+/* Section backgrounds / overlays / pills opt in with these hooks */
+html[data-theme='halloween'] .theme-haunted-bg {
+  background-color: rgb(var(--surface));
+  background-image:
+    radial-gradient(ellipse 60% 45% at 12% 0%, rgb(147 51 234 / 0.22), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 92% 100%, rgb(255 122 26 / 0.13), transparent 70%),
+    linear-gradient(180deg, rgb(13 7 20), rgb(22 11 33) 50%, rgb(13 7 20));
+}
+
+html[data-theme='halloween'] .theme-overlay {
+  background-color: transparent;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgb(255 122 26 / 0.12), transparent 70%),
+    linear-gradient(180deg, rgb(13 7 20 / 0.92), rgb(36 12 58 / 0.78) 45%, rgb(13 7 20 / 0.93));
+}
+
+html[data-theme='halloween'] .theme-pill {
+  border-color: rgb(var(--accent) / 0.45);
+  background-color: rgb(24 8 36 / 0.5);
+}
+
+html[data-theme='halloween'] .theme-default-only {
+  display: none;
+}
+
+html[data-theme='halloween'] .theme-chip {
+  background-color: rgb(var(--accent));
+  box-shadow: 0 0 24px -6px rgb(var(--glow) / 0.7);
+}
+
+html[data-theme='halloween'] .theme-cta {
+  background-color: rgb(var(--cta));
+  color: rgb(var(--cta-fg));
+  box-shadow: 0 0 30px -8px rgb(var(--cta-glow) / 0.7);
+}
+
+/* ---------- Decorative animations (all prefixed hw-) ---------- */
+
+@keyframes hw-fly {
+  0% { transform: translate3d(-12vw, 0, 0); }
+  15% { transform: translate3d(18vw, -5vh, 0); }
+  30% { transform: translate3d(45vw, 3vh, 0); }
+  45% { transform: translate3d(75vw, -4vh, 0); }
+  60%, 100% { transform: translate3d(112vw, 1vh, 0); }
+}
+
+@keyframes hw-fly-rev {
+  0% { transform: translate3d(112vw, 0, 0) scaleX(-1); }
+  15% { transform: translate3d(80vw, 4vh, 0) scaleX(-1); }
+  30% { transform: translate3d(50vw, -3vh, 0) scaleX(-1); }
+  45% { transform: translate3d(22vw, 5vh, 0) scaleX(-1); }
+  60%, 100% { transform: translate3d(-12vw, 0, 0) scaleX(-1); }
+}
+
+@keyframes hw-flap-l {
+  from { transform: rotate(22deg); }
+  to { transform: rotate(-28deg); }
+}
+
+@keyframes hw-flap-r {
+  from { transform: rotate(-22deg); }
+  to { transform: rotate(28deg); }
+}
+
+@keyframes hw-bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 0); }
+}
+
+@keyframes hw-hover-loop {
+  0% { transform: translate3d(0, 0, 0) rotate(-4deg); }
+  25% { transform: translate3d(14px, -8px, 0) rotate(3deg); }
+  50% { transform: translate3d(4px, -16px, 0) rotate(-2deg); }
+  75% { transform: translate3d(-12px, -6px, 0) rotate(4deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(-4deg); }
+}
+
+@keyframes hw-rise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  10% { opacity: var(--hw-o, 0.8); }
+  50% { transform: translate3d(var(--hw-sway, 20px), -55vh, 0); }
+  85% { opacity: var(--hw-o, 0.8); }
+  100% { transform: translate3d(calc(var(--hw-sway, 20px) * -0.5), -110vh, 0); opacity: 0; }
+}
+
+@keyframes hw-fog {
+  from { transform: translate3d(-8%, 0, 0); }
+  to { transform: translate3d(8%, 0, 0); }
+}
+
+@keyframes hw-flicker {
+  0%, 100% { opacity: 1; }
+  8% { opacity: 0.75; }
+  12% { opacity: 1; }
+  40% { opacity: 0.9; }
+  44% { opacity: 0.6; }
+  48% { opacity: 1; }
+  72% { opacity: 0.85; }
+}
+
+@keyframes hw-dangle {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, 36px, 0); }
+}
+
+@keyframes hw-swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes hw-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 24px rgb(255 230 170 / 0.45)); }
+  50% { filter: drop-shadow(0 0 42px rgb(255 230 170 / 0.7)); }
+}
+
+@keyframes hw-drop {
+  0%, 55% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  60% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(0, 60px, 0) scale(1); opacity: 0; }
+}
+
+.hw-bat-wing-l {
+  transform-origin: 30px 15px;
+  animation: hw-flap-l 0.26s ease-in-out infinite alternate;
+}
+
+.hw-bat-wing-r {
+  transform-origin: 34px 15px;
+  animation: hw-flap-r 0.26s ease-in-out infinite alternate;
+}
+
+.hw-flicker {
+  animation: hw-flicker 3.2s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-anim,
+  .hw-anim *,
+  .hw-bat-wing-l,
+  .hw-bat-wing-r,
+  .hw-flicker {
+    animation: none !important;
+  }
 }

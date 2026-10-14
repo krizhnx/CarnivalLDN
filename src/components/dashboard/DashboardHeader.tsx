@@ -1,4 +1,5 @@
 import { RefreshCw } from 'lucide-react';
+import SiteThemeToggle from './SiteThemeToggle';
 
 // Affiliate tracking tab added
 interface DashboardHeaderProps {
@@ -66,7 +67,7 @@ const DashboardHeader = ({
           </div>
         </div>
         {/* Tabs */}
-        <div className="mt-6 flex items-center gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-2">
           <button
             onClick={() => onTabChange('analytics')}
             className={`px-4 py-2 rounded-lg text-sm font-medium border ${activeTab === 'analytics' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
@@ -91,6 +92,9 @@ const DashboardHeader = ({
           >
             Affiliate Tracking
           </button>
+          <div className="ml-auto">
+            <SiteThemeToggle />
+          </div>
         </div>
       </div>
     </div>

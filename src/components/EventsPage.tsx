@@ -1,24 +1,33 @@
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Clock, ArrowRight, X } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
 import { useState, useEffect, useRef } from 'react';
-import { Event, Order } from '../types';
+import { Event } from '../types';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useSearchParams } from 'react-router-dom';
-import Checkout from './Checkout';
-import PaymentSuccess from './PaymentSuccess';
+import EventCard from './EventCard';
+import CheckoutSheet from './checkout';
 import { useGlitchEffect } from '../hooks/useGlitchEffect';
+import { useSiteTheme } from '../theme/siteTheme';
+import { useThemeCopy } from '../theme/copy';
+import { HalloweenHeroBackdrop } from './Hero';
+import { HauntedCorners, SectionDrip, SectionFog } from './halloween/decorations';
 
 const EventsPage = () => {
   const { events, getEvents, isLoading, trackAffiliateClick, affiliateLinks, getAffiliateLinks, affiliateSocieties, getAffiliateSocieties } = useAppStore();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [highlightedEvent, setHighlightedEvent] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
+  const { isHalloween } = useSiteTheme();
+  const copy = useThemeCopy();
+
+  const openEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setSheetOpen(true);
+  };
 
   // Ref to track processed affiliate clicks to prevent duplicates
   const processedClicksRef = useRef<Set<string>>(new Set());
@@ -157,15 +166,19 @@ const EventsPage = () => {
       {/* Hero Section with Video Background */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
         {/* Image Background */}
-        <div className="absolute inset-0 w-full h-full">
-          <img
-            src="/main-hero.jpg"
-            alt="Carnival LDN Hero Background"
-            className="w-full h-full object-cover"
-          />
-          {/* Overlay for better text readability */}
-          <div className="absolute inset-0 bg-black/60"></div>
-        </div>
+        {isHalloween ? (
+          <HalloweenHeroBackdrop />
+        ) : (
+          <div className="absolute inset-0 w-full h-full">
+            <img
+              src="/main-hero.jpg"
+              alt="Carnival LDN Hero Background"
+              className="w-full h-full object-cover"
+            />
+            {/* Overlay for better text readability */}
+            <div className="absolute inset-0 bg-black/60"></div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 lg:px-8 text-center">
@@ -204,7 +217,7 @@ const EventsPage = () => {
               className="text-base sm:text-lg md:text-xl lg:text-xl font-light max-w-4xl mx-auto leading-relaxed px-2 text-white drop-shadow-lg"
             >
               <motion.span
-                className="inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg"
+                className="theme-pill inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg"
                 whileHover={{
                   scale: 1.05,
                   boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
@@ -223,8 +236,8 @@ const EventsPage = () => {
                   ease: "easeInOut"
                 }}
               >
-                <span className="block sm:hidden">⚡ Events that hit different ⚡</span>
-                <span className="hidden sm:block">⚡ From rooftop raves to underground vibes - events that hit different ⚡</span>
+                <span className="block sm:hidden">{copy.eventsPillShort}</span>
+                <span className="hidden sm:block">{copy.eventsPillLong}</span>
               </motion.span>
             </motion.div>
 
@@ -260,7 +273,9 @@ const EventsPage = () => {
                 }}
                 whileHover={{ scale: 1.05, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-transparent hover:bg-white/90 text-white hover:text-gray-900 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-3/4 sm:w-auto transition-all backdrop-blur-sm group flex items-center justify-center gap-3"
+                className={isHalloween
+                  ? "bg-cta hover:bg-cta/90 text-cta-fg px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-bold rounded-lg border border-white/20 w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none transition-all shadow-[0_0_40px_-6px_rgb(var(--cta-glow)/0.75)] group flex items-center justify-center gap-3"
+                  : "bg-transparent hover:bg-white/90 text-white hover:text-gray-900 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none transition-all backdrop-blur-sm group flex items-center justify-center gap-3"}
               >
                 <span>Get Tickets</span>
                 <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
@@ -322,8 +337,11 @@ const EventsPage = () => {
             className="w-full h-full object-cover scale-150"
           />
           {/* Overlay for better text readability */}
-          <div className="absolute inset-0 bg-gray-900/70"></div>
+          <div className="theme-overlay absolute inset-0 bg-gray-900/70"></div>
         </div>
+        <SectionDrip />
+        <HauntedCorners />
+        <SectionFog />
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
@@ -337,17 +355,17 @@ const EventsPage = () => {
           >
                          <motion.h2
                className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
-               data-text="WHAT'S ON"
+               data-text={copy.whatsOn}
                style={{
                  textTransform: 'uppercase',
                  letterSpacing: '0.1em'
                }}
              >
-              WHAT'S ON
+              {copy.whatsOn}
             </motion.h2>
             <div className="flex justify-center">
               <motion.span
-                className="inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg text-white/80"
+                className="theme-pill inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg text-white/80"
                 whileHover={{
                   scale: 1.05,
                   boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
@@ -366,7 +384,7 @@ const EventsPage = () => {
                   ease: "easeInOut"
                 }}
               >
-                🎭  Check out our upcoming events  🎭
+                {copy.whatsOnPill}
               </motion.span>
             </div>
           </motion.div>
@@ -397,182 +415,14 @@ const EventsPage = () => {
                 : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
             }`}>
               {events.filter(e => !e.isArchived).map((event, index) => (
-                <motion.div
+                <EventCard
                   key={event.id}
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{
-                    duration: 0.6,
-                    delay: highlightedEvent === event.id ? 0.2 : index * 0.1
-                  }}
-                  whileHover={{ y: -8 }}
-                  className={`group relative rounded-3xl font-mono transition-all duration-500 overflow-hidden cursor-pointer backdrop-blur-xl ${
-                    highlightedEvent === event.id
-                      ? 'scale-105 ring-2 ring-cyan-300/50 shadow-[0_0_55px_rgba(34,211,238,0.35)]'
-                      : 'ring-1 ring-white/15 shadow-[0_20px_45px_rgba(0,0,0,0.45)] hover:ring-cyan-300/35 hover:shadow-[0_0_50px_rgba(34,211,238,0.22)]'
-                  }`}
-                >
-                  {/* Premium outer frame */}
-                  <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br from-cyan-400/25 via-fuchsia-500/15 to-indigo-500/20 opacity-80" />
-                  <div className="pointer-events-none absolute inset-[1px] rounded-[calc(1.5rem-1px)] border border-white/10 bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-slate-950/95" />
-                  <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_10%_0%,rgba(255,255,255,0.22),transparent_50%),radial-gradient(circle_at_90%_100%,rgba(6,182,212,0.28),transparent_45%)] mix-blend-screen" />
-
-                  {/* Event Image with Overlay */}
-                  <div className="relative h-48 md:h-56 overflow-hidden" onClick={() => { setSelectedEvent(event); setShowDetails(true); }}>
-                    {/* Featured Event Badge */}
-                    {highlightedEvent === event.id && (
-                      <div className="absolute top-4 right-4 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
-                        ⭐ Featured Event
-                      </div>
-                    )}
-
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-full h-full object-cover object-[center_15%] transition-transform duration-500 group-hover:scale-110"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = `https://via.placeholder.com/400x300/6B7280/FFFFFF?text=${encodeURIComponent(event.title)}`;
-                      }}
-                    />
-
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                    {/* Top Badges */}
-                    <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                      {event.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-semibold text-gray-800 shadow-sm border border-white/20">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Sold-out Badge */}
-                    {event.ticketTiers && event.ticketTiers.length > 0 && event.ticketTiers.every(t => (t.capacity - t.soldCount) <= 0 || t.isActive === false) && (
-                      <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                        Sold Out
-                      </div>
-                    )}
-
-                    {/* Event Title Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 pb-2">
-                      <h3
-                        className={`block max-w-full text-lg md:text-xl font-mono font-black uppercase tracking-[0.14em] text-white leading-tight whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-[0_0_14px_rgba(56,189,248,0.6)] glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
-                        data-text={event.title}
-                        style={{
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.14em'
-                        }}
-                      >
-                        {event.title}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {/* Event Content */}
-                  <div className="relative p-5 md:p-6 space-y-4 bg-white/95 backdrop-blur-sm border-t border-white/70" onClick={() => { setSelectedEvent(event); setShowDetails(true); }}>
-                    {/* Event Details Grid */}
-                    <div className="space-y-2">
-                      {/* Date */}
-                      <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                        <Calendar className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                        <span className="text-sm font-semibold text-gray-900">{event.date}</span>
-                      </div>
-
-                      {/* Time */}
-                      <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                        <Clock className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                        <span className="text-sm font-semibold text-gray-900">{event.time}</span>
-                      </div>
-
-                      {/* Location */}
-                      <div className="flex items-center justify-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                        <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                        <span className="text-sm font-semibold text-gray-900">{event.venue}</span>
-                      </div>
-                    </div>
-
-                    {/* Ticket Tiers */}
-                    {event.ticketTiers && event.ticketTiers.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-gray-700">Ticket Options</h4>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                            {Math.min(...event.ticketTiers.map(t => t.price)) === 0 ? 'Free' : `From £${(Math.min(...event.ticketTiers.map(t => t.price)) / 100).toFixed(2)}`}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          {event.ticketTiers
-                            .sort((a, b) => a.price - b.price)
-                            .slice(-3)
-                            .map((tier) => {
-                            const remaining = tier.capacity - tier.soldCount;
-                            const isSoldOut = remaining <= 0 || tier.isActive === false;
-                            
-                            return (
-                              <div key={tier.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${
-                                isSoldOut 
-                                  ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-200' 
-                                  : 'bg-gradient-to-r from-gray-50 to-white border-gray-100'
-                              }`}>
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    isSoldOut ? 'bg-red-500' : 'bg-blue-500'
-                                  }`}></div>
-                                  <span className={`text-sm font-medium ${
-                                    isSoldOut ? 'text-red-800' : 'text-gray-800'
-                                  }`}>{tier.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {isSoldOut ? (
-                                    <span className="text-sm font-bold text-red-700">Sold out</span>
-                                  ) : (
-                                    <>
-                                      {tier.originalPrice && tier.originalPrice > tier.price && (
-                                        <span className="text-xs text-gray-400 line-through">
-                                          £{(tier.originalPrice / 100).toFixed(2)}
-                                        </span>
-                                      )}
-                                      <span className="text-lg font-bold text-gray-900">
-                                        {tier.price === 0 ? 'Free' : `£${(tier.price / 100).toFixed(2)}`}
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          {event.ticketTiers.length > 3 && (
-                            <div className="text-center">
-                              <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
-                                +{event.ticketTiers.length - 3} more options
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Book Now Button */}
-                    <motion.button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedEvent(event);
-                        setShowCheckout(true);
-                      }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-800 hover:from-gray-800 hover:via-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-sm md:text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl group-hover:shadow-2xl"
-                    >
-                      {event.ticketTiers && event.ticketTiers.length > 0 ? 'Get Tickets' : 'Book Now'}
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                    </motion.button>
-                  </div>
-                </motion.div>
+                  event={event}
+                  index={index}
+                  featured={highlightedEvent === event.id}
+                  onSelect={openEvent}
+                  glitchClassName={`glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
+                />
               ))}
             </div>
           )}
@@ -580,85 +430,8 @@ const EventsPage = () => {
         </div>
       </section>
 
-      {/* Event Details Modal */}
-      {showDetails && selectedEvent && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDetails(false)}>
-                     <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-48 overflow-hidden">
-              <img src={selectedEvent.image} alt={selectedEvent.title} className="w-full h-full object-cover" />
-              <button className="absolute top-3 right-3 bg-white/90 rounded-full p-1" onClick={() => setShowDetails(false)}>
-                <X className="w-5 h-5 text-gray-700" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4 text-center">
-              <h3 className="text-xl font-bold text-gray-900">{selectedEvent.title}</h3>
-              <p className="text-gray-600 text-sm">{selectedEvent.description}</p>
-                             <div className="space-y-3 text-sm text-black">
-                 <div className="flex items-center justify-center gap-2"><Calendar className="w-4 h-4" /><span className="font-semibold">{selectedEvent.date}</span></div>
-                 <div className="flex items-center justify-center gap-2"><Clock className="w-4 h-4" /><span className="font-semibold">{selectedEvent.time}</span></div>
-                 <div className="flex items-center justify-center gap-2"><MapPin className="w-4 h-4" /><span className="font-semibold">{selectedEvent.venue}</span></div>
-               </div>
-                             {selectedEvent.ticketTiers && selectedEvent.ticketTiers.length > 0 && (
-                 <div className="text-left">
-                   <h4 className="text-sm font-semibold text-gray-800 mb-2">Ticket Tiers</h4>
-                   <div className="space-y-2">
-                    {selectedEvent.ticketTiers.sort((a, b) => a.price - b.price).map(tier => {
-                      const remaining = tier.capacity - tier.soldCount;
-                      const isSoldOut = remaining <= 0 || tier.isActive === false;
-                      return (
-                        <div key={tier.id} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-700">{tier.name}</span>
-                          {isSoldOut ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">Sold out</span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {tier.originalPrice && tier.originalPrice > tier.price && (
-                                <span className="text-gray-400 line-through">£{(tier.originalPrice / 100).toFixed(2)}</span>
-                              )}
-                              <span className="font-semibold text-gray-900">{tier.price === 0 ? 'Free' : `£${(tier.price / 100).toFixed(2)}`}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  setShowDetails(false);
-                  setSelectedEvent(selectedEvent);
-                  setShowCheckout(true);
-                }}
-                disabled={selectedEvent.ticketTiers?.every(t => (t.capacity - t.soldCount) <= 0 || t.isActive === false)}
-                className="w-full bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm"
-              >
-                Buy Tickets
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Checkout Modal */}
-      {showCheckout && selectedEvent && (
-        <Checkout
-          event={selectedEvent}
-          onClose={() => setShowCheckout(false)}
-          onSuccess={(order) => {
-            setCompletedOrder(order);
-            setShowCheckout(false);
-          }}
-        />
-      )}
-
-      {/* Payment Success Modal */}
-      {completedOrder && (
-        <PaymentSuccess
-          order={completedOrder}
-          onClose={() => setCompletedOrder(null)}
-        />
-      )}
+      {/* Checkout sheet */}
+      <CheckoutSheet event={selectedEvent} open={sheetOpen} onOpenChange={setSheetOpen} />
 
       <Footer />
     </div>
