@@ -1,25 +1,47 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { motion } from 'framer-motion';
-import { X, Calendar, Clock, MapPin, Users, Tag, Ticket } from 'lucide-react';
+import { CalendarDays, ImageOff, Pencil, Plus, Ticket } from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
 import { Event, EventFormData, TicketTier } from '../types';
 import TicketTierForm from './TicketTierForm';
+import { AdminModal } from './admin/Modal';
+import { Badge, Button, Field, Input, Select, Textarea } from './admin/ui';
+import { money } from './admin/format';
 
 interface EventFormProps {
   event?: Event | null;
   onClose: () => void;
 }
 
+const gradientOptions = [
+  { value: 'from-gray-600 to-gray-800', label: 'Gray' },
+  { value: 'from-gray-700 to-gray-900', label: 'Dark Gray' },
+  { value: 'from-gray-800 to-black', label: 'Black' },
+  { value: 'from-gray-500 to-gray-700', label: 'Light Gray' },
+  { value: 'from-blue-600 to-blue-800', label: 'Blue' },
+  { value: 'from-green-600 to-green-800', label: 'Green' },
+  { value: 'from-purple-600 to-purple-800', label: 'Purple' },
+  { value: 'from-red-600 to-red-800', label: 'Red' },
+];
+
+const SectionTitle = ({ title, description }: { title: string; description?: string }) => (
+  <div className="md:col-span-2">
+    <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+    {description && <p className="text-[13px] text-zinc-500">{description}</p>}
+  </div>
+);
+
 const EventForm = ({ event, onClose }: EventFormProps) => {
   const { addEvent, updateEvent } = useAppStore();
   const [showTicketTierForm, setShowTicketTierForm] = useState(false);
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>(event?.ticketTiers || []);
+  const [imageFailed, setImageFailed] = useState(false);
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<EventFormData>();
 
@@ -40,18 +62,19 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
     }
   }, [event, reset]);
 
+  const image = watch('image');
+  useEffect(() => setImageFailed(false), [image]);
+
   const onSubmit = (data: EventFormData) => {
-    console.log('Form submitted with ticket tiers:', ticketTiers);
-    
     // Ensure ticket tiers have the correct eventId
-    const updatedTicketTiers = ticketTiers.map(tier => ({
+    const updatedTicketTiers = ticketTiers.map((tier) => ({
       ...tier,
       eventId: event?.id || 'new_event',
     }));
-    
+
     // Derive display price from the lowest active ticket tier
-    const activeTiers = updatedTicketTiers.filter(t => t.isActive !== false && typeof t.price === 'number');
-    const minPrice = activeTiers.length > 0 ? Math.min(...activeTiers.map(t => t.price)) : 0;
+    const activeTiers = updatedTicketTiers.filter((t) => t.isActive !== false && typeof t.price === 'number');
+    const minPrice = activeTiers.length > 0 ? Math.min(...activeTiers.map((t) => t.price)) : 0;
     const derivedPriceLabel = minPrice > 0 ? `From £${(minPrice / 100).toFixed(0)}` : 'Free';
 
     const eventData = {
@@ -59,9 +82,7 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
       price: derivedPriceLabel,
       ticketTiers: updatedTicketTiers,
     };
-    
-    console.log('Final event data to save:', eventData);
-    
+
     if (event) {
       updateEvent(event.id, eventData);
     } else {
@@ -71,283 +92,158 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
   };
 
   const handleTicketTiersSave = (tiers: TicketTier[]) => {
-    console.log('Ticket tiers saved in EventForm:', tiers);
     setTicketTiers(tiers);
     setShowTicketTierForm(false);
   };
 
-  const gradientOptions = [
-    { value: 'from-gray-600 to-gray-800', label: 'Gray' },
-    { value: 'from-gray-700 to-gray-900', label: 'Dark Gray' },
-    { value: 'from-gray-800 to-black', label: 'Black' },
-    { value: 'from-gray-500 to-gray-700', label: 'Light Gray' },
-    { value: 'from-blue-600 to-blue-800', label: 'Blue' },
-    { value: 'from-green-600 to-green-800', label: 'Green' },
-    { value: 'from-purple-600 to-purple-800', label: 'Purple' },
-    { value: 'from-red-600 to-red-800', label: 'Red' },
-  ];
+  const sortedTiers = [...ticketTiers].sort((a, b) => a.price - b.price);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <motion.div
-        key={event?.id || 'new-event'}
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {event ? 'Edit Event' : 'Add New Event'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+    <AdminModal
+      open
+      onClose={onClose}
+      closeOnBackdrop={false}
+      size="lg"
+      icon={event ? Pencil : CalendarDays}
+      title={event ? 'Edit event' : 'New event'}
+      description={event ? event.title : 'Publish a new event to the site'}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form="event-form">
+            {event ? 'Save changes' : 'Create event'}
+          </Button>
+        </>
+      }
+    >
+      <form id="event-form" onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2">
+        <SectionTitle title="Basics" />
+        <Field label="Event title" htmlFor="ev-title" error={errors.title?.message} className="md:col-span-2">
+          <Input id="ev-title" {...register('title', { required: 'Title is required' })} placeholder="e.g. Carnival LDN: Diwali Night" invalid={!!errors.title} />
+        </Field>
+        <Field label="Description" htmlFor="ev-desc" error={errors.description?.message} className="md:col-span-2">
+          <Textarea
+            id="ev-desc"
+            rows={4}
+            {...register('description', { required: 'Description is required' })}
+            placeholder="What should people expect?"
+            invalid={!!errors.description}
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Title */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Title
-              </label>
-              <input
-                {...register('title', { required: 'Title is required' })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="Enter event title"
-              />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
-              )}
-            </div>
+        <div className="border-t border-zinc-100 md:col-span-2" />
+        <SectionTitle title="When & where" />
+        <Field label="Date" htmlFor="ev-date" error={errors.date?.message} hint="Shown as written, e.g. Saturday, 1 November 2026">
+          <Input id="ev-date" {...register('date', { required: 'Date is required' })} placeholder="e.g. Saturday, 1 November 2026" invalid={!!errors.date} />
+        </Field>
+        <Field label="Time" htmlFor="ev-time" error={errors.time?.message}>
+          <Input id="ev-time" {...register('time', { required: 'Time is required' })} placeholder="e.g. 10:00 PM - 3:00 AM" invalid={!!errors.time} />
+        </Field>
+        <Field label="Venue" htmlFor="ev-venue" error={errors.venue?.message}>
+          <Input id="ev-venue" {...register('venue', { required: 'Venue is required' })} placeholder="Venue name" invalid={!!errors.venue} />
+        </Field>
+        <Field label="Capacity" htmlFor="ev-cap" error={errors.capacity?.message}>
+          <Input id="ev-cap" {...register('capacity', { required: 'Capacity is required' })} placeholder="e.g. 200" invalid={!!errors.capacity} />
+        </Field>
 
-            {/* Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="inline h-4 w-4 mr-1" />
-                Date
-              </label>
-              <input
-                {...register('date', { required: 'Date is required' })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="e.g., Dec 15, 2024"
-              />
-              {errors.date && (
-                <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
-              )}
-            </div>
-
-            {/* Time */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Clock className="inline h-4 w-4 mr-1" />
-                Time
-              </label>
-              <input
-                {...register('time', { required: 'Time is required' })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="e.g., 7:00 PM"
-              />
-              {errors.time && (
-                <p className="mt-1 text-sm text-red-600">{errors.time.message}</p>
-              )}
-            </div>
-
-            {/* Venue */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <MapPin className="inline h-4 w-4 mr-1" />
-                Venue
-              </label>
-              <input
-                {...register('venue', { required: 'Venue is required' })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="Enter venue name"
-              />
-              {errors.venue && (
-                <p className="mt-1 text-sm text-red-600">{errors.venue.message}</p>
-              )}
-            </div>
-
-            {/* Price is derived from ticket tiers; remove manual field */}
-
-            {/* Capacity */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Users className="inline h-4 w-4 mr-1" />
-                Capacity
-              </label>
-              <input
-                {...register('capacity', { required: 'Capacity is required' })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="e.g., 200"
-              />
-              {errors.capacity && (
-                <p className="mt-1 text-sm text-red-600">{errors.capacity.message}</p>
-              )}
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Tag className="inline h-4 w-4 mr-1" />
-                Tags (comma-separated)
-              </label>
-              <input
-                {...register('tags', { required: 'Tags are required' })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="e.g., Corporate, Networking, Formal"
-              />
-              {errors.tags && (
-                <p className="mt-1 text-sm text-red-600">{errors.tags.message}</p>
-              )}
-            </div>
-
-            {/* Gradient */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Color Theme
-              </label>
-              <select
-                {...register('gradient', { required: 'Gradient is required' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              >
-                {gradientOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {errors.gradient && (
-                <p className="mt-1 text-sm text-red-600">{errors.gradient.message}</p>
-              )}
-            </div>
-
-            {/* Image URL */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Image URL
-              </label>
-              <input
-                {...register('image', {
-                  required: 'Image URL is required',
-                  pattern: {
-                    value: /^(https?:\/\/.+|\/.+)/,
-                    message: 'Please enter a valid URL starting with http:// or https://, or a relative path starting with /'
-                  }
-                })}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="https://images.unsplash.com/photo-... or /palace.png"
-              />
-              {errors.image && (
-                <p className="mt-1 text-sm text-red-600">{errors.image.message}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                Tip: You can use external URLs (https://picsum.photos/800/600?random=1) or local images (/palace.png)
-              </p>
-            </div>
-
-            {/* Ticket Tiers Management */}
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Ticket Tiers
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowTicketTierForm(true)}
-                  className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Ticket className="h-4 w-4" />
-                  Manage Tiers
-                </button>
-              </div>
-              {ticketTiers.length > 0 ? (
-                <div className="space-y-2">
-                  {ticketTiers.sort((a, b) => a.price - b.price).map((tier) => (
-                    <div key={tier.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <span className="font-medium text-gray-900">{tier.name}</span>
-                        <span className="ml-2 text-sm text-gray-600">
-                          £{(tier.price / 100).toFixed(2)} - {tier.capacity} available
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-500">
-                        {tier.capacity - tier.soldCount} left
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No ticket tiers configured. Click "Manage Tiers" to add pricing options.</p>
-              )}
-            </div>
-
-            {/* Booking URL */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Booking URL (Optional - will be replaced by Stripe checkout)
-              </label>
-              <input
-                {...register('bookingUrl')}
-                type="url"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="https://example.com/book/event (optional)"
-              />
-              {errors.bookingUrl && (
-                <p className="mt-1 text-sm text-red-600">{errors.bookingUrl.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              {...register('description', { required: 'Description is required' })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-              placeholder="Enter event description"
-            />
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+        <div className="border-t border-zinc-100 md:col-span-2" />
+        <SectionTitle title="Look & listing" />
+        <div className="flex gap-4 md:col-span-2">
+          <div className="grid h-[104px] w-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200">
+            {image && !imageFailed ? (
+              <img src={image} alt="" className="h-full w-full object-cover" onError={() => setImageFailed(true)} />
+            ) : (
+              <ImageOff className="h-5 w-5 text-zinc-400" />
             )}
           </div>
+          <Field
+            label="Poster image URL"
+            htmlFor="ev-image"
+            error={errors.image?.message}
+            hint="External URL (https://…) or a path in /public, e.g. /palace.png"
+            className="flex-1"
+          >
+            <Input
+              id="ev-image"
+              {...register('image', {
+                required: 'Image URL is required',
+                pattern: {
+                  value: /^(https?:\/\/.+|\/.+)/,
+                  message: 'Use a URL starting with http(s):// or a path starting with /',
+                },
+              })}
+              placeholder="https://… or /palace.png"
+              invalid={!!errors.image}
+            />
+          </Field>
+        </div>
+        <Field label="Tags" htmlFor="ev-tags" error={errors.tags?.message} hint="Comma-separated">
+          <Input id="ev-tags" {...register('tags', { required: 'Tags are required' })} placeholder="e.g. Bollywood, Club night" invalid={!!errors.tags} />
+        </Field>
+        <Field label="Colour theme" htmlFor="ev-gradient" error={errors.gradient?.message}>
+          <Select id="ev-gradient" {...register('gradient', { required: 'Gradient is required' })}>
+            {gradientOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
 
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-4 pt-6 border-t">
+        <div className="border-t border-zinc-100 md:col-span-2" />
+        <div className="flex items-end justify-between gap-4 md:col-span-2">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900">Ticket tiers</h3>
+            <p className="text-[13px] text-zinc-500">The lowest active price becomes the “From £X” label.</p>
+          </div>
+          <Button size="sm" icon={ticketTiers.length ? Ticket : Plus} onClick={() => setShowTicketTierForm(true)}>
+            {ticketTiers.length ? 'Manage tiers' : 'Add tiers'}
+          </Button>
+        </div>
+        <div className="md:col-span-2">
+          {sortedTiers.length > 0 ? (
+            <div className="overflow-hidden rounded-xl ring-1 ring-zinc-200">
+              {sortedTiers.map((tier) => {
+                const left = tier.capacity - tier.soldCount;
+                return (
+                  <div key={tier.id} className="flex items-center justify-between gap-4 border-b border-zinc-100 px-4 py-3 last:border-0">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-900">{tier.name}</p>
+                      <p className="text-xs text-zinc-500">
+                        {tier.price === 0 ? 'Free' : money(tier.price)} · {tier.capacity} capacity
+                        {tier.lastEntryTime ? ` · last entry ${tier.lastEntryTime}` : ''}
+                      </p>
+                    </div>
+                    {tier.isActive === false ? (
+                      <Badge tone="amber">Sales off</Badge>
+                    ) : left <= 0 ? (
+                      <Badge tone="red">Sold out</Badge>
+                    ) : (
+                      <Badge>{left} left</Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              onClick={() => setShowTicketTierForm(true)}
+              className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-zinc-50"
             >
-              Cancel
+              <Ticket className="h-5 w-5 text-zinc-400" />
+              No ticket tiers yet — add pricing options
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-md transition-colors"
-            >
-              {event ? 'Update Event' : 'Create Event'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
+          )}
+        </div>
 
-      {/* Ticket Tier Management Modal */}
+        <Field label="External booking URL" optional htmlFor="ev-booking" error={errors.bookingUrl?.message} hint="Leave blank to use on-site checkout" className="md:col-span-2">
+          <Input id="ev-booking" type="url" {...register('bookingUrl')} placeholder="https://example.com/book/event" />
+        </Field>
+      </form>
+
       {showTicketTierForm && (
         <TicketTierForm
           ticketTiers={ticketTiers}
@@ -356,7 +252,7 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
           onClose={() => setShowTicketTierForm(false)}
         />
       )}
-    </div>
+    </AdminModal>
   );
 };
 

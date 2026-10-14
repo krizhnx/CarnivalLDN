@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, Users, FileText, Send } from 'lucide-react';
+import { AlertCircle, ClipboardList, Minus, Plus, Send } from 'lucide-react';
 import { Event, GuestlistFormData } from '../types';
+import { cn } from '../lib/utils';
+import { AdminModal } from './admin/Modal';
+import { Button, Field, Input, Textarea } from './admin/ui';
 
 interface GuestlistModalProps {
   event: Event;
@@ -10,6 +12,13 @@ interface GuestlistModalProps {
   onManageGuestlists?: () => void;
 }
 
+const CATEGORIES = [
+  { value: 'free', label: 'Free', hint: 'Free entry' },
+  { value: 'GL', label: 'GL', hint: 'Guestlist' },
+  { value: 'tables', label: 'Tables', hint: 'Table booking' },
+  { value: 'other', label: 'Other', hint: 'Anything else' },
+] as const;
+
 const GuestlistModal: React.FC<GuestlistModalProps> = ({ event, onClose, onSuccess, onManageGuestlists }) => {
   const [formData, setFormData] = useState<GuestlistFormData>({
     leadName: '',
@@ -17,14 +26,14 @@ const GuestlistModal: React.FC<GuestlistModalProps> = ({ event, onClose, onSucce
     leadPhone: '',
     totalTickets: 1,
     notes: '',
-    category: 'free'
+    category: 'free',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.leadName || !formData.leadEmail || formData.totalTickets < 1) {
       setError('Please fill in all required fields and ensure at least 1 ticket.');
       return;
@@ -36,13 +45,8 @@ const GuestlistModal: React.FC<GuestlistModalProps> = ({ event, onClose, onSucce
     try {
       const response = await fetch('/api/create-guestlist', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          eventId: event.id,
-          ...formData
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: event.id, ...formData }),
       });
 
       if (!response.ok) {
@@ -60,227 +64,120 @@ const GuestlistModal: React.FC<GuestlistModalProps> = ({ event, onClose, onSucce
   };
 
   const handleInputChange = (field: keyof GuestlistFormData, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-      >
-        <div className="p-6 border-b">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Create Guestlist</h2>
-              <p className="text-gray-600">{event.title}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {onManageGuestlists && (
-                <button
-                  onClick={onManageGuestlists}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                >
-                  Manage Guestlists
-                </button>
-              )}
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
+    <AdminModal
+      open
+      onClose={onClose}
+      closeOnBackdrop={false}
+      dismissable={!isSubmitting}
+      size="md"
+      icon={ClipboardList}
+      title="New guestlist"
+      description={event.title}
+      headerActions={
+        onManageGuestlists && (
+          <Button size="sm" variant="ghost" onClick={onManageGuestlists}>
+            View guestlists
+          </Button>
+        )
+      }
+      footer={
+        <>
+          <p className="mr-auto text-xs text-zinc-500">One QR code, scannable {formData.totalTickets}×, emailed to the lead.</p>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form="guestlist-form" icon={Send} loading={isSubmitting}>
+            {isSubmitting ? 'Creating…' : 'Create & send QR'}
+          </Button>
+        </>
+      }
+    >
+      <form id="guestlist-form" onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Lead name" htmlFor="gl-name">
+            <Input id="gl-name" value={formData.leadName} onChange={(e) => handleInputChange('leadName', e.target.value)} placeholder="e.g. John Smith" required autoFocus />
+          </Field>
+          <Field label="Lead email" htmlFor="gl-email">
+            <Input id="gl-email" type="email" value={formData.leadEmail} onChange={(e) => handleInputChange('leadEmail', e.target.value)} placeholder="john@example.com" required />
+          </Field>
+          <Field label="Lead phone" optional htmlFor="gl-phone" className="sm:col-span-2">
+            <Input id="gl-phone" type="tel" value={formData.leadPhone} onChange={(e) => handleInputChange('leadPhone', e.target.value)} placeholder="+44 7…" />
+          </Field>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Lead Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Group Leader Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lead Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.leadName}
-                  onChange={(e) => handleInputChange('leadName', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., John Smith"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lead Email *
-                </label>
-                <input
-                  type="email"
-                  value={formData.leadEmail}
-                  onChange={(e) => handleInputChange('leadEmail', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lead Phone (Optional)
-              </label>
-              <input
-                type="tel"
-                value={formData.leadPhone}
-                onChange={(e) => handleInputChange('leadPhone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="+44 123 456 7890"
-              />
-            </div>
-          </div>
-
-          {/* Category Selection */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Category
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(['free', 'GL', 'tables', 'other'] as const).map((category) => (
+        <Field label="Category">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {CATEGORIES.map((c) => {
+              const active = formData.category === c.value;
+              return (
                 <button
-                  key={category}
+                  key={c.value}
                   type="button"
-                  onClick={() => handleInputChange('category', category)}
-                  className={`px-4 py-3 rounded-lg border-2 font-medium transition-all ${
-                    formData.category === category
-                      ? 'border-blue-600 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                  }`}
+                  onClick={() => handleInputChange('category', c.value)}
+                  className={cn(
+                    'rounded-xl border px-3 py-2.5 text-left transition-all',
+                    active ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm' : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300'
+                  )}
                 >
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                  <span className="block text-sm font-semibold">{c.label}</span>
+                  <span className={cn('block text-xs', active ? 'text-zinc-300' : 'text-zinc-500')}>{c.hint}</span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
+        </Field>
 
-          {/* Ticket Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Ticket Details
-            </h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Number of Tickets *
-              </label>
-              <div className="flex items-center space-x-4">
-                <button
-                  type="button"
-                  onClick={() => handleInputChange('totalTickets', Math.max(1, formData.totalTickets - 1))}
-                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
-                  disabled={formData.totalTickets <= 1}
-                >
-                  -
-                </button>
-                <span className="text-2xl font-bold text-gray-900 min-w-[3rem] text-center">
-                  {formData.totalTickets}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleInputChange('totalTickets', formData.totalTickets + 1)}
-                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                >
-                  +
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                This will create one QR code that can be scanned {formData.totalTickets} times for entry.
-              </p>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Additional Notes
-            </h3>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={3}
-              placeholder="e.g., VIP table, special dietary requirements, arrival time..."
+        <Field label="Number of guests" hint={`The QR code can be scanned ${formData.totalTickets} time${formData.totalTickets === 1 ? '' : 's'} for entry.`}>
+          <div className="inline-flex items-center rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => handleInputChange('totalTickets', Math.max(1, formData.totalTickets - 1))}
+              disabled={formData.totalTickets <= 1}
+              className="grid h-9 w-9 place-items-center rounded-lg text-zinc-600 hover:bg-zinc-100 disabled:opacity-40"
+              aria-label="Fewer guests"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <input
+              type="number"
+              min={1}
+              value={formData.totalTickets}
+              onChange={(e) => handleInputChange('totalTickets', Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-16 bg-transparent text-center text-lg font-semibold tabular-nums text-zinc-900 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
             />
+            <button
+              type="button"
+              onClick={() => handleInputChange('totalTickets', formData.totalTickets + 1)}
+              className="grid h-9 w-9 place-items-center rounded-lg text-zinc-600 hover:bg-zinc-100"
+              aria-label="More guests"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
+        </Field>
 
-          {/* Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Summary</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Event:</span>
-                <span className="font-medium">{event.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Group Leader:</span>
-                <span className="font-medium">{formData.leadName || 'Not specified'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Contact:</span>
-                <span className="font-medium">{formData.leadEmail || 'Not specified'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Total Tickets:</span>
-                <span className="font-medium">{formData.totalTickets}</span>
-              </div>
-              {formData.notes && (
-                <div className="flex justify-between">
-                  <span>Notes:</span>
-                  <span className="font-medium text-gray-600">{formData.notes}</span>
-                </div>
-              )}
-            </div>
+        <Field label="Notes" optional htmlFor="gl-notes">
+          <Textarea
+            id="gl-notes"
+            rows={3}
+            value={formData.notes}
+            onChange={(e) => handleInputChange('notes', e.target.value)}
+            placeholder="e.g. VIP table, arrival time…"
+          />
+        </Field>
+
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-inset ring-red-200">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            {error}
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-800">{error}</p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Creating Guestlist...</span>
-              </>
-            ) : (
-              <>
-                <Send className="h-5 w-5" />
-                <span>Create Guestlist & Send QR Code</span>
-              </>
-            )}
-          </button>
-
-          <div className="text-center text-sm text-gray-500">
-            <p>This will create a guestlist and automatically send a QR code to the group leader.</p>
-            <p>The QR code can be scanned {formData.totalTickets} times for entry.</p>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+        )}
+      </form>
+    </AdminModal>
   );
 };
 

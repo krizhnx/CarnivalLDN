@@ -1,4 +1,4 @@
-import { AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '../../lib/utils';
 import { useSiteThemeStore } from '../../theme/siteTheme';
@@ -6,24 +6,29 @@ import { ADMIN_THEME_SWITCH, HALLOWEEN_END, HALLOWEEN_START, SITE_THEME } from '
 import { JackOLantern } from '../halloween/decorations';
 
 const formatLondon = (iso: string) =>
-  new Date(iso).toLocaleString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/London',
-  });
+  new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
 
 const PreviewLink = () => (
   <a
     href="/?theme=halloween"
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-flex items-center gap-1 text-sm text-gray-500 underline-offset-2 hover:text-gray-800 hover:underline"
+    className="inline-flex items-center gap-0.5 text-xs font-medium text-zinc-500 hover:text-zinc-900"
     title="Preview the Halloween design in a new tab (only you see it)"
   >
-    Preview <ExternalLink className="h-3.5 w-3.5" />
+    Preview <ArrowUpRight className="h-3 w-3" />
   </a>
+);
+
+const Shell = ({ on, children }: { on: boolean; children: React.ReactNode }) => (
+  <div
+    className={cn(
+      'rounded-xl border px-3 py-2.5 text-[13px]',
+      on ? 'border-orange-200 bg-orange-50/70' : 'border-zinc-200 bg-zinc-50/60'
+    )}
+  >
+    {children}
+  </div>
 );
 
 /** Read-only status while the theme is controlled from src/theme/config.ts. */
@@ -32,29 +37,31 @@ const CodeThemeStatus = () => {
   const now = Date.now();
 
   let detail: string;
-  if (SITE_THEME === 'halloween') detail = 'forced on';
-  else if (SITE_THEME === 'default') detail = 'forced off';
-  else if (on) detail = `auto-off ${formatLondon(HALLOWEEN_END)}`;
-  else if (now < Date.parse(HALLOWEEN_START)) detail = `starts ${formatLondon(HALLOWEEN_START)}`;
-  else detail = 'season over';
+  if (SITE_THEME === 'halloween') detail = 'Forced on';
+  else if (SITE_THEME === 'default') detail = 'Forced off';
+  else if (on) detail = `Ends ${formatLondon(HALLOWEEN_END)}`;
+  else if (now < Date.parse(HALLOWEEN_START)) detail = `Starts ${formatLondon(HALLOWEEN_START)}`;
+  else detail = 'Season over';
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div
-        className={cn(
-          'inline-flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm font-medium',
-          on ? 'border-orange-300 bg-orange-50 text-orange-900' : 'border-gray-300 bg-white text-gray-700'
-        )}
-        title="Set in src/theme/config.ts (SITE_THEME) - change it and redeploy"
-      >
-        <JackOLantern className={cn('h-5 w-5', !on && 'grayscale opacity-60')} lit={on} />
-        <span>
-          Halloween mode: <strong className={on ? 'text-orange-600' : 'text-gray-500'}>{on ? 'ON' : 'OFF'}</strong>
+    <Shell on={on}>
+      <div className="flex items-center gap-2" title="Set in src/theme/config.ts (SITE_THEME) - change it and redeploy">
+        <JackOLantern className={cn('h-4 w-4 shrink-0', !on && 'opacity-50 grayscale')} lit={on} />
+        <span className="flex-1 font-medium text-zinc-800">Halloween</span>
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide',
+            on ? 'bg-orange-500 text-white' : 'bg-zinc-200 text-zinc-500'
+          )}
+        >
+          {on ? 'On' : 'Off'}
         </span>
-        <span className="text-xs text-gray-500">· {detail} · set in code</span>
       </div>
-      <PreviewLink />
-    </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2 pl-6">
+        <span className="truncate text-xs text-zinc-500" title="Set in src/theme/config.ts">{detail}</span>
+        <PreviewLink />
+      </div>
+    </Shell>
   );
 };
 
@@ -90,25 +97,20 @@ const AdminThemeSwitch = () => {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label="Halloween mode"
-        onClick={toggle}
-        disabled={busy}
-        className={cn(
-          'group inline-flex items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-wait disabled:opacity-70',
-          on ? 'border-orange-300 bg-orange-50 text-orange-900' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-        )}
-      >
-        <JackOLantern className={cn('h-5 w-5 transition', !on && 'grayscale opacity-60')} lit={on} />
-        <span>Halloween mode</span>
-        <span
+    <Shell on={on}>
+      <div className="flex items-center gap-2">
+        <JackOLantern className={cn('h-4 w-4 shrink-0', !on && 'opacity-50 grayscale')} lit={on} />
+        <span className="flex-1 font-medium text-zinc-800">Halloween</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label="Halloween mode"
+          onClick={toggle}
+          disabled={busy}
           className={cn(
-            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
-            on ? 'bg-orange-500' : 'bg-gray-300'
+            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-wait disabled:opacity-60',
+            on ? 'bg-orange-500' : 'bg-zinc-300'
           )}
         >
           <span
@@ -117,26 +119,26 @@ const AdminThemeSwitch = () => {
               on && 'translate-x-4'
             )}
           >
-            {saving && <Loader2 className="h-3 w-3 animate-spin text-gray-500" />}
+            {saving && <Loader2 className="h-3 w-3 animate-spin text-zinc-500" />}
           </span>
-        </span>
-        <span className={cn('text-xs font-semibold uppercase tracking-wide', on ? 'text-orange-600' : 'text-gray-400')}>
-          {status === 'idle' || status === 'loading' ? '…' : on ? 'Live' : 'Off'}
-        </span>
-      </button>
-
-      <PreviewLink />
-
+        </button>
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2 pl-6">
+        <span className="text-xs text-zinc-500">{status === 'idle' || status === 'loading' ? 'Checking…' : on ? 'Live for everyone' : 'Off'}</span>
+        <PreviewLink />
+      </div>
       {error && (
-        <span className="inline-flex items-center gap-1.5 text-xs text-red-600">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          {error}
-          <button type="button" onClick={() => void refresh()} className="font-semibold underline">
-            Retry
-          </button>
-        </span>
+        <p className="mt-2 flex items-start gap-1.5 pl-6 text-xs text-red-600">
+          <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+          <span>
+            {error}{' '}
+            <button type="button" onClick={() => void refresh()} className="font-semibold underline">
+              Retry
+            </button>
+          </span>
+        </p>
       )}
-    </div>
+    </Shell>
   );
 };
 

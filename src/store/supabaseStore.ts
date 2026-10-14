@@ -153,7 +153,6 @@ export const useAppStore = create<AppState>()(
             }
           })
 
-          console.log('Events with tiers:', eventsWithTiers)
           set({ events: eventsWithTiers, isLoading: false })
         } catch (error) {
           console.error('Error fetching events:', error)
@@ -181,8 +180,6 @@ export const useAppStore = create<AppState>()(
             // Remove created_at and updated_at - let the database handle them
           }
 
-          console.log('Adding new event:', newEvent)
-
           // First, insert the event
           const { data: eventResult, error: eventError } = await supabase
             .from('events')
@@ -194,8 +191,6 @@ export const useAppStore = create<AppState>()(
             console.error('Supabase insert error:', eventError)
             throw eventError
           }
-
-          console.log('Event added successfully, now adding ticket tiers')
 
           // If there are ticket tiers, save them to the ticket_tiers table
           if (eventData.ticketTiers && eventData.ticketTiers.length > 0) {
@@ -215,11 +210,7 @@ export const useAppStore = create<AppState>()(
               last_entry_time: tier.lastEntryTime || null,
             }))
 
-            console.log('Inserting ticket tiers:', ticketTiersToInsert)
-
-            console.log('About to insert ticket tiers into database:', ticketTiersToInsert)
-
-            const { data: tiersResult, error: tiersError } = await supabase
+            const { error: tiersError } = await supabase
               .from('ticket_tiers')
               .insert(ticketTiersToInsert)
               .select()
@@ -229,7 +220,6 @@ export const useAppStore = create<AppState>()(
               console.error('Error details:', tiersError.details, tiersError.hint, tiersError.message)
               // Don't throw here, just log the error
             } else {
-              console.log('Ticket tiers added successfully:', tiersResult)
             }
           }
 
@@ -257,8 +247,6 @@ export const useAppStore = create<AppState>()(
             gradient: eventData.gradient,
             // Remove updated_at - let the database handle it automatically
           }
-
-          console.log('Updating event with data:', updatedEvent)
 
           const { error } = await supabase
             .from('events')
@@ -300,8 +288,6 @@ export const useAppStore = create<AppState>()(
                 last_entry_time: tier.lastEntryTime || null,
               }))
 
-              console.log('Updating ticket tiers:', ticketTiersToInsert)
-
               const { error: tiersError } = await supabase
                 .from('ticket_tiers')
                 .insert(ticketTiersToInsert)
@@ -309,12 +295,10 @@ export const useAppStore = create<AppState>()(
               if (tiersError) {
                 console.error('Error updating ticket tiers:', tiersError)
               } else {
-                console.log('Ticket tiers updated successfully')
               }
             }
           }
 
-          console.log('Event updated successfully')
           // Refresh events
           await get().getEvents()
         } catch (error) {
@@ -357,12 +341,10 @@ export const useAppStore = create<AppState>()(
           }
 
           if ((eventOrders || []).length > 0) {
-            console.log(`📊 Event has ${(eventOrders || []).length} orders - proceeding with deletion of all related data`)
           }
 
           // If archived, hard-delete dependent data first to avoid FK conflicts
           if (isArchived) {
-            console.log(`🗑️ Deleting archived event ${id} and all related data...`)
             
             // Delete in reverse dependency order to avoid FK conflicts
             
@@ -375,7 +357,6 @@ export const useAppStore = create<AppState>()(
             if (scansDeleteError) {
               console.error('Error deleting ticket_scans for event:', scansDeleteError)
             } else {
-              console.log('✅ Deleted ticket_scans for event')
             }
 
             // 2. Delete guestlist_scans (they reference events)
@@ -387,7 +368,6 @@ export const useAppStore = create<AppState>()(
             if (guestlistScansError) {
               console.error('Error deleting guestlist_scans for event:', guestlistScansError)
             } else {
-              console.log('✅ Deleted guestlist_scans for event')
             }
 
             // 3. Collect order ids for this event
@@ -403,7 +383,6 @@ export const useAppStore = create<AppState>()(
             const orderIds = (ordersToDelete || []).map(o => o.id)
 
             if (orderIds.length > 0) {
-              console.log(`🗑️ Deleting ${orderIds.length} orders and related data...`)
               
               // 4. Delete order_tickets referencing those orders
               const { error: otDeleteError } = await supabase
@@ -414,7 +393,6 @@ export const useAppStore = create<AppState>()(
               if (otDeleteError) {
                 console.error('Error deleting order_tickets for event:', otDeleteError)
               } else {
-                console.log('✅ Deleted order_tickets for event')
               }
 
               // 5. Delete orders for the event
@@ -426,7 +404,6 @@ export const useAppStore = create<AppState>()(
               if (ordersDeleteError) {
                 console.error('Error deleting orders for event:', ordersDeleteError)
               } else {
-                console.log('✅ Deleted orders for event')
               }
             }
 
@@ -439,7 +416,6 @@ export const useAppStore = create<AppState>()(
             if (guestlistsError) {
               console.error('Error deleting guestlists for event:', guestlistsError)
             } else {
-              console.log('✅ Deleted guestlists for event')
             }
           }
 
@@ -503,22 +479,18 @@ export const useAppStore = create<AppState>()(
           .channel('events')
           .on('postgres_changes',
             { event: '*', schema: 'public', table: 'events' },
-            (payload) => {
-              console.log('Database change detected:', payload)
+            () => {
               // Refresh events when database changes
               get().getEvents()
             }
           )
-          .subscribe((status) => {
-            console.log('Subscription status:', status)
-          })
+          .subscribe()
 
         return subscription
       },
 
       getOrders: async () => {
         try {
-          console.log('🔄 Fetching orders with tickets and scans...')
 
           // Fetch orders
           const { data: ordersData, error: ordersError } = await supabase
@@ -597,7 +569,6 @@ export const useAppStore = create<AppState>()(
             })
           )
 
-          console.log('📦 Orders with tickets and scans (mapped):', mappedOrders)
           set({ orders: mappedOrders })
         } catch (error) {
           console.error('Error fetching orders:', error)
@@ -668,7 +639,6 @@ export const useAppStore = create<AppState>()(
       // Ticket scanning actions
       validateTicket: async (orderId: string, ticketTierId: string, customerEmail: string, scanType: 'entry' | 'exit' = 'entry'): Promise<TicketValidationResult> => {
         try {
-          console.log('🔍 Validating ticket:', { orderId, ticketTierId, customerEmail });
 
           // Get ticket quantity from order_tickets
           const { data: orderTicket, error: orderTicketError } = await supabase
@@ -681,11 +651,9 @@ export const useAppStore = create<AppState>()(
           if (orderTicketError || !orderTicket) {
             console.error('Error fetching order ticket quantity:', orderTicketError);
             // Fallback: assume quantity is 1 if we can't find it
-            console.log('⚠️ Could not find order ticket, assuming quantity 1');
           }
 
           const ticketQuantity = orderTicket?.quantity || 1;
-          console.log('🎫 Ticket quantity:', ticketQuantity);
 
           // Check existing scans based on scan type
           if (scanType === 'entry') {
@@ -702,11 +670,9 @@ export const useAppStore = create<AppState>()(
             }
 
             const scanCount = existingEntryScans?.length || 0;
-            console.log(`🔢 Entry scans: ${scanCount}/${ticketQuantity}`);
 
             // If already scanned the maximum number of times, return error
             if (scanCount >= ticketQuantity) {
-              console.log(`❌ Ticket already scanned ${scanCount} times (max: ${ticketQuantity})`);
               return {
                 isValid: false,
                 message: `Ticket already scanned ${scanCount} time${scanCount > 1 ? 's' : ''} (maximum: ${ticketQuantity})`,
@@ -732,7 +698,6 @@ export const useAppStore = create<AppState>()(
 
             // Must have entry scan before exit scan
             if (!existingEntryScans || existingEntryScans.length === 0) {
-              console.log('❌ Cannot exit without entry scan');
               return {
                 isValid: false,
                 message: 'Cannot exit without entry scan',
@@ -756,11 +721,9 @@ export const useAppStore = create<AppState>()(
             }
 
             const exitScanCount = existingExitScans?.length || 0;
-            console.log(`🔢 Exit scans: ${exitScanCount}/${ticketQuantity}`);
 
             // If already scanned the maximum number of times for exit, return error
             if (exitScanCount >= ticketQuantity) {
-              console.log(`❌ Ticket already scanned for exit ${exitScanCount} times (max: ${ticketQuantity})`);
               return {
                 isValid: false,
                 message: `Ticket already scanned for exit ${exitScanCount} time${exitScanCount > 1 ? 's' : ''} (maximum: ${ticketQuantity})`,
@@ -782,7 +745,6 @@ export const useAppStore = create<AppState>()(
             .single();
 
           if (orderError || !orderData) {
-            console.log('❌ Order not found:', { orderError, orderId, customerEmail });
             
             // Try to find the order without email constraint to debug
             const { data: orderWithoutEmail } = await supabase
@@ -792,10 +754,6 @@ export const useAppStore = create<AppState>()(
               .single();
             
             if (orderWithoutEmail) {
-              console.log('🔍 Order found but email mismatch:', { 
-                orderEmail: orderWithoutEmail.customer_email, 
-                scannedEmail: customerEmail 
-              });
               return {
                 isValid: false,
                 message: 'Customer email does not match order',
@@ -816,11 +774,8 @@ export const useAppStore = create<AppState>()(
             };
           }
 
-          console.log('✅ Order found:', orderData);
-
           // Check if payment is completed
           if (orderData.status !== 'completed') {
-            console.log('❌ Payment not completed:', orderData.status);
             return {
               isValid: false,
               message: 'Payment not completed',
@@ -839,7 +794,6 @@ export const useAppStore = create<AppState>()(
             .single();
 
           if (eventError || !eventData) {
-            console.log('❌ Event not found:', eventError);
             return {
               isValid: false,
               message: 'Event not found',
@@ -850,12 +804,9 @@ export const useAppStore = create<AppState>()(
             };
           }
 
-          console.log('✅ Event found:', eventData);
-
           // Check if event date hasn't passed
           const eventDate = eventData.date;
           if (eventDate && new Date(eventDate) < new Date()) {
-            console.log('❌ Event has passed:', eventDate);
             return {
               isValid: false,
               message: 'Event has passed',
@@ -867,7 +818,6 @@ export const useAppStore = create<AppState>()(
           }
 
           // Check if ticket tier exists and is active
-          console.log('🔍 Looking for ticket tier:', { ticketTierId, orderEventId: orderData.event_id });
           
           const { data: tierData, error: tierError } = await supabase
             .from('ticket_tiers')
@@ -876,20 +826,7 @@ export const useAppStore = create<AppState>()(
             .single();
 
           if (tierError || !tierData) {
-            console.log('❌ Ticket tier not found:', { ticketTierId, error: tierError });
-            
-            // Try to find any ticket tiers for this event to debug
-            const { data: allTiersForEvent, error: allTiersError } = await supabase
-              .from('ticket_tiers')
-              .select('*')
-              .eq('event_id', orderData.event_id);
-            
-            console.log('🔍 All ticket tiers for this event:', { 
-              eventId: orderData.event_id, 
-              tiers: allTiersForEvent, 
-              error: allTiersError 
-            });
-            
+
             return {
               isValid: false,
               message: 'Ticket tier not found',
@@ -902,10 +839,6 @@ export const useAppStore = create<AppState>()(
 
           // Verify the ticket tier belongs to the correct event
           if (tierData.event_id !== orderData.event_id) {
-            console.log('❌ Ticket tier does not belong to this event:', { 
-              tierEventId: tierData.event_id, 
-              orderEventId: orderData.event_id 
-            });
             return {
               isValid: false,
               message: 'Ticket tier does not belong to this event',
@@ -916,15 +849,12 @@ export const useAppStore = create<AppState>()(
             };
           }
 
-          console.log('✅ Ticket tier found:', tierData);
-
           // Note: We don't check is_active here because it only controls whether new tickets
           // can be purchased, not whether existing tickets are valid for entry.
           // Tickets purchased when the tier was active should remain valid even if
           // the tier is later marked as inactive (e.g., sold out).
 
           // All validations passed
-          console.log('✅ Ticket validation successful');
           return {
             isValid: true,
             message: `Ticket is valid for ${scanType}`,
@@ -979,7 +909,6 @@ export const useAppStore = create<AppState>()(
       // Search for specific tickets
       searchTickets: async (searchTerm: string): Promise<TicketSearchResult[]> => {
         try {
-          console.log('🔍 Searching for tickets with term:', searchTerm)
           
           // Search in orders table by customer name, email, or order ID
           const { data: ordersData, error: ordersError } = await supabase
@@ -1070,7 +999,6 @@ export const useAppStore = create<AppState>()(
 
           // Flatten the results since each order can have multiple tickets
           const flattenedResults: TicketSearchResult[] = searchResults.flat()
-          console.log('🔍 Search results:', flattenedResults)
           return flattenedResults
 
         } catch (error) {
@@ -1173,9 +1101,8 @@ export const useAppStore = create<AppState>()(
       },
 
       // Guestlist validation
-      validateGuestlist: async (guestlistId: string, scanType: 'entry' | 'exit' = 'entry'): Promise<TicketValidationResult> => {
+      validateGuestlist: async (guestlistId: string, _scanType: 'entry' | 'exit' = 'entry'): Promise<TicketValidationResult> => {
         try {
-          console.log('🔍 Validating guestlist:', { guestlistId, scanType });
 
           // Check if guestlist exists and can be scanned
           const { data: guestlist, error: guestlistError } = await supabase
@@ -1185,7 +1112,6 @@ export const useAppStore = create<AppState>()(
             .single();
 
           if (guestlistError || !guestlist) {
-            console.log('❌ Guestlist not found:', guestlistError);
             return {
               isValid: false,
               message: 'Guestlist not found',
@@ -1198,7 +1124,6 @@ export const useAppStore = create<AppState>()(
 
           // Check if remaining scans > 0
           if (guestlist.remaining_scans <= 0) {
-            console.log('❌ No remaining scans for guestlist');
             return {
               isValid: false,
               message: 'All tickets from this group pass have been used',
@@ -1217,7 +1142,6 @@ export const useAppStore = create<AppState>()(
             .single();
 
           if (eventError || !event) {
-            console.log('❌ Event not found:', eventError);
             return {
               isValid: false,
               message: 'Event not found',
@@ -1231,7 +1155,6 @@ export const useAppStore = create<AppState>()(
           // Check if event date hasn't passed
           const eventDate = event.date;
           if (eventDate && new Date(eventDate) < new Date()) {
-            console.log('❌ Event has passed:', eventDate);
             return {
               isValid: false,
               message: 'Event has passed',
@@ -1243,7 +1166,6 @@ export const useAppStore = create<AppState>()(
           }
 
           // All validations passed
-          console.log('✅ Guestlist validation successful');
           return {
             isValid: true,
             message: `Group pass valid - ${guestlist.remaining_scans} tickets remaining`,
@@ -1367,8 +1289,6 @@ export const useAppStore = create<AppState>()(
       // Affiliate tracking actions
       getAffiliateSocieties: async () => {
         try {
-          console.log('🔍 Fetching affiliate societies from Supabase...');
-          console.log('🔗 Supabase client:', supabase);
           
           const { data: societies, error } = await supabase
             .from('affiliate_societies')
@@ -1379,8 +1299,6 @@ export const useAppStore = create<AppState>()(
             console.error('❌ Error fetching affiliate societies:', error);
             throw error;
           }
-
-          console.log('📊 Raw societies data from Supabase:', societies);
 
           const transformedSocieties = (societies || []).map(society => ({
             id: society.id,
@@ -1397,7 +1315,6 @@ export const useAppStore = create<AppState>()(
             updatedAt: society.updated_at,
           }));
 
-          console.log('✅ Transformed societies:', transformedSocieties);
           set({ affiliateSocieties: transformedSocieties });
         } catch (error) {
           console.error('Error fetching affiliate societies:', error);
@@ -1519,7 +1436,6 @@ export const useAppStore = create<AppState>()(
 
           if (linkIds.length > 0) {
             // Step 1: Delete all affiliate clicks associated with these links
-            console.log('🗑️ Deleting affiliate clicks for links:', linkIds);
             const { error: clicksError } = await supabase
               .from('affiliate_clicks')
               .delete()
@@ -1531,7 +1447,6 @@ export const useAppStore = create<AppState>()(
             }
 
             // Step 2: Delete all affiliate links associated with this society
-            console.log('🗑️ Deleting affiliate links for society:', id);
             const { error: linksError } = await supabase
               .from('affiliate_links')
               .delete()
@@ -1544,7 +1459,6 @@ export const useAppStore = create<AppState>()(
           }
 
           // Step 3: Delete the society itself
-          console.log('🗑️ Deleting society:', id);
           const { error: societyError } = await supabase
             .from('affiliate_societies')
             .delete()
@@ -1571,7 +1485,6 @@ export const useAppStore = create<AppState>()(
 
       getAffiliateLinks: async () => {
         try {
-          console.log('🔍 Fetching affiliate links from Supabase...');
           const { data: links, error } = await supabase
             .from('affiliate_links')
             .select('*')
@@ -1581,8 +1494,6 @@ export const useAppStore = create<AppState>()(
             console.error('❌ Error fetching affiliate links:', error);
             throw error;
           }
-
-          console.log('📊 Raw links data from Supabase:', links);
 
           const transformedLinks = (links || []).map(link => ({
             id: link.id,
@@ -1594,7 +1505,6 @@ export const useAppStore = create<AppState>()(
             createdAt: link.created_at,
           }));
 
-          console.log('✅ Transformed links:', transformedLinks);
           set({ affiliateLinks: transformedLinks });
         } catch (error) {
           console.error('Error fetching affiliate links:', error);

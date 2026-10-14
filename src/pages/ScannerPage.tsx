@@ -1,12 +1,6 @@
 import React from 'react';
 import TicketScanner from '../TicketScanner/TicketScanner';
 
-const ScannerPage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <TicketScanner />
-    </div>
-  );
-};
+const ScannerPage: React.FC = () => <TicketScanner />;
 
 export default ScannerPage;

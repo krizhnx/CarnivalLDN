@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Users, Mail, Phone, GraduationCap, Tag, Percent } from 'lucide-react';
+import { Users, Wand2 } from 'lucide-react';
 import { AffiliateSociety, AffiliateFormData } from '../types';
 import toast from 'react-hot-toast';
+import { AdminModal } from './admin/Modal';
+import { Button, Field, Input, Select } from './admin/ui';
 
 interface AffiliateSocietyModalProps {
   isOpen: boolean;
@@ -10,17 +12,19 @@ interface AffiliateSocietyModalProps {
   editingSociety?: AffiliateSociety | null;
 }
 
+const EMPTY: AffiliateFormData = {
+  name: '',
+  code: '',
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  university: '',
+  societyType: '',
+  commissionRate: 5.0,
+};
+
 const AffiliateSocietyModal = ({ isOpen, onClose, onSave, editingSociety }: AffiliateSocietyModalProps) => {
-  const [formData, setFormData] = useState<AffiliateFormData>({
-    name: '',
-    code: '',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
-    university: '',
-    societyType: '',
-    commissionRate: 5.0
-  });
+  const [formData, setFormData] = useState<AffiliateFormData>(EMPTY);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -33,25 +37,18 @@ const AffiliateSocietyModal = ({ isOpen, onClose, onSave, editingSociety }: Affi
         contactPhone: editingSociety.contactPhone || '',
         university: editingSociety.university || '',
         societyType: editingSociety.societyType || '',
-        commissionRate: editingSociety.commissionRate
+        commissionRate: editingSociety.commissionRate,
       });
     } else {
-      setFormData({
-        name: '',
-        code: '',
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
-        university: '',
-        societyType: '',
-        commissionRate: 5.0
-      });
+      setFormData(EMPTY);
     }
   }, [editingSociety, isOpen]);
 
+  const set = <K extends keyof AffiliateFormData>(key: K, value: AffiliateFormData[K]) => setFormData((prev) => ({ ...prev, [key]: value }));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.code.trim()) {
       toast.error('Society name and code are required');
       return;
@@ -60,7 +57,7 @@ const AffiliateSocietyModal = ({ isOpen, onClose, onSave, editingSociety }: Affi
     setIsLoading(true);
     try {
       await onSave(formData);
-      toast.success(editingSociety ? 'Society updated successfully!' : 'Society created successfully!');
+      toast.success(editingSociety ? 'Society updated' : 'Society created');
       onClose();
     } catch (error) {
       console.error('Error saving society:', error);
@@ -77,203 +74,105 @@ const AffiliateSocietyModal = ({ isOpen, onClose, onSave, editingSociety }: Affi
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, '-')
         .substring(0, 20);
-      setFormData(prev => ({ ...prev, code }));
+      set('code', code);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {editingSociety ? 'Edit Society' : 'Add New Society'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+    <AdminModal
+      open={isOpen}
+      onClose={onClose}
+      closeOnBackdrop={false}
+      size="md"
+      icon={Users}
+      title={editingSociety ? 'Edit society' : 'Add society'}
+      description={editingSociety ? editingSociety.name : 'Track sales from a university society'}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit" form="society-form" loading={isLoading}>
+            {editingSociety ? 'Save changes' : 'Create society'}
+          </Button>
+        </>
+      }
+    >
+      <form id="society-form" onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <Field label="Society name" htmlFor="soc-name" className="sm:col-span-2">
+          <Input id="soc-name" value={formData.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Imperial College Bollywood Society" required autoFocus />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Society Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Users className="inline h-4 w-4 mr-2" />
-              Society Name *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="e.g., Imperial College Bollywood Society"
-              required
+        <Field
+          label="Tracking code"
+          htmlFor="soc-code"
+          className="sm:col-span-2"
+          hint={
+            <>
+              Used in links: <span className="font-mono">carnivalldn.com/events?event=…&ref={formData.code || 'code'}</span>
+            </>
+          }
+        >
+          <div className="flex gap-2">
+            <Input id="soc-code" value={formData.code} onChange={(e) => set('code', e.target.value)} placeholder="e.g. imperial-bollywood" className="font-mono" required />
+            <Button icon={Wand2} onClick={generateCode} disabled={!formData.name} className="h-10">
+              Generate
+            </Button>
+          </div>
+        </Field>
+
+        <Field label="Contact name" optional htmlFor="soc-contact">
+          <Input id="soc-contact" value={formData.contactName} onChange={(e) => set('contactName', e.target.value)} placeholder="e.g. John Smith" />
+        </Field>
+        <Field label="Contact email" optional htmlFor="soc-email">
+          <Input id="soc-email" type="email" value={formData.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} placeholder="john@imperial.ac.uk" />
+        </Field>
+        <Field label="Contact phone" optional htmlFor="soc-phone">
+          <Input id="soc-phone" type="tel" value={formData.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} placeholder="+44 …" />
+        </Field>
+        <Field label="Commission" htmlFor="soc-rate" hint="% of ticket sales through their links">
+          <div className="relative">
+            <Input
+              id="soc-rate"
+              type="number"
+              min="0"
+              max="50"
+              step="0.1"
+              value={formData.commissionRate}
+              onChange={(e) => set('commissionRate', parseFloat(e.target.value) || 0)}
+              className="pr-8"
             />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">%</span>
           </div>
+        </Field>
 
-          {/* Society Code */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Tag className="inline h-4 w-4 mr-2" />
-              Society Code *
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={formData.code}
-                onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., imperial-bollywood"
-                required
-              />
-              <button
-                type="button"
-                onClick={generateCode}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Generate
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Used in tracking URLs: carnivalldn.com/events/bollywood-night?ref={formData.code}</p>
-          </div>
-
-          {/* Contact Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Users className="inline h-4 w-4 mr-2" />
-                Contact Name
-              </label>
-              <input
-                type="text"
-                value={formData.contactName}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactName: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., John Smith"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Mail className="inline h-4 w-4 mr-2" />
-                Contact Email
-              </label>
-              <input
-                type="email"
-                value={formData.contactEmail}
-                onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., john@imperial.ac.uk"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Phone className="inline h-4 w-4 mr-2" />
-              Contact Phone
-            </label>
-            <input
-              type="tel"
-              value={formData.contactPhone}
-              onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="e.g., +44 20 7589 5111"
-            />
-          </div>
-
-          {/* University and Society Type */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <GraduationCap className="inline h-4 w-4 mr-2" />
-                University
-              </label>
-              <select
-                value={formData.university}
-                onChange={(e) => setFormData(prev => ({ ...prev, university: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">Select University</option>
-                <option value="Imperial College London">Imperial College London</option>
-                <option value="University College London">University College London</option>
-                <option value="King's College London">King's College London</option>
-                <option value="London School of Economics">London School of Economics</option>
-                <option value="Queen Mary University">Queen Mary University</option>
-                <option value="City University London">City University London</option>
-                <option value="Brunel University">Brunel University</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Tag className="inline h-4 w-4 mr-2" />
-                Society Type
-              </label>
-              <select
-                value={formData.societyType}
-                onChange={(e) => setFormData(prev => ({ ...prev, societyType: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">Select Type</option>
-                <option value="bollywood">Bollywood/Cultural</option>
-                <option value="cultural">Cultural Society</option>
-                <option value="music">Music Society</option>
-                <option value="dance">Dance Society</option>
-                <option value="social">Social Society</option>
-                <option value="general">General</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Commission Rate */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Percent className="inline h-4 w-4 mr-2" />
-              Commission Rate (%)
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                max="50"
-                step="0.1"
-                value={formData.commissionRate}
-                onChange={(e) => setFormData(prev => ({ ...prev, commissionRate: parseFloat(e.target.value) || 0 }))}
-                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="5.0"
-              />
-              <span className="text-sm text-gray-500">% of ticket sales</span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Commission paid to society for each ticket sold through their links</p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Saving...' : (editingSociety ? 'Update Society' : 'Create Society')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Field label="University" optional htmlFor="soc-uni">
+          <Select id="soc-uni" value={formData.university} onChange={(e) => set('university', e.target.value)}>
+            <option value="">Select university</option>
+            <option value="Imperial College London">Imperial College London</option>
+            <option value="University College London">University College London</option>
+            <option value="King's College London">King's College London</option>
+            <option value="London School of Economics">London School of Economics</option>
+            <option value="Queen Mary University">Queen Mary University</option>
+            <option value="City University London">City University London</option>
+            <option value="Brunel University">Brunel University</option>
+            <option value="Other">Other</option>
+          </Select>
+        </Field>
+        <Field label="Society type" optional htmlFor="soc-type">
+          <Select id="soc-type" value={formData.societyType} onChange={(e) => set('societyType', e.target.value)}>
+            <option value="">Select type</option>
+            <option value="bollywood">Bollywood/Cultural</option>
+            <option value="cultural">Cultural Society</option>
+            <option value="music">Music Society</option>
+            <option value="dance">Dance Society</option>
+            <option value="social">Social Society</option>
+            <option value="general">General</option>
+            <option value="other">Other</option>
+          </Select>
+        </Field>
+      </form>
+    </AdminModal>
   );
 };
 

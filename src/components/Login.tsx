@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAppStore } from '../store/supabaseStore';
 import { LoginFormData } from '../types';
 import toast from 'react-hot-toast';
+import { Button, Field, Input } from './admin/ui';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,81 +25,51 @@ const Login = () => {
     const success = await login(data.email, data.password);
 
     if (success) {
-      toast.success('Welcome back, Admin!');
+      toast.success('Welcome back');
       navigate('/admin/dashboard');
     } else {
       setError('Invalid email or password');
-      toast.error('Invalid email or password');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-start justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8" style={{ paddingTop: '20vh' }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8"
-      >
-        <div>
+    <div className="flex min-h-screen bg-[#f6f6f7] font-sans text-zinc-900 antialiased">
+      {/* Form */}
+      <div className="flex flex-1 flex-col px-6 py-8 sm:px-12">
+        <Link to="/" className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-zinc-500 hover:text-zinc-900">
+          <ArrowLeft className="h-4 w-4" />
+          Back to site
+        </Link>
+
+        <div className="flex flex-1 items-center justify-center py-12">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="flex justify-center mb-6"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="w-full max-w-sm"
           >
-            <img
-              src="/carnival-logo.svg"
-              alt="Carnival LDN"
-              className="h-14 w-auto pr-5 mb-8"
-            />
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-center text-3xl font-extrabold text-gray-900"
-          >
-            Admin Login
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-2 text-center text-sm text-gray-600"
-          >
-            Sign in to access the dashboard
-          </motion.p>
-        </div>
+            <div className="flex items-center gap-2.5">
+              <img src="/carnival-logo.svg" alt="Carnival LDN" className="h-9 w-auto" />
+              <span className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">Admin</span>
+            </div>
+            <h1 className="mt-8 text-2xl font-semibold tracking-tight text-zinc-900">Welcome back</h1>
+            <p className="mt-1.5 text-sm text-zinc-500">Sign in to manage events, orders and guestlists.</p>
 
-        <motion.form
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 space-y-6"
-          onSubmit={handleSubmit(onSubmit)}
-        >
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center space-x-2"
-            >
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <span className="text-sm text-red-600">{error}</span>
-            </motion.div>
-          )}
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700 ring-1 ring-inset ring-red-200"
+                  role="alert"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {error}
+                </motion.div>
+              )}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
+              <Field label="Email" htmlFor="email" error={errors.email?.message}>
+                <Input
                   {...register('email', {
                     required: 'Email is required',
                     pattern: {
@@ -109,75 +80,66 @@ const Login = () => {
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-900 focus:border-gray-900 focus:z-10 sm:text-sm"
-                  placeholder="Enter your email"
+                  autoFocus
+                  placeholder="you@carnivalldn.com"
+                  leading={<Mail className="h-4 w-4" />}
+                  invalid={!!errors.email}
+                  className="h-11"
                 />
-              </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+              </Field>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-20">
-                  <Lock className="h-5 w-5 text-gray-400" />
+              <Field label="Password" htmlFor="password" error={errors.password?.message}>
+                <div className="relative">
+                  <Input
+                    {...register('password', {
+                      required: 'Password is required',
+                      minLength: {
+                        value: 6,
+                        message: 'Password must be at least 6 characters',
+                      },
+                    })}
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    leading={<Lock className="h-4 w-4" />}
+                    invalid={!!errors.password}
+                    className="h-11 pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400 hover:text-zinc-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-                <input
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters',
-                    },
-                  })}
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  className="appearance-none relative block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-gray-900 focus:border-gray-900 focus:z-10 sm:text-sm"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center z-20"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
-          </div>
+              </Field>
 
-          <div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Signing in...</span>
-                </div>
-              ) : (
-                'Sign in'
-              )}
-            </motion.button>
+              <Button type="submit" variant="primary" size="lg" loading={isLoading} className="w-full">
+                {isLoading ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+          </motion.div>
+        </div>
+
+        <p className="text-xs text-zinc-400">© {new Date().getFullYear()} Carnival LDN</p>
+      </div>
+
+      {/* Visual */}
+      <div className="hidden p-3 lg:block lg:w-[48%] xl:w-[52%]">
+        <div className="relative h-full overflow-hidden rounded-[28px] bg-zinc-900">
+          <img src="/hero/hero-wide-poster.jpg" alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" />
+          <div className="absolute inset-x-0 bottom-0 p-10">
+            <p className="text-[13px] font-medium uppercase tracking-[0.18em] text-white/60">Carnival LDN</p>
+            <p className="mt-3 max-w-md text-3xl font-semibold leading-tight tracking-tight text-white">
+              Events, orders, guestlists and the door — in one place.
+            </p>
           </div>
-        </motion.form>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 };
