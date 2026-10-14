@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { useGlitchEffect } from '../hooks/useGlitchEffect'
+import { cn } from '../lib/utils'
 import Footer from './Footer'
+import { SectionGlow, SectionHeading, sectionBg } from './ui/section'
 
 const galleryImages = [
   {
@@ -51,55 +52,35 @@ const galleryImages = [
 ]
 
 const Gallery = () => {
-  // Glitch effect for title
-  const { glitchRef, isGlitching, glitchType } = useGlitchEffect();
-
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header */}
-      <div className="pt-40 pb-16 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <motion.h1
-            ref={glitchRef}
-            animate={{
-              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 pb-1 glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
-            data-text="GALLERY"
-            style={{
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em'
-            }}
-          >
-            GALLERY
-          </motion.h1>
-        </div>
-      </div>
+    <div className={cn(sectionBg, 'min-h-screen')}>
+      <SectionGlow />
 
-      {/* Gallery Grid */}
-      <div className="px-4 pb-16">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {galleryImages.map((image, index) => (
-              <motion.div
-                key={image.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="group relative overflow-hidden rounded-lg cursor-pointer"
-              >
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    loading="lazy"
-                  />
-                </div>
-              </motion.div>
-            ))}
-          </div>
+      <div className="relative z-10 mx-auto max-w-6xl px-3 pb-16 pt-28 md:px-6 md:pb-24 md:pt-36 lg:px-8">
+        <SectionHeading as="h1" title="GALLERY" pill="Moments from our nights out across London" />
+
+        {/* 2-up on phones, 3-up on desktop; first shot spans wide as a hero tile */}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-4">
+          {galleryImages.map((image, index) => (
+            <motion.div
+              key={image.id}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.5, delay: (index % 3) * 0.06, ease: [0.22, 1, 0.36, 1] }}
+              className={cn(
+                'group relative overflow-hidden rounded-2xl bg-surface-2 ring-1 ring-white/10 md:rounded-3xl',
+                index === 0 ? 'col-span-2 aspect-[16/10] md:row-span-2 md:aspect-auto' : 'aspect-[4/5]'
+              )}
+            >
+              <img
+                src={image.src}
+                alt={image.alt}
+                loading={index < 3 ? 'eager' : 'lazy'}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+              />
+            </motion.div>
+          ))}
         </div>
       </div>
 

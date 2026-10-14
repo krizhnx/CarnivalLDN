@@ -2,6 +2,8 @@ import { motion } from 'framer-motion'
 import { FileText, CheckCircle, AlertTriangle, Users, Calendar, CreditCard } from 'lucide-react'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
 import SEO from './SEO'
+import Navbar from './Navbar'
+import Footer from './Footer'
 
 const TermsOfService = () => {
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
@@ -75,25 +77,26 @@ const TermsOfService = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white py-20 px-4">
+    <div className="min-h-screen bg-surface text-white">
+      <Navbar />
       <SEO 
         title="Terms of Service"
         description="Carnival LDN Terms of Service - Read our terms and conditions for using our event services and website."
         keywords="Carnival LDN terms of service, event booking terms, London events terms, party planning terms, event company terms"
       />
-      <div className="max-w-4xl mx-auto">
+      <div className="mx-auto max-w-3xl px-4 pb-16 pt-28 md:pt-36">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          className="mb-10 text-center md:mb-14"
         >
 
           
           <motion.h1
             ref={glitchRef}
-            className={`text-5xl md:text-6xl font-bold mb-6 glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
+            className={`text-4xl md:text-6xl mb-5 glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
             data-text="TERMS OF SERVICE"
             style={{
               textTransform: 'uppercase',
@@ -107,7 +110,7 @@ const TermsOfService = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-xl text-gray-300 max-w-2xl mx-auto"
+            className="mx-auto max-w-xl text-base text-white/65 md:text-lg"
           >
             Please read these terms carefully before using our services. They govern your relationship with Carnival LDN.
           </motion.p>
@@ -116,7 +119,7 @@ const TermsOfService = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="text-sm text-gray-400 mt-4"
+            className="mt-4 text-xs text-white/40"
           >
             Last updated: {new Date().toLocaleDateString('en-GB', { 
               day: 'numeric', 
@@ -131,36 +134,36 @@ const TermsOfService = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="bg-white/5 border border-white/20 rounded-2xl p-8 mb-12 backdrop-blur-sm"
+          className="mb-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8"
         >
-          <h2 className="text-2xl font-bold mb-4 text-white">Agreement to Terms</h2>
-          <p className="text-gray-300 leading-relaxed">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight text-white md:text-xl">Agreement to Terms</h2>
+          <p className="text-white/70 leading-relaxed">
             These Terms of Service ("Terms") govern your use of Carnival LDN's website, services, and events. By accessing or using our services, you agree to be bound by these Terms. If you disagree with any part of these terms, then you may not access our services.
           </p>
         </motion.div>
 
         {/* Main Sections */}
-        <div className="space-y-8">
+        <div className="space-y-4">
           {sections.map((section, index) => (
             <motion.div
               key={section.title}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 + index * 0.1 }}
-              className="bg-white/5 border border-white/20 rounded-2xl p-8 backdrop-blur-sm hover:bg-white/10 transition-all duration-300"
+              className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8"
             >
               <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mr-4">
-                  <section.icon className="w-6 h-6 text-white" />
+                <div className="mr-4 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/[0.06] ring-1 ring-white/10">
+                  <section.icon className="h-5 w-5 text-accent" />
                 </div>
-                <h3 className="text-2xl font-bold text-white">{section.title}</h3>
+                <h3 className="text-lg font-semibold tracking-tight text-white md:text-xl">{section.title}</h3>
               </div>
               
               <ul className="space-y-3">
                 {section.content.map((item, itemIndex) => (
                   <li key={itemIndex} className="flex items-start">
-                    <span className="w-2 h-2 bg-white rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                    <span className="text-gray-300 leading-relaxed">{item}</span>
+                    <span className="mr-3 mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"></span>
+                    <span className="text-white/70 leading-relaxed">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -173,10 +176,10 @@ const TermsOfService = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.3 }}
-          className="bg-white/5 border border-white/20 rounded-2xl p-8 mt-12 backdrop-blur-sm"
+          className="mt-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8"
         >
-          <h2 className="text-2xl font-bold mb-4 text-white">Additional Terms</h2>
-          <div className="space-y-4 text-gray-300">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight text-white md:text-xl">Additional Terms</h2>
+          <div className="space-y-4 text-white/70">
             <p><strong>Governing Law:</strong> These terms are governed by the laws of England and Wales.</p>
             <p><strong>Dispute Resolution:</strong> Any disputes will be resolved through mediation or in the courts of England and Wales.</p>
             <p><strong>Severability:</strong> If any provision is found to be unenforceable, the remaining provisions remain in effect.</p>
@@ -189,13 +192,13 @@ const TermsOfService = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4 }}
-          className="bg-white/5 border border-white/20 rounded-2xl p-8 mt-12 backdrop-blur-sm"
+          className="mt-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8"
         >
-          <h2 className="text-2xl font-bold mb-4 text-white">Questions About These Terms?</h2>
-          <p className="text-gray-300 mb-4">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight text-white md:text-xl">Questions About These Terms?</h2>
+          <p className="text-white/70 mb-4">
             If you have any questions about these Terms of Service, please contact us:
           </p>
-          <div className="space-y-2 text-gray-300">
+          <div className="space-y-2 text-white/70">
             <p><strong>Email:</strong> legal@carnivalldn.com</p>
             <p><strong>Phone:</strong> +44 20 1234 5678</p>
             <p><strong>Address:</strong> 123 Event Street, London, UK</p>
@@ -207,16 +210,17 @@ const TermsOfService = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.6 }}
-          className="text-center mt-12"
+          className="mt-10 text-center"
         >
           <a
             href="/"
-            className="inline-flex items-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition-all duration-300 hover:scale-105"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white/[0.06] px-6 text-[15px] font-medium text-white ring-1 ring-white/10 transition hover:bg-white/10"
           >
-            ← Back to Home
+            ← Back to home
           </a>
         </motion.div>
       </div>
+      <Footer />
     </div>
   )
 }

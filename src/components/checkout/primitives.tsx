@@ -9,6 +9,7 @@ import {
   type InputHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
+  type TextareaHTMLAttributes,
 } from 'react';
 import { cn } from '../../lib/utils';
 import { formatGBP, GENDER_OPTIONS, type Gender } from '../../lib/checkout';
@@ -178,6 +179,7 @@ export const NotchedOutline = ({
   error,
   htmlFor,
   labelId,
+  multiline,
 }: {
   label: string;
   floated: boolean;
@@ -185,6 +187,8 @@ export const NotchedOutline = ({
   error?: boolean;
   htmlFor?: string;
   labelId?: string;
+  /** Textareas: the resting label sits on the first line instead of the vertical centre */
+  multiline?: boolean;
 }) => (
   <>
     <fieldset
@@ -209,7 +213,7 @@ export const NotchedOutline = ({
       htmlFor={htmlFor}
       className={cn(
         'pointer-events-none absolute left-4 max-w-[calc(100%-2rem)] -translate-y-1/2 truncate transition-all duration-150 ease-out',
-        floated ? 'top-0 text-xs font-medium' : 'top-1/2 text-base font-normal',
+        floated ? 'top-0 text-xs font-medium' : cn(multiline ? 'top-7' : 'top-1/2', 'text-base font-normal'),
         error ? 'text-rose-300' : focused ? 'text-accent' : floated ? 'text-white/60' : 'text-white/45'
       )}
     >
@@ -285,6 +289,68 @@ export const FloatingField = forwardRef<HTMLInputElement, FloatingFieldProps>(
   }
 );
 FloatingField.displayName = 'FloatingField';
+
+interface FloatingTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value'> {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  hint?: ReactNode;
+}
+
+/** Multi-line version of FloatingField (same notched outline). */
+export const FloatingTextarea = ({
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  id,
+  rows = 5,
+  className,
+  onFocus,
+  onBlur,
+  ...props
+}: FloatingTextareaProps) => {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  const messageId = `${inputId}-msg`;
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <div className={className}>
+      <div className="group/field relative w-full rounded-2xl">
+        <textarea
+          id={inputId}
+          rows={rows}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          aria-invalid={!!error}
+          aria-describedby={error || hint ? messageId : undefined}
+          className="checkout-input block w-full resize-none rounded-2xl bg-transparent px-4 pb-3 pt-4 text-base leading-6 text-white outline-none"
+          {...props}
+        />
+        <NotchedOutline
+          label={label}
+          htmlFor={inputId}
+          floated={focused || value !== ''}
+          focused={focused}
+          error={!!error}
+          multiline
+        />
+      </div>
+      <FieldMessage id={messageId} error={error} hint={hint} />
+    </div>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Date of birth: DD / MM / YYYY with auto-advance (emits ISO YYYY-MM-DD)

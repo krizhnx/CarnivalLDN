@@ -1,147 +1,299 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
-import { useSiteTheme } from '../theme/siteTheme'
+import { useEffect, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowUpRight, Menu, X } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { cn } from '../lib/utils'
+import { useMediaQuery } from '../hooks/useMediaQuery'
+
+/*
+ * Site navigation. Theme-neutral (no seasonal styling).
+ *  - Phones: logo + "Get tickets" + menu button; menu opens a full-screen sheet.
+ *    Transparent over the hero, frosted dark glass once scrolled.
+ *  - md+:    the original layout - wordmark left, logo centred, menu button right,
+ *    white glass bar once scrolled - with a working dropdown menu.
+ */
+
+interface NavItem {
+  name: string
+  href: string
+  /** Client-side route (react-router Link) rather than an in-page/hash link */
+  route?: boolean
+  active?: boolean
+}
+
+const EASE = [0.22, 1, 0.36, 1] as const
+
+const NavLink = ({
+  item,
+  className,
+  onNavigate,
+  children,
+}: {
+  item: NavItem
+  className?: string
+  onNavigate?: () => void
+  children: ReactNode
+}) =>
+  item.route ? (
+    <Link to={item.href} onClick={onNavigate} className={className} aria-current={item.active ? 'page' : undefined}>
+      {children}
+    </Link>
+  ) : (
+    <a href={item.href} onClick={onNavigate} className={className} aria-current={item.active ? 'page' : undefined}>
+      {children}
+    </a>
+  )
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const location = useLocation()
-  const { isHalloween } = useSiteTheme()
-  // Light glass bar once scrolled (standard theme only); Halloween keeps a dark bar
-  const light = isScrolled && !isHalloween
+  const [open, setOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const { pathname, hash } = useLocation()
+  const isDesktop = useMediaQuery('(min-width: 768px)')
+  const onHome = pathname === '/'
+  const onEvents = pathname.startsWith('/events')
+  const homeHref = onHome ? '#home' : '/'
+  // Desktop bar turns into the white glass bar once scrolled (or while its dropdown is open)
+  const light = scrolled || open
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const navItems = [
-    { name: 'Home', href: location.pathname === '/' ? '#home' : '/#home' },
-    { name: 'Events', href: location.pathname === '/' ? '#events' : '/events' },
-    { name: 'Gallery', href: '/gallery' },
-    { name: 'About', href: location.pathname === '/' ? '#about' : '/#about' },
-    { name: 'Contact', href: location.pathname === '/' ? '#contact' : '/#contact' },
+  // Close the menu whenever the route/hash changes or we cross the phone/desktop breakpoint
+  useEffect(() => setOpen(false), [pathname, hash, isDesktop])
+
+  // While the menu is open: close on Escape; lock page scroll behind the full-screen phone menu
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    const previous = document.body.style.overflow
+    if (!isDesktop) document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open, isDesktop])
+
+  const items: NavItem[] = [
+    { name: 'Home', href: onHome ? '#home' : '/', route: !onHome, active: onHome },
+    { name: 'Events', href: '/events', route: true, active: onEvents },
+    { name: 'Gallery', href: '/gallery', route: true, active: pathname.startsWith('/gallery') },
+    { name: 'About', href: onHome ? '#about' : '/#about' },
+    { name: 'Contact', href: onHome ? '#contact' : '/#contact' },
   ]
+  const contactHref = onHome ? '#contact' : '/#contact'
+  const close = () => setOpen(false)
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 px-2 md:px-4 pt-2 md:pt-4">
+    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:px-4 md:pt-4">
+      {/* ---------- Desktop (md+): original layout ---------- */}
       <motion.nav
+        aria-label="Main"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className={`transition-all duration-500 ease-out ${
-          isScrolled
-            ? isHalloween
-              ? 'bg-surface/80 backdrop-blur-xl shadow-[0_20px_50px_-20px_rgb(var(--glow)/0.45)] border-2 border-accent/30 rounded-2xl max-w-4xl md:max-w-7xl mx-auto'
-              : 'bg-white/80 backdrop-blur-xl shadow-2xl border-2 border-slate-200/80 rounded-2xl max-w-4xl md:max-w-7xl mx-auto'
-            : 'bg-transparent max-w-4xl md:max-w-7xl mx-auto'
-        }`}
+        className={cn(
+          'mx-auto hidden max-w-7xl transition-all duration-500 ease-out md:block',
+          light ? 'rounded-2xl border-2 border-slate-200/80 bg-white/80 shadow-2xl backdrop-blur-xl' : 'bg-transparent'
+        )}
       >
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
-                 <div className="flex items-center justify-between h-14 md:h-16 relative">
-          {/* Text - Left (Desktop only) */}
-          <div className="hidden md:flex items-center z-10">
-                         <img
-               src="/carntext-b.svg"
-               alt="Carnival LDN"
-               className="h-6 md:h-8 w-auto max-w-[120px] md:max-w-[220px] object-contain transition-all duration-300"
-               style={{ filter: light ? 'none' : 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}
-             />
-          </div>
-
-          {/* Logo - Left on mobile, centered on desktop */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="pl-2 md:pl-0 md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-10"
-          >
-            <div className="relative">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="relative flex h-16 items-center justify-between">
+            {/* Wordmark - left */}
+            <a href={homeHref} className="z-10 flex items-center">
               <img
-                src={light ? "/carnival-logo.svg" : "/carnival-logo-w.svg"}
-                alt="Carnival LDN Logo"
-                className="w-10 h-10 md:w-12 md:h-12 object-contain transition-all duration-300"
-                style={{ backgroundColor: 'transparent' }}
+                src="/carntext-b.svg"
+                alt="Carnival LDN"
+                className="h-8 w-auto max-w-[220px] object-contain transition-all duration-300"
+                style={{ filter: light ? 'none' : 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(0,0,0,0.5))' }}
               />
-            </div>
-          </motion.div>
+            </a>
 
-          {/* Menu button - Right */}
-          <div className="flex justify-end z-10">
+            {/* Logo - centred (wrapper owns the translate so the hover scale doesn't wipe it) */}
+            <div className="absolute left-1/2 z-10 -translate-x-1/2">
+              <motion.a href={homeHref} whileHover={{ scale: 1.05 }} className="block" aria-label="Carnival LDN - home">
+                <img
+                  src={light ? '/carnival-logo.svg' : '/carnival-logo-w.svg'}
+                  alt=""
+                  className="h-12 w-12 object-contain transition-all duration-300"
+                />
+              </motion.a>
+            </div>
+
+            {/* Menu button - right */}
             <motion.button
+              type="button"
               whileTap={{ scale: 0.95 }}
-              onClick={() => setIsOpen(!isOpen)}
-              className={`p-4 transition-colors rounded-lg ${
-                light
-                  ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-                  : 'text-white hover:text-gray-200 hover:bg-white/10'
-              }`}
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
+              aria-controls="desktop-menu"
+              className={cn(
+                'z-10 rounded-lg p-4 transition-colors',
+                light ? 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' : 'text-white hover:bg-white/10 hover:text-gray-200'
+              )}
             >
-              {isOpen ? <X size={28} strokeWidth={2.5} /> : <Menu size={28} strokeWidth={2.5} />}
+              {open ? <X size={28} strokeWidth={2.5} /> : <Menu size={28} strokeWidth={2.5} />}
             </motion.button>
           </div>
-        </div>
 
-        {/* Mobile Navigation */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className={`md:hidden border-t mt-2 overflow-hidden ${
-                light ? 'border-gray-200/50' : 'border-white/30'
-              }`}
-            >
-              <div className="px-2 py-6 space-y-0">
-                {navItems.map((item, index) => (
-                  <div key={item.name}>
-                    <motion.a
-                      href={item.href}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      onClick={() => setIsOpen(false)}
-                      className={`block text-center text-lg font-medium transition-colors py-3 rounded-lg ${
-                        light
-                          ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                          : 'text-white hover:text-gray-200 hover:bg-white/10'
-                      }`}
+          {/* Dropdown (previously phone-only, so desktop's menu button opened nothing) */}
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                id="desktop-menu"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-2 overflow-hidden border-t border-gray-200/50"
+              >
+                <div className="mx-auto max-w-md px-2 py-6">
+                  {items.map((item, index) => (
+                    <div key={item.name}>
+                      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }}>
+                        <NavLink
+                          item={item}
+                          onNavigate={close}
+                          className="block rounded-lg py-3 text-center text-lg font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                        >
+                          {item.name}
+                        </NavLink>
+                      </motion.div>
+                      {index < items.length - 1 && <div className="mx-4 border-b border-gray-200" />}
+                    </div>
+                  ))}
+                  <motion.a
+                    href={contactHref}
+                    onClick={close}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: items.length * 0.1 }}
+                    className="mt-4 block w-full rounded-lg bg-gray-900 py-3 text-center text-base font-medium text-white transition-colors hover:bg-gray-800"
+                  >
+                    Book Event
+                  </motion.a>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.nav>
+
+      {/* ---------- Phones ---------- */}
+      <motion.nav
+        aria-label="Main"
+        initial={{ y: -24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: EASE }}
+        className={cn(
+          'relative mx-auto flex h-14 items-center justify-between rounded-2xl pl-5 pr-1.5 transition-[background-color,box-shadow] duration-300 md:hidden',
+          scrolled || open
+            ? 'bg-zinc-950/70 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.75)] ring-1 ring-white/10 backdrop-blur-xl'
+            : 'bg-transparent'
+        )}
+      >
+        <a href={homeHref} onClick={close} className="flex items-center" aria-label="Carnival LDN - home">
+          <img src="/carnival-logo-w.svg" alt="" className="h-9 w-9 object-contain" />
+        </a>
+
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            aria-expanded={open}
+            aria-controls="site-menu"
+            className="grid h-11 w-11 place-items-center text-white [-webkit-tap-highlight-color:transparent]"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={open ? 'close' : 'menu'}
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </motion.span>
+            </AnimatePresence>
+          </button>
+        </div>
+      </motion.nav>
+
+      {/* Mobile menu: full-screen sheet behind the bar */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            id="site-menu"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 -z-10 bg-zinc-950/95 backdrop-blur-xl md:hidden"
+          >
+            <div className="flex h-full flex-col overflow-y-auto px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-24">
+              <ul>
+                {items.map((item, i) => (
+                  <motion.li
+                    key={item.name}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 + i * 0.04, duration: 0.35, ease: EASE }}
+                  >
+                    <NavLink
+                      item={item}
+                      onNavigate={close}
+                      className="group flex items-center justify-between border-b border-white/[0.08] py-4"
                     >
-                      {item.name}
-                    </motion.a>
-                    {index < navItems.length - 1 && (
-                      <div className={`border-b mx-4 ${
-                        light ? 'border-gray-200' : 'border-white/30'
-                      }`}></div>
-                    )}
-                  </div>
+                      <span
+                        className={cn(
+                          'text-[30px] font-semibold leading-tight tracking-tight transition-colors',
+                          item.active ? 'text-white' : 'text-white/55 group-hover:text-white'
+                        )}
+                      >
+                        {item.name}
+                      </span>
+                      <ArrowUpRight
+                        className={cn(
+                          'h-5 w-5 transition',
+                          item.active ? 'text-white' : 'text-white/25 group-hover:text-white'
+                        )}
+                      />
+                    </NavLink>
+                  </motion.li>
                 ))}
-                <motion.button
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: navItems.length * 0.1 }}
-                  className={`w-full py-3 rounded-lg font-medium transition-colors text-base mt-4 ${
-                    light
-                      ? 'bg-gray-900 hover:bg-gray-800 text-white'
-                      : isHalloween
-                      ? 'bg-cta hover:bg-cta/90 text-cta-fg'
-                      : 'bg-white/90 hover:bg-white text-gray-900'
-                  }`}
+              </ul>
+
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.28, duration: 0.35, ease: EASE }}
+                className="mt-auto space-y-3 pt-10"
+              >
+                <Link
+                  to="/events"
+                  onClick={close}
+                  className="flex h-14 items-center justify-center gap-1.5 rounded-2xl bg-white text-base font-semibold text-zinc-950"
                 >
-                  Book Event
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.nav>
-    </div>
+                  Get tickets <ArrowUpRight className="h-5 w-5" />
+                </Link>
+                <a
+                  href={contactHref}
+                  onClick={close}
+                  className="flex h-14 items-center justify-center rounded-2xl bg-white/[0.06] text-base font-medium text-white ring-1 ring-white/10"
+                >
+                  Book a private event
+                </a>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
   )
 }
 
 export default Navbar
-

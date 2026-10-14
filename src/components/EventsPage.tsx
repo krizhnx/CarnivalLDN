@@ -11,8 +11,10 @@ import CheckoutSheet from './checkout';
 import { useGlitchEffect } from '../hooks/useGlitchEffect';
 import { useSiteTheme } from '../theme/siteTheme';
 import { useThemeCopy } from '../theme/copy';
-import { HalloweenHeroBackdrop } from './Hero';
+import { HalloweenHeroBackdrop, HeroVideo } from './Hero';
 import { HauntedCorners, SectionDrip, SectionFog } from './halloween/decorations';
+import { card, SectionHeading } from './ui/section';
+import { cn } from '../lib/utils';
 
 const EventsPage = () => {
   const { events, getEvents, isLoading, trackAffiliateClick, affiliateLinks, getAffiliateLinks, affiliateSocieties, getAffiliateSocieties } = useAppStore();
@@ -20,7 +22,6 @@ const EventsPage = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [highlightedEvent, setHighlightedEvent] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const { isHalloween } = useSiteTheme();
   const copy = useThemeCopy();
 
@@ -147,34 +148,18 @@ const EventsPage = () => {
     }
   }, [searchParams, affiliateLinks, trackAffiliateClick, affiliateSocieties]);
 
-  // Hide scroll indicator when user scrolls
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 100) {
-        setShowScrollIndicator(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
     <div className="min-h-screen relative overflow-hidden">
       <Navbar />
 
       {/* Hero Section with Video Background */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
-        {/* Image Background */}
+        {/* Video Background */}
         {isHalloween ? (
           <HalloweenHeroBackdrop />
         ) : (
           <div className="absolute inset-0 w-full h-full">
-            <img
-              src="/main-hero.jpg"
-              alt="Carnival LDN Hero Background"
-              className="w-full h-full object-cover"
-            />
+            <HeroVideo />
             {/* Overlay for better text readability */}
             <div className="absolute inset-0 bg-black/60"></div>
           </div>
@@ -283,48 +268,6 @@ const EventsPage = () => {
             </motion.div>
           </motion.div>
         </div>
-
-        {/* Scroll Down Indicator */}
-        {showScrollIndicator && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 w-full flex justify-center"
-          >
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="flex flex-col items-center space-y-2 cursor-pointer"
-              onClick={() => {
-                document.getElementById('events-grid')?.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'start'
-                });
-              }}
-            >
-              <motion.div
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center"
-              >
-                <motion.div
-                  animate={{ y: [0, 12, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-1 h-3 bg-white/70 rounded-full mt-2"
-                />
-              </motion.div>
-              <motion.p
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="text-white/70 text-xs font-medium"
-              >
-                Scroll to explore
-              </motion.p>
-            </motion.div>
-          </motion.div>
-        )}
       </section>
 
       {/* Events Grid Section */}
@@ -337,7 +280,7 @@ const EventsPage = () => {
             className="w-full h-full object-cover scale-150"
           />
           {/* Overlay for better text readability */}
-          <div className="theme-overlay absolute inset-0 bg-gray-900/70"></div>
+          <div className="theme-overlay absolute inset-0 bg-surface/80"></div>
         </div>
         <SectionDrip />
         <HauntedCorners />
@@ -345,65 +288,23 @@ const EventsPage = () => {
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          {/* Section Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-12 md:mb-16"
-          >
-                         <motion.h2
-               className={`text-5xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-white glitch-text ${isGlitching ? `glitch-active glitch-${glitchType}` : ''}`}
-               data-text={copy.whatsOn}
-               style={{
-                 textTransform: 'uppercase',
-                 letterSpacing: '0.1em'
-               }}
-             >
-              {copy.whatsOn}
-            </motion.h2>
-            <div className="flex justify-center">
-              <motion.span
-                className="theme-pill inline-block px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-black/20 backdrop-blur-sm rounded-full border border-white/20 text-sm sm:text-base md:text-lg text-white/80"
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
-                  borderColor: "rgba(255, 255, 255, 0.5)"
-                }}
-                animate={{
-                  boxShadow: [
-                    "0 0 10px rgba(255, 255, 255, 0.1)",
-                    "0 0 20px rgba(255, 255, 255, 0.2)",
-                    "0 0 10px rgba(255, 255, 255, 0.1)"
-                  ]
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
-                {copy.whatsOnPill}
-              </motion.span>
-            </div>
-          </motion.div>
+          <SectionHeading title={copy.whatsOn} pill={copy.whatsOnPill} />
 
-          {/* Loading State */}
+          {/* Loading / empty states */}
           {isLoading ? (
-            <div className="text-center py-12">
-              <div className="text-white text-lg mb-4">Loading events...</div>
-              <div className="text-white/70 text-sm">Please wait while we fetch the latest events</div>
+            <div className={cn(card, 'mx-auto max-w-md px-6 py-10 text-center')}>
+              <p className="text-lg font-medium text-white">Loading events...</p>
+              <p className="mt-1 text-sm text-white/55">Fetching the latest line-up</p>
             </div>
           ) : !events || events.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-white text-lg mb-4">No events available</div>
-              <div className="text-white/70 text-sm">Check back later for upcoming events</div>
+            <div className={cn(card, 'mx-auto max-w-md px-6 py-10 text-center')}>
+              <p className="text-lg font-medium text-white">No events available</p>
+              <p className="mt-1 text-sm text-white/55">Check back later for upcoming events</p>
             </div>
           ) : events.filter(e => !e.isArchived).length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-white text-lg mb-4">No upcoming events</div>
-              <div className="text-white/70 text-sm">All events are currently archived</div>
+            <div className={cn(card, 'mx-auto max-w-md px-6 py-10 text-center')}>
+              <p className="text-lg font-medium text-white">No upcoming events</p>
+              <p className="mt-1 text-sm text-white/55">New dates drop soon - check back shortly</p>
             </div>
           ) : (
             /* Events Grid */

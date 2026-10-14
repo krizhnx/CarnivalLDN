@@ -1,26 +1,64 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, PartyPopper } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
 import { useSiteTheme } from '../theme/siteTheme'
 import { useThemeCopy } from '../theme/copy'
 import { Bat, DanglingSpider, JackOLantern, Moon } from './halloween/decorations'
 
-/** Full-bleed Halloween artwork + atmosphere, shared by the home and /events heroes. */
+/*
+ * Hero background video, compressed from /vid.mp4 (9.4 MB, 1080p60 + audio) to
+ * 1280x720, 30fps, muted, faststart (~3.8 MB). Same file on every device.
+ * Reduced-motion / data-saver users get the poster frame instead.
+ */
+const HERO_VIDEO = { src: '/hero/hero-wide.mp4', poster: '/hero/hero-wide-poster.jpg' }
+
+export const HeroVideo = () => {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [still] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true)
+  )
+  const { src, poster } = HERO_VIDEO
+
+  useEffect(() => {
+    const video = ref.current
+    if (!video) return
+    // React doesn't reliably set the `muted` attribute, and iOS won't autoplay without it
+    video.muted = true
+    video.play().catch(() => {})
+  }, [])
+
+  if (still) return <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={poster}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="auto"
+      disablePictureInPicture
+      aria-hidden
+      tabIndex={-1}
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+    />
+  )
+}
+
+/** Hero video + Halloween atmosphere (wash, moon, bats, spider), shared by the home and /events heroes. */
 export const HalloweenHeroBackdrop = () => (
   <div className="absolute inset-0 h-full w-full">
-    <picture>
-      <source media="(orientation: portrait) and (max-width: 900px)" srcSet="/halloween/hero-tall-1080.webp" />
-      <source srcSet="/halloween/hero-wide-1280.webp 1280w, /halloween/hero-wide-2400.webp 2400w" sizes="100vw" type="image/webp" />
-      <img
-        src="/halloween/hero-wide-1280.webp"
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-    </picture>
-    {/* Purple night wash + floor glow for legibility */}
-    <div className="absolute inset-0 bg-gradient-to-b from-surface/80 via-[#1c0a30]/55 to-surface" />
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_100%,rgb(255_122_26/0.22),transparent_70%)]" />
+    <HeroVideo />
+    {/* Mostly neutral dark wash (just a hint of purple) so the video reads through; faint floor glow */}
+    <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-[#1c0a30]/20 to-surface" />
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_100%,rgb(255_122_26/0.07),transparent_70%)]" />
 
     <Moon className="absolute right-[6%] top-[13%] h-20 w-20 opacity-90 sm:h-28 sm:w-28 md:right-[10%] md:top-[16%] md:h-36 md:w-36" />
     <div className="hw-anim absolute right-[18%] top-[12%] w-8 md:right-[19%] md:top-[14%] md:w-12" style={{ animation: 'hw-hover-loop 7s ease-in-out infinite' }}>
@@ -120,16 +158,12 @@ const Hero = () => {
 
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
-      {/* Image Background */}
+      {/* Video Background */}
       {isHalloween ? (
         <HalloweenHeroBackdrop />
       ) : (
         <div className="absolute inset-0 w-full h-full">
-          <img
-            src="/main-hero.jpg"
-            alt="Carnival LDN Hero Background"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <HeroVideo />
           {/* Dark overlay for text readability */}
           <div className="absolute inset-0 bg-black/50" />
         </div>
@@ -206,21 +240,6 @@ const Hero = () => {
           </motion.div>
         </motion.div>
       </div>
-
-      {/* Scroll Indicator
-      <motion.div
-        animate={{ y: [0, 10, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 hidden md:block"
-      >
-        <div className="w-6 h-10 border-2 border-gray-300 rounded-full flex justify-center">
-          <motion.div
-            animate={{ y: [0, 12, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-1 h-3 bg-gray-600 rounded-full mt-2"
-          />
-        </div>
-      </motion.div> */}
     </section>
   )
 }
