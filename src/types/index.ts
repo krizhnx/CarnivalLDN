@@ -10,6 +10,7 @@ export interface Event {
   capacity: string;
   rating: string;
   tags: string[];
+  /** Card theme ('default' | 'halloween' | 'diwali'); legacy column name - read it via eventTheme() */
   gradient: string;
   bookingUrl: string;
   createdAt: Date;

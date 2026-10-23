@@ -5,7 +5,9 @@ import { useNavigate } from 'react-router-dom'
 import { useGlitchEffect } from '../hooks/useGlitchEffect'
 import { useSiteTheme } from '../theme/siteTheme'
 import { useThemeCopy } from '../theme/copy'
+import { cn } from '../lib/utils'
 import { Bat, DanglingSpider, JackOLantern, Moon } from './halloween/decorations'
+import { DiwaliHeroDecor, Diya } from './diwali/decorations'
 
 /*
  * Hero background video, compressed from /vid.mp4 (9.4 MB, 1080p60 + audio) to
@@ -71,9 +73,38 @@ export const HalloweenHeroBackdrop = () => (
   </div>
 )
 
+/** Hero video + Diwali atmosphere (warm wash, rangoli, fireworks, marigolds, lanterns, diyas). */
+export const DiwaliHeroBackdrop = () => (
+  <div className="absolute inset-0 h-full w-full">
+    <HeroVideo />
+    <DiwaliHeroDecor />
+  </div>
+)
+
+/** Picks the hero backdrop for the active theme; `overlay` is the standard-theme darkening. */
+export const SeasonalHeroBackdrop = ({ overlay = 'bg-black/50' }: { overlay?: string }) => {
+  const { isHalloween, isDiwali } = useSiteTheme()
+  if (isHalloween) return <HalloweenHeroBackdrop />
+  if (isDiwali) return <DiwaliHeroBackdrop />
+  return (
+    <div className="absolute inset-0 h-full w-full">
+      <HeroVideo />
+      {/* Dark overlay for text readability */}
+      <div className={cn('absolute inset-0', overlay)} />
+    </div>
+  )
+}
+
+const KickerIcon = ({ side }: { side: 'left' | 'right' }) => {
+  const { isHalloween, isDiwali } = useSiteTheme()
+  const gap = side === 'left' ? 'mr-2' : 'ml-2'
+  if (isHalloween) return <JackOLantern className={`hidden md:inline-block ${gap} -mt-1 w-5 h-5 md:w-6 md:h-6 align-middle`} />
+  if (isDiwali) return <Diya className={`hidden md:inline-block ${gap} -mt-2 w-7 h-6 align-middle`} delay={side === 'left' ? 0 : 0.9} />
+  return <PartyPopper className={`hidden md:inline-block ${gap} w-4 h-4 md:w-5 md:h-5 text-yellow-400`} />
+}
+
 // Simple subtitle component
 const SubtitleText = () => {
-  const { isHalloween } = useSiteTheme()
   const copy = useThemeCopy()
   return (
     <motion.span
@@ -96,17 +127,9 @@ const SubtitleText = () => {
         ease: "easeInOut"
       }}
     >
-      {isHalloween ? (
-        <JackOLantern className="hidden md:inline-block mr-2 -mt-1 w-5 h-5 md:w-6 md:h-6 align-middle" />
-      ) : (
-        <PartyPopper className="hidden md:inline-block mr-2 w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
-      )}
+      <KickerIcon side="left" />
       {copy.heroKicker}
-      {isHalloween ? (
-        <JackOLantern className="hidden md:inline-block ml-2 -mt-1 w-5 h-5 md:w-6 md:h-6 align-middle" />
-      ) : (
-        <PartyPopper className="hidden md:inline-block ml-2 w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
-      )}
+      <KickerIcon side="right" />
     </motion.span>
   )
 }
@@ -114,7 +137,8 @@ const SubtitleText = () => {
 const Hero = () => {
   const { glitchRef, isGlitching, glitchType } = useGlitchEffect()
   const navigate = useNavigate()
-  const { isHalloween } = useSiteTheme()
+  const { theme, isDiwali } = useSiteTheme()
+  const isSeasonal = theme !== 'default'
   const copy = useThemeCopy()
 
   const containerVariants = {
@@ -157,17 +181,15 @@ const Hero = () => {
 
 
   return (
-    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
-      {/* Video Background */}
-      {isHalloween ? (
-        <HalloweenHeroBackdrop />
-      ) : (
-        <div className="absolute inset-0 w-full h-full">
-          <HeroVideo />
-          {/* Dark overlay for text readability */}
-          <div className="absolute inset-0 bg-black/50" />
-        </div>
+    <section
+      id="home"
+      className={cn(
+        'theme-scope relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4',
+        isDiwali && 'pb-24 sm:pb-28 md:pb-32'
       )}
+    >
+      {/* Video Background */}
+      <SeasonalHeroBackdrop overlay="bg-black/50" />
 
 
 
@@ -207,7 +229,10 @@ const Hero = () => {
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
               }}
               transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="text-s sm:text-sm md:text-base lg:text-lg xl:text-xl max-w-3xl mx-auto leading-relaxed px-2 bg-gradient-to-r from-gray-200 via-white to-gray-200 bg-[length:200%_200%] bg-clip-text text-transparent drop-shadow-lg"
+              className={cn(
+                'text-s sm:text-sm md:text-base lg:text-lg xl:text-xl max-w-3xl mx-auto leading-relaxed px-2 bg-gradient-to-r bg-[length:200%_200%] bg-clip-text text-transparent drop-shadow-lg',
+                isDiwali ? 'from-amber-100 via-white to-amber-100' : 'from-gray-200 via-white to-gray-200'
+              )}
             >
               {copy.heroTagline}
             </motion.p>
@@ -219,7 +244,7 @@ const Hero = () => {
               onClick={handleExploreEvents}
               whileHover={{ scale: 1.05, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
               whileTap={{ scale: 0.95 }}
-              className={isHalloween
+              className={isSeasonal
                 ? "bg-cta hover:bg-cta/90 text-cta-fg font-bold text-base sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-lg group w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none flex items-center justify-center space-x-2 transition-all shadow-[0_0_40px_-6px_rgb(var(--cta-glow)/0.75)] border border-white/20"
                 : "bg-white/90 hover:bg-white text-gray-900 font-bold text-base sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-lg group w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none flex items-center justify-center space-x-2 transition-all shadow-lg backdrop-blur-sm border border-white/30"}
             >
@@ -231,7 +256,7 @@ const Hero = () => {
               onClick={handleBookPrivateEvent}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={isHalloween
+              className={isSeasonal
                 ? "bg-black/20 hover:bg-accent2/20 text-white px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-semibold rounded-lg border-2 border-accent2/70 w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none transition-all backdrop-blur-sm"
                 : "bg-transparent hover:bg-white/90 text-white hover:text-gray-900 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none transition-all backdrop-blur-sm"}
             >

@@ -1,8 +1,6 @@
 import { Eye, X } from 'lucide-react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { isThemedPath, useSiteTheme, useSiteThemeStore } from '../../theme/siteTheme';
-
-const LABEL = { default: 'Standard', halloween: 'Halloween' } as const;
+import { THEME_LABEL as LABEL, isThemedPath, useSiteTheme, useSiteThemeStore } from '../../theme/siteTheme';
 
 /** Floating reminder shown while `?theme=...` preview is active in this tab. */
 const ThemePreviewBadge = () => {

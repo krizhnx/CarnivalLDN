@@ -4,8 +4,11 @@
 
 @layer base {
   /* Seasonal theme tokens (space-separated RGB so Tailwind can apply alpha).
-     Switched by <html data-theme="..."> - see src/theme/siteTheme.ts */
-  :root {
+     Switched by <html data-theme="..."> - see src/theme/siteTheme.ts.
+     Event cards carry data-event-theme and always use their own token set
+     (see src/theme/eventTheme.ts). */
+  :root,
+  [data-event-theme='default'] {
     --accent: 103 232 249;        /* cyan-300 */
     --accent-2: 232 121 249;      /* fuchsia-400 */
     --slime: 252 211 77;          /* amber-300 */
@@ -20,7 +23,8 @@
     --font-display: 'Poppins', sans-serif;
   }
 
-  html[data-theme='halloween'] {
+  html[data-theme='halloween'],
+  [data-event-theme='halloween'] {
     --accent: 255 146 43;         /* pumpkin */
     --accent-2: 183 132 255;      /* witchy violet */
     --slime: 163 230 53;          /* toxic green */
@@ -972,4 +976,213 @@ html[data-theme='halloween'] .theme-cta {
   .hw-flicker {
     animation: none !important;
   }
+}
+
+/* ==========================================================================
+   Diwali theme
+   Scoped: tokens only apply inside `.theme-scope` (home hero, home Events
+   section, /events hero + grid) and on Diwali event cards. Navbar, footer,
+   other sections, other pages and the portaled checkout sheet keep the
+   standard look.
+   ========================================================================== */
+
+html[data-theme='diwali'] .theme-scope,
+[data-event-theme='diwali'] {
+  --accent: 255 196 77;         /* gold */
+  --accent-2: 244 114 182;      /* rani pink */
+  --slime: 251 146 60;          /* saffron */
+  --glow: 255 170 40;
+  --glow-2: 219 39 119;
+  --cta: 255 196 66;
+  --cta-fg: 58 8 22;            /* deep maroon */
+  --cta-glow: 255 170 40;
+  --cta-shimmer: 255 243 196;
+  --surface: 22 6 14;           /* wine-black */
+  --surface-2: 40 12 24;
+  --font-display: 'Cinzel', 'Poppins', serif;
+}
+
+html[data-theme='diwali'] .theme-scope ::selection {
+  background: rgb(var(--accent) / 0.85);
+  color: #3a0816;
+}
+
+/* Brand glitch headings become gold-leaf titles. Glow uses drop-shadow
+   (text-shadow would paint over the clipped gradient). */
+html[data-theme='diwali'] .theme-scope h1.glitch-text,
+html[data-theme='diwali'] .theme-scope h2.glitch-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  color: transparent;
+  background-image: linear-gradient(180deg, #fff7d6 0%, #ffe08a 30%, #f7b42c 58%, #d4870f 78%, #ffd36e 100%);
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 0 rgb(70 10 22 / 0.85)) drop-shadow(0 0 26px rgb(255 170 40 / 0.45));
+}
+
+html[data-theme='diwali'] .theme-scope h1.glitch-text::before,
+html[data-theme='diwali'] .theme-scope h1.glitch-text::after,
+html[data-theme='diwali'] .theme-scope h2.glitch-text::before,
+html[data-theme='diwali'] .theme-scope h2.glitch-text::after {
+  display: none;
+}
+
+html[data-theme='diwali'] .theme-scope .theme-overlay {
+  background-color: transparent;
+  background-image:
+    radial-gradient(ellipse 80% 45% at 50% 0%, rgb(255 170 40 / 0.14), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgb(219 39 119 / 0.14), transparent 70%),
+    linear-gradient(180deg, rgb(22 6 14 / 0.94), rgb(52 10 30 / 0.82) 45%, rgb(22 6 14 / 0.95));
+}
+
+html[data-theme='diwali'] .theme-scope .theme-pill {
+  border-color: rgb(var(--accent) / 0.45);
+  background-color: rgb(46 8 26 / 0.55);
+}
+
+html[data-theme='diwali'] .theme-scope .theme-default-only {
+  display: none;
+}
+
+html[data-theme='diwali'] .theme-scope .theme-chip {
+  background-color: rgb(var(--accent));
+  box-shadow: 0 0 24px -6px rgb(var(--glow) / 0.7);
+}
+
+html[data-theme='diwali'] .theme-scope .theme-cta {
+  background-color: rgb(var(--cta));
+  color: rgb(var(--cta-fg));
+  box-shadow: 0 0 30px -8px rgb(var(--cta-glow) / 0.7);
+}
+
+/* ---------- Decorative animations (all prefixed dw-, transform/opacity only) ---------- */
+
+@keyframes dw-flame {
+  0%, 100% { transform: scale(1, 1) rotate(-2deg); }
+  20% { transform: scale(0.93, 1.07) rotate(2.5deg); }
+  45% { transform: scale(1.05, 0.94) rotate(-1deg); }
+  70% { transform: scale(0.96, 1.05) rotate(3deg); }
+  85% { transform: scale(1.02, 0.97) rotate(-3deg); }
+}
+
+@keyframes dw-glow {
+  0%, 100% { opacity: 0.7; }
+  30% { opacity: 1; }
+  55% { opacity: 0.8; }
+  75% { opacity: 0.95; }
+}
+
+@keyframes dw-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dw-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+@keyframes dw-flash {
+  0% { opacity: 0; transform: scale(0.3); }
+  2% { opacity: 1; transform: scale(1); }
+  12%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+/* Firework spark: --a = angle, --r = travel distance (set per element) */
+@keyframes dw-burst {
+  0% { opacity: 0; transform: rotate(var(--a)) translate3d(0, 0, 0) scaleY(0.3); }
+  1.5% { opacity: 1; }
+  13% { opacity: 1; transform: rotate(var(--a)) translate3d(0, calc(var(--r) * -1), 0) scaleY(1); }
+  24%, 100% { opacity: 0; transform: rotate(var(--a)) translate3d(0, calc(var(--r) * -1.15), 0) scaleY(0.4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-anim,
+  .dw-anim * {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   Per-event card themes
+   Each EventCard sets data-event-theme (admin "Card theme"), so it keeps its
+   own look whatever the site / section theme is. Tokens are set above; these
+   undo the site-level font/glitch overrides inside cards. Selectors start
+   with `html` to match the site-level rules' specificity and win by order.
+   ========================================================================== */
+
+/* Standard card: Poppins black title + RGB glitch (even on the Halloween site) */
+html [data-event-theme='default'] .font-display {
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+html [data-event-theme='default'] .font-display .glitch-text {
+  font-weight: 800;
+  letter-spacing: inherit;
+}
+
+html [data-event-theme='default'] .glitch-text.glitch-active::before {
+  text-shadow: -2px 0 #ff0000;
+}
+
+html [data-event-theme='default'] .glitch-text.glitch-active::after {
+  text-shadow: -2px 0 #00ff00, 2px 2px #ff0000;
+}
+
+/* Halloween card: Creepster (single weight) + pumpkin glitch */
+html [data-event-theme='halloween'] .font-display,
+html [data-event-theme='halloween'] .font-display .glitch-text {
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+html [data-event-theme='halloween'] .glitch-text.glitch-active::before {
+  text-shadow: -2px 0 #ff5e00;
+}
+
+html [data-event-theme='halloween'] .glitch-text.glitch-active::after {
+  text-shadow: -2px 0 #a3e635, 2px 2px #9333ea;
+}
+
+/* Diwali card: gold Cinzel title, no glitch */
+html [data-event-theme='diwali'] .font-display,
+html [data-event-theme='diwali'] .font-display .glitch-text {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+html [data-event-theme='diwali'] .font-display .glitch-text {
+  color: inherit;
+}
+
+html [data-event-theme='diwali'] .glitch-text::before,
+html [data-event-theme='diwali'] .glitch-text::after {
+  display: none;
+}
+
+/* One-shot fireworks volley when a Diwali event card is opened (FireworksShow.tsx).
+   --sx/--sy = launch offset, --ra = rocket heading, --a/--r = spark angle/distance */
+@keyframes dw-launch {
+  0% { opacity: 0; transform: translate3d(var(--sx), var(--sy), 0) rotate(var(--ra)); }
+  8%, 90% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(0, 0, 0) rotate(var(--ra)); }
+}
+
+@keyframes dw-pop {
+  0% { opacity: 0; transform: rotate(var(--a)) translate3d(0, 0, 0) scaleY(0.3); }
+  4%, 55% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translate3d(0, calc(var(--r) * -1), 0) scaleY(0.6); }
+}
+
+@keyframes dw-fall {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 40px, 0); }
+}
+
+@keyframes dw-pop-flash {
+  0% { opacity: 0; transform: scale(0.2); }
+  10% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.9); }
 }

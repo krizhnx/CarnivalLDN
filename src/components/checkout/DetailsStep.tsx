@@ -13,7 +13,7 @@ interface DetailsStepProps {
 const DetailsStep = ({ customer, errors, onChange, onBlur }: DetailsStepProps) => {
   const copy = useThemeCopy();
   return (
-  <div className="space-y-6 px-5 pb-6 pt-2">
+  <div className="space-y-6 px-5 pb-6 pt-5">
     <h3 className="font-display text-2xl font-semibold tracking-tight text-white">{copy.detailsTitle}</h3>
 
     {/* space-y-4: floated labels sit on the top border, so they need room above */}

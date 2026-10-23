@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { ADMIN_THEME_SWITCH, HALLOWEEN_END, HALLOWEEN_START, SITE_THEME } from './config';
+import { ADMIN_THEME_SWITCH, SEASONS, SITE_THEME, type Season } from './config';
 
 /**
  * Site-wide seasonal theme.
@@ -11,23 +11,43 @@ import { ADMIN_THEME_SWITCH, HALLOWEEN_END, HALLOWEEN_START, SITE_THEME } from '
  *   row `theme`, see /site_settings.sql) and flipped from the admin dashboard; the
  *   code setting becomes the fallback. The last remote value is cached in
  *   localStorage to avoid a flash of the wrong theme.
- * - A *preview* theme can be forced for the current tab with `?theme=halloween`
- *   (or `?theme=default`); `?theme=live` clears it. Preview never affects visitors.
+ * - A *preview* theme can be forced for the current tab with `?theme=diwali`,
+ *   `?theme=halloween` (or `?theme=default`); `?theme=live` clears it. Preview
+ *   never affects visitors.
+ *
+ * Halloween restyles every public page (tokens on <html>). Diwali is scoped: only
+ * elements with the `theme-scope` class (home hero, Events sections, /events)
+ * pick up its tokens - see index.css.
  */
 
-export type SiteTheme = 'default' | 'halloween';
+export type SiteTheme = 'default' | 'halloween' | 'diwali';
+
+export const THEME_LABEL: Record<SiteTheme, string> = {
+  default: 'Standard',
+  halloween: 'Halloween',
+  diwali: 'Diwali',
+};
 
 const CACHE_KEY = 'carnival_site_theme';
 const PREVIEW_KEY = 'carnival_site_theme_preview';
 const SETTINGS_TABLE = 'site_settings';
 const THEME_KEY = 'theme';
 
-export const isSiteTheme = (value: unknown): value is SiteTheme => value === 'default' || value === 'halloween';
+export const isSiteTheme = (value: unknown): value is SiteTheme =>
+  value === 'default' || value === 'halloween' || value === 'diwali';
+
+/** Season whose window covers `now`, if any. */
+export const currentSeason = (now: number = Date.now()): Season | undefined =>
+  SEASONS.find((s) => now >= Date.parse(s.start) && now < Date.parse(s.end));
+
+/** Next season that hasn't started yet, if any. */
+export const nextSeason = (now: number = Date.now()): Season | undefined =>
+  SEASONS.filter((s) => Date.parse(s.start) > now).sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0];
 
 /** Theme decided by the code setting in ./config.ts. */
 export const codeTheme = (now: number = Date.now()): SiteTheme => {
   if (SITE_THEME !== 'auto') return SITE_THEME;
-  return now >= Date.parse(HALLOWEEN_START) && now < Date.parse(HALLOWEEN_END) ? 'halloween' : 'default';
+  return currentSeason(now)?.theme ?? 'default';
 };
 
 const storage = {
@@ -154,7 +174,7 @@ export const useSiteTheme = () => {
   const liveTheme = useSiteThemeStore((s) => s.liveTheme);
   const previewTheme = useSiteThemeStore((s) => s.previewTheme);
   const theme = previewTheme ?? liveTheme;
-  return { theme, isHalloween: theme === 'halloween', isPreview: previewTheme !== null };
+  return { theme, isHalloween: theme === 'halloween', isDiwali: theme === 'diwali', isPreview: previewTheme !== null };
 };
 
 /** Routes that never get the seasonal theme (admin tools, and the standalone Halloween landing page which has its own look). */

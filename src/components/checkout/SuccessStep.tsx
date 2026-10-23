@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useCallback, useState } from 'react';
 import { Calendar, Check, Inbox, MapPin } from 'lucide-react';
 import type { Event, Order } from '../../types';
 import { formatGBP, type TicketSelection } from '../../lib/checkout';
@@ -7,6 +8,8 @@ import { cn } from '../../lib/utils';
 import { useSiteTheme } from '../../theme/siteTheme';
 import { useThemeCopy } from '../../theme/copy';
 import { JackOLantern } from '../halloween/decorations';
+import { eventTheme } from '../../theme/eventTheme';
+import { DiwaliFireworksShow } from '../diwali/FireworksShow';
 
 interface SuccessStepProps {
   event: Event;
@@ -19,9 +22,13 @@ const SuccessStep = ({ event, order, selections }: SuccessStepProps) => {
   const reference = order.id?.slice(0, 8).toUpperCase() || 'N/A';
   const { isHalloween } = useSiteTheme();
   const copy = useThemeCopy();
+  // Diwali events celebrate a confirmed order with the same fireworks volley as opening the card
+  const [fireworks, setFireworks] = useState(() => eventTheme(event) === 'diwali');
+  const endFireworks = useCallback(() => setFireworks(false), []);
 
   return (
     <div className="flex flex-col items-center px-5 pb-8 pt-14 text-center">
+      {fireworks && <DiwaliFireworksShow onDone={endFireworks} />}
       <div className="relative mb-6">
         <Burst />
         <motion.div

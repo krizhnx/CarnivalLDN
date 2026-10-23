@@ -11,8 +11,9 @@ import CheckoutSheet from './checkout';
 import { useGlitchEffect } from '../hooks/useGlitchEffect';
 import { useSiteTheme } from '../theme/siteTheme';
 import { useThemeCopy } from '../theme/copy';
-import { HalloweenHeroBackdrop, HeroVideo } from './Hero';
+import { SeasonalHeroBackdrop } from './Hero';
 import { HauntedCorners, SectionDrip, SectionFog } from './halloween/decorations';
+import { DiwaliSectionDecor, DiyaDivider } from './diwali/decorations';
 import { card, SectionHeading } from './ui/section';
 import { cn } from '../lib/utils';
 
@@ -22,7 +23,8 @@ const EventsPage = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [highlightedEvent, setHighlightedEvent] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
-  const { isHalloween } = useSiteTheme();
+  const { theme, isDiwali } = useSiteTheme();
+  const isSeasonal = theme !== 'default';
   const copy = useThemeCopy();
 
   const openEvent = (event: Event) => {
@@ -153,17 +155,14 @@ const EventsPage = () => {
       <Navbar />
 
       {/* Hero Section with Video Background */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4">
-        {/* Video Background */}
-        {isHalloween ? (
-          <HalloweenHeroBackdrop />
-        ) : (
-          <div className="absolute inset-0 w-full h-full">
-            <HeroVideo />
-            {/* Overlay for better text readability */}
-            <div className="absolute inset-0 bg-black/60"></div>
-          </div>
+      <section
+        className={cn(
+          'theme-scope relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-2 sm:px-4',
+          isDiwali && 'pb-24 sm:pb-28 md:pb-32'
         )}
+      >
+        {/* Video Background */}
+        <SeasonalHeroBackdrop overlay="bg-black/60" />
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 lg:px-8 text-center">
@@ -258,7 +257,7 @@ const EventsPage = () => {
                 }}
                 whileHover={{ scale: 1.05, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
                 whileTap={{ scale: 0.95 }}
-                className={isHalloween
+                className={isSeasonal
                   ? "bg-cta hover:bg-cta/90 text-cta-fg px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-bold rounded-lg border border-white/20 w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none transition-all shadow-[0_0_40px_-6px_rgb(var(--cta-glow)/0.75)] group flex items-center justify-center gap-3"
                   : "bg-transparent hover:bg-white/90 text-white hover:text-gray-900 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-base sm:text-base md:text-lg font-semibold rounded-lg border-2 border-white/70 w-full max-w-xs whitespace-nowrap sm:w-auto sm:max-w-none transition-all backdrop-blur-sm group flex items-center justify-center gap-3"}
               >
@@ -271,7 +270,7 @@ const EventsPage = () => {
       </section>
 
       {/* Events Grid Section */}
-      <section id="events-grid" className="py-16 md:py-20 relative px-4 overflow-hidden">
+      <section id="events-grid" className={cn('theme-scope py-16 md:py-20 relative px-4 overflow-hidden', isDiwali && 'pt-28 md:pt-32')}>
         {/* Image Background for Events Section */}
         <div className="absolute inset-0 w-full h-full">
           <img
@@ -285,10 +284,15 @@ const EventsPage = () => {
         <SectionDrip />
         <HauntedCorners />
         <SectionFog />
+        {isDiwali && <DiwaliSectionDecor />}
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          <SectionHeading title={copy.whatsOn} pill={copy.whatsOnPill} />
+          <SectionHeading
+            title={copy.whatsOn}
+            pill={copy.whatsOnPill}
+            ornament={isDiwali ? <DiyaDivider /> : undefined}
+          />
 
           {/* Loading / empty states */}
           {isLoading ? (

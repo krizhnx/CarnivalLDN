@@ -52,11 +52,14 @@ export const Eyebrow = ({ children, className }: { children: ReactNode; classNam
 export const SectionHeading = ({
   title,
   pill,
+  ornament,
   as = 'h2',
   className,
 }: {
   title: string
   pill?: ReactNode
+  /** Optional decoration between the title and the pill (e.g. seasonal divider) */
+  ornament?: ReactNode
   as?: 'h1' | 'h2'
   className?: string
 }) => {
@@ -81,6 +84,7 @@ export const SectionHeading = ({
       >
         {title}
       </Heading>
+      {ornament}
       {pill && (
         <p className="theme-pill mx-auto mt-4 w-fit max-w-full rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-sm text-white/80 backdrop-blur-md md:mt-5 md:text-base">
           {pill}

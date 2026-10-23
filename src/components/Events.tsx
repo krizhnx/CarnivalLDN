@@ -8,7 +8,9 @@ import { cn } from '../lib/utils'
 import EventCard from './EventCard'
 import CheckoutSheet from './checkout'
 import { useThemeCopy } from '../theme/copy'
+import { useSiteTheme } from '../theme/siteTheme'
 import { HauntedCorners, SectionDrip, SectionFog } from './halloween/decorations'
+import { DiwaliSectionDecor, DiyaDivider } from './diwali/decorations'
 import { buttonSecondary, SectionHeading } from './ui/section'
 
 const Events = () => {
@@ -16,6 +18,7 @@ const Events = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const copy = useThemeCopy();
+  const { isDiwali } = useSiteTheme();
 
   // Track page view when component mounts
   useEffect(() => {
@@ -33,7 +36,7 @@ const Events = () => {
   };
 
   return (
-    <section id="events" className="py-16 md:py-24 relative px-4 overflow-hidden">
+    <section id="events" className={cn('theme-scope py-16 md:py-24 relative px-4 overflow-hidden', isDiwali && 'pt-28 md:pt-32')}>
       {/* Image Background */}
       <div className="absolute inset-0 w-full h-full">
         <img
@@ -47,11 +50,13 @@ const Events = () => {
       <SectionDrip />
       <HauntedCorners />
       <SectionFog />
+      {isDiwali && <DiwaliSectionDecor />}
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <SectionHeading
           title="EVENTS"
+          ornament={isDiwali ? <DiyaDivider /> : undefined}
           pill={
             <>
               <span className="sm:hidden">{copy.eventsPillShort}</span>

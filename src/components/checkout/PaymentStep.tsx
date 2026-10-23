@@ -315,7 +315,7 @@ const PaymentStep = ({
   });
 
   return (
-    <div className="space-y-6 px-5 pb-6 pt-2">
+    <div className="space-y-6 px-5 pb-6 pt-5">
       <div>
         <h3 className="font-display text-2xl font-semibold tracking-tight text-white">{copy.paymentTitle}</h3>
         <p className="mt-1 text-sm text-white/55">{copy.paymentSubtitle}</p>

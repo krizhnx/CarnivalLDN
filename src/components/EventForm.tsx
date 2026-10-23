@@ -7,22 +7,12 @@ import TicketTierForm from './TicketTierForm';
 import { AdminModal } from './admin/Modal';
 import { Badge, Button, Field, Input, Select, Textarea } from './admin/ui';
 import { money } from './admin/format';
+import { EVENT_THEME_OPTIONS, eventTheme } from '../theme/eventTheme';
 
 interface EventFormProps {
   event?: Event | null;
   onClose: () => void;
 }
-
-const gradientOptions = [
-  { value: 'from-gray-600 to-gray-800', label: 'Gray' },
-  { value: 'from-gray-700 to-gray-900', label: 'Dark Gray' },
-  { value: 'from-gray-800 to-black', label: 'Black' },
-  { value: 'from-gray-500 to-gray-700', label: 'Light Gray' },
-  { value: 'from-blue-600 to-blue-800', label: 'Blue' },
-  { value: 'from-green-600 to-green-800', label: 'Green' },
-  { value: 'from-purple-600 to-purple-800', label: 'Purple' },
-  { value: 'from-red-600 to-red-800', label: 'Red' },
-];
 
 const SectionTitle = ({ title, description }: { title: string; description?: string }) => (
   <div className="md:col-span-2">
@@ -43,7 +33,7 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
     reset,
     watch,
     formState: { errors },
-  } = useForm<EventFormData>();
+  } = useForm<EventFormData>({ defaultValues: { gradient: 'default' } });
 
   useEffect(() => {
     if (event) {
@@ -55,7 +45,7 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
         description: event.description,
         capacity: event.capacity,
         tags: event.tags.join(', '),
-        gradient: event.gradient,
+        gradient: eventTheme(event),
         image: event.image,
         bookingUrl: event.bookingUrl,
       });
@@ -182,9 +172,10 @@ const EventForm = ({ event, onClose }: EventFormProps) => {
         <Field label="Tags" htmlFor="ev-tags" error={errors.tags?.message} hint="Comma-separated">
           <Input id="ev-tags" {...register('tags', { required: 'Tags are required' })} placeholder="e.g. Bollywood, Club night" invalid={!!errors.tags} />
         </Field>
-        <Field label="Colour theme" htmlFor="ev-gradient" error={errors.gradient?.message}>
-          <Select id="ev-gradient" {...register('gradient', { required: 'Gradient is required' })}>
-            {gradientOptions.map((option) => (
+        <Field label="Card theme" htmlFor="ev-gradient" hint="How this event's card looks on the site">
+          {/* Stored in the legacy `gradient` column - see src/theme/eventTheme.ts */}
+          <Select id="ev-gradient" {...register('gradient')}>
+            {EVENT_THEME_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
