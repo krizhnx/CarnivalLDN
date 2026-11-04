@@ -49,6 +49,8 @@ const Overview = ({
   const days = TIMEFRAME_DAYS[timeframe];
 
   const data = useMemo(() => {
+    const tiersByEvent = new Map(events.map((e) => [e.id, e.ticketTiers]));
+    const feesOf = (o: Order) => orderFees(o, tiersByEvent.get(o.eventId));
     const start = startOfToday();
     start.setDate(start.getDate() - (days - 1));
     const prevStart = new Date(start);
@@ -63,10 +65,10 @@ const Overview = ({
     }
 
     const gross = sum(current, (o) => o.totalAmount || 0);
-    const fees = sum(current, orderFees);
+    const fees = sum(current, feesOf);
     const tickets = sum(current, ticketCount);
     const prevGross = sum(previous, (o) => o.totalAmount || 0);
-    const prevNet = prevGross - sum(previous, orderFees);
+    const prevNet = prevGross - sum(previous, feesOf);
     const prevTickets = sum(previous, ticketCount);
 
     // Daily series

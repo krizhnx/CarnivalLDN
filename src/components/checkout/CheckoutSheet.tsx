@@ -20,6 +20,7 @@ import {
   isTierSoldOut,
   isValidDiscountCode,
   normaliseCode,
+  pricingSummary,
   sortTiers,
   validateCustomer,
   validateField,
@@ -242,6 +243,7 @@ const CheckoutFlow = ({ event, onClose, onLockChange, onOrderComplete }: Checkou
         tickets: selections,
         customerInfo: info,
         totalAmount: totals.total,
+        pricing: pricingSummary(totals),
         affiliateLinkId: getAffiliateLinkId(),
       }),
     });
@@ -311,6 +313,7 @@ const CheckoutFlow = ({ event, onClose, onLockChange, onOrderComplete }: Checkou
           tickets: selections,
           customerInfo: info,
           totalAmount: totals.total,
+          pricing: pricingSummary(totals),
           affiliateLinkId: getAffiliateLinkId(),
         }),
       });
@@ -373,6 +376,7 @@ const CheckoutFlow = ({ event, onClose, onLockChange, onOrderComplete }: Checkou
           tickets: selections,
           customerInfo: info,
           totalAmount: totals.total,
+          pricing: pricingSummary(totals),
           affiliateLinkId: getAffiliateLinkId(),
           isApplePay: true,
         }),

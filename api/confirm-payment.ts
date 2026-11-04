@@ -1,5 +1,6 @@
 const Stripe = require('stripe');
 const { sendTicketConfirmationEmail: sendEmail } = require('../src/lib/emailService.js');
+const { pricingForEmail } = require('../src/lib/pricingMeta.js');
 
 // Type definitions for the ticket metadata structure
 interface TicketMetadata {
@@ -144,7 +145,7 @@ module.exports = async function handler(req: any, res: any) {
     // Get event details for email
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, date, venue')
+      .select('title, date, time, venue, image, gradient')
       .eq('id', eventId)
       .single();
 
@@ -177,7 +178,10 @@ module.exports = async function handler(req: any, res: any) {
           orderId: order.id,
           eventName: event.title,
           eventDate: event.date,
+          eventTime: event.time,
           eventLocation: event.venue,
+          eventImage: event.image,
+          eventTheme: event.gradient,
           tickets: tickets.map((ticket: TicketMetadata) => {
             const tier: TicketTier | undefined = ticketTiers.find((tt: TicketTier) => tt.id === ticket.tierId);
             return {
@@ -190,7 +194,9 @@ module.exports = async function handler(req: any, res: any) {
             };
           }),
           totalAmount: paymentIntent.amount,
-          currency: paymentIntent.currency
+          currency: paymentIntent.currency,
+          // Promo code breakdown (per-ticket discount, reduced booking fee), if a code was used
+          pricing: pricingForEmail(paymentIntent.metadata.pricing, paymentIntent.amount)
         };
 
         await sendEmail(emailData);

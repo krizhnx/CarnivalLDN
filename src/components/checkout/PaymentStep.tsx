@@ -11,7 +11,7 @@ import {
 import type { PaymentRequest, StripeElementChangeEvent, StripeElementStyle } from '@stripe/stripe-js';
 import type { Event } from '../../types';
 import { cn } from '../../lib/utils';
-import { formatEventDateShort, formatGBP, type CheckoutTotals, type TicketSelection } from '../../lib/checkout';
+import { formatEventDateShort, formatGBP, formatGBPCompact, type CheckoutTotals, type TicketSelection } from '../../lib/checkout';
 import { AnimatedAmount, FloatingField, NotchedOutline, outlinedField } from './primitives';
 import { useThemeCopy } from '../../theme/copy';
 
@@ -46,6 +46,19 @@ const SummaryRow = ({ label, value, className }: { label: ReactNode; value: Reac
     <dd className="shrink-0 tabular-nums">{value}</dd>
   </div>
 );
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** Short description of what the applied code does, e.g. "£5.00 off each ticket". */
+const promoDetail = (totals: CheckoutTotals) => {
+  const p = totals.promo;
+  if (!p) return null;
+  const parts = [
+    p.perTicketOff && p.discountedTickets > 0 && `${formatGBPCompact(p.perTicketOff)} off each ticket`,
+    p.feePerTicket !== undefined && totals.fee < totals.standardFee && `${formatGBPCompact(p.feePerTicket)} fee`,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+};
 
 const OrderSummary = ({
   event,
@@ -114,11 +127,46 @@ const OrderSummary = ({
       <AnimatePresence initial={false}>
         {totals.discount > 0 && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-            <SummaryRow className="text-emerald-300" label="Promo code" value={`−${formatGBP(totals.discount)}`} />
+            <SummaryRow
+              className="text-emerald-300"
+              label={
+                <span>
+                  Promo code{totals.promo ? ` ${totals.promo.code}` : ''}
+                  {totals.promo?.perTicketOff && totals.promo.discountedTickets > 0 && (
+                    <span className="block text-[11px] text-emerald-300/70">
+                      {formatGBP(totals.promo.perTicketOff)} off × {plural(totals.promo.discountedTickets, 'ticket')}
+                    </span>
+                  )}
+                </span>
+              }
+              value={`−${formatGBP(totals.discount)}`}
+            />
           </motion.div>
         )}
       </AnimatePresence>
-      <SummaryRow label="Booking fee" value={formatGBP(totals.fee)} />
+      {totals.fee < totals.standardFee ? (
+        <SummaryRow
+          label={
+            <span>
+              Booking fee
+              <span className="block text-[11px] text-emerald-300/80">
+                {totals.standardFeePerTicket !== null && (
+                  <span className="mr-1 text-white/40 line-through">{formatGBP(totals.standardFeePerTicket)}</span>
+                )}
+                {formatGBP(totals.promo?.feePerTicket ?? 0)} per ticket with {totals.promo?.code}
+              </span>
+            </span>
+          }
+          value={
+            <span>
+              <span className="mr-1.5 text-white/40 line-through">{formatGBP(totals.standardFee)}</span>
+              <span className="text-emerald-300">{formatGBP(totals.fee)}</span>
+            </span>
+          }
+        />
+      ) : (
+        <SummaryRow label="Booking fee" value={formatGBP(totals.fee)} />
+      )}
       <SummaryRow
         className="pt-1 text-base font-semibold text-white"
         label="Total"
@@ -133,11 +181,13 @@ const OrderSummary = ({
 const PromoCode = ({
   appliedCode,
   discount,
+  detail,
   onApply,
   onRemove,
 }: {
   appliedCode: string | null;
   discount: number;
+  detail?: string | null;
   onApply: (code: string) => boolean;
   onRemove: () => void;
 }) => {
@@ -164,8 +214,11 @@ const PromoCode = ({
         className="flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 py-2 pl-4 pr-2"
       >
         <Tag className="h-4 w-4 text-emerald-300" />
-        <span className="text-sm font-semibold tracking-wider text-emerald-200">{appliedCode}</span>
-        <span className="ml-auto text-sm font-medium text-emerald-200">−{formatGBP(discount)}</span>
+        <span className="min-w-0 leading-tight">
+          <span className="block text-sm font-semibold tracking-wider text-emerald-200">{appliedCode}</span>
+          {detail && <span className="block truncate text-[11px] text-emerald-200/70">{detail}</span>}
+        </span>
+        <span className="ml-auto shrink-0 text-sm font-medium text-emerald-200">−{formatGBP(discount)}</span>
         <button
           type="button"
           onClick={onRemove}
@@ -323,7 +376,13 @@ const PaymentStep = ({
 
       <OrderSummary event={event} selections={selections} totals={totals} />
 
-      <PromoCode appliedCode={appliedCode} discount={totals.discount} onApply={onApplyCode} onRemove={onRemoveCode} />
+      <PromoCode
+        appliedCode={appliedCode}
+        discount={totals.discount}
+        detail={promoDetail(totals)}
+        onApply={onApplyCode}
+        onRemove={onRemoveCode}
+      />
 
       <section className="space-y-4">
         {wallet && (

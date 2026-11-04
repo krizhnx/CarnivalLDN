@@ -1,4 +1,5 @@
 const StripePaymentSDK = require('stripe');
+const { pricingToMetadata } = require('../src/lib/pricingMeta.js');
 
 module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -7,7 +8,7 @@ module.exports = async function handler(req: any, res: any) {
 
   try {
     console.log('Request body:', req.body);
-    const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId, isApplePay } = req.body;
+    const { eventId, tickets, customerInfo, totalAmount, affiliateLinkId, isApplePay, pricing } = req.body;
 
     // Helper to detect Apple relay emails
     const isAppleRelayEmail = (email?: string) => {
@@ -149,7 +150,8 @@ module.exports = async function handler(req: any, res: any) {
         affiliateLinkId: affiliateLinkId || null, // Include affiliate link ID
         isApplePay: isApplePay ? 'true' : 'false', // Include Apple Pay flag
         ticketCount: tickets.reduce((sum: number, ticket: any) => sum + ticket.quantity, 0),
-        tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity })))
+        tickets: JSON.stringify(tickets.map(t => ({ tierId: t.tierId, quantity: t.quantity }))),
+        ...pricingToMetadata(pricing), // promoCode + price breakdown for the confirmation email
       },
       automatic_payment_methods: {
         enabled: true,

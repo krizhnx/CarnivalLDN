@@ -39,7 +39,7 @@ module.exports = async function handler(req: any, res: any) {
     // Fetch event details
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, date, venue')
+      .select('title, date, time, venue, image, gradient')
       .eq('id', guestlist.event_id)
       .single();
 
@@ -54,7 +54,10 @@ module.exports = async function handler(req: any, res: any) {
         eventId: guestlist.event_id,
         eventName: event.title,
         eventDate: event.date,
+        eventTime: event.time,
         eventLocation: event.venue,
+        eventImage: event.image,
+        eventTheme: event.gradient,
         leadName: guestlist.lead_name,
         leadEmail: guestlist.lead_email,
         totalTickets: guestlist.total_tickets,

@@ -51,7 +51,7 @@ const EventOverview = ({
 
   const stats = useMemo(() => {
     const gross = eventOrders.reduce((s, o) => s + (o.totalAmount || 0), 0);
-    const fees = eventOrders.reduce((s, o) => s + orderFees(o), 0);
+    const fees = eventOrders.reduce((s, o) => s + orderFees(o, event.ticketTiers), 0);
     const tickets = eventOrders.reduce((s, o) => s + ticketCount(o), 0);
     const capacity = eventCapacity(event);
     const checkedIn = eventOrders.filter((o) => {

@@ -97,15 +97,27 @@ export const lowestPrice = (event: Event): number | null => {
  *   £40 - £50  -> £2.00
  *   above £50  -> £2.50
  */
+export const BOOKING_FEE_LEVELS = [150, 200, 250] as const;
+
 export const bookingFeePerTicket = (ticketPricePence: number) => {
   if (ticketPricePence <= 4000) return 150;
   if (ticketPricePence <= 5000) return 200;
   return 250;
 };
 
-const DISCOUNT_CODES: Record<string, number> = {
-  LSEHOLI: 1000, // £10.00
-  HOLIHAI: 250, // £2.50
+export interface DiscountCode {
+  /** Fixed amount off the whole order (pence) */
+  orderOff?: number;
+  /** Amount off each ticket (pence), never more than the ticket's price */
+  perTicketOff?: number;
+  /** Booking fee per ticket while the code is applied (pence); never raises the normal fee */
+  feePerTicket?: number;
+}
+
+const DISCOUNT_CODES: Record<string, DiscountCode> = {
+  LSEHOLI: { orderOff: 1000 }, // £10.00 off the order
+  HOLIHAI: { orderOff: 250 }, // £2.50 off the order
+  DIWALI: { perTicketOff: 500, feePerTicket: 100 }, // £5.00 off each ticket + £1.00 booking fee per ticket
 };
 
 export const normaliseCode = (code: string) => code.trim().toUpperCase();
@@ -113,31 +125,100 @@ export const normaliseCode = (code: string) => code.trim().toUpperCase();
 export const isValidDiscountCode = (code: string) =>
   Object.prototype.hasOwnProperty.call(DISCOUNT_CODES, normaliseCode(code));
 
+export interface AppliedPromo extends DiscountCode {
+  code: string;
+  /** Tickets that got the per-ticket discount (paid tickets) */
+  discountedTickets: number;
+}
+
 export interface CheckoutTotals {
   quantity: number;
   subtotal: number;
   discount: number;
   fee: number;
+  /** Booking fee without the promo code (same as `fee` unless the code lowers it) */
+  standardFee: number;
+  /** Standard per-ticket fee when every selected ticket has the same one (for "was £1.50" display) */
+  standardFeePerTicket: number | null;
+  promo: AppliedPromo | null;
   total: number;
 }
 
 export const computeTotals = (selections: TicketSelection[], discountCode: string | null): CheckoutTotals => {
+  const code = discountCode && isValidDiscountCode(discountCode) ? normaliseCode(discountCode) : null;
+  const rule = code ? DISCOUNT_CODES[code] : null;
+
   let quantity = 0;
   let subtotal = 0;
   let fee = 0;
+  let standardFee = 0;
+  let perTicketDiscount = 0;
+  let discountedTickets = 0;
+  const standardFees = new Set<number>();
 
   for (const s of selections) {
     if (s.quantity <= 0) continue;
+    const normalFee = bookingFeePerTicket(s.tier.price);
+    const tierFee = rule?.feePerTicket !== undefined ? Math.min(normalFee, rule.feePerTicket) : normalFee;
     quantity += s.quantity;
     subtotal += s.tier.price * s.quantity;
-    fee += bookingFeePerTicket(s.tier.price) * s.quantity;
+    standardFee += normalFee * s.quantity;
+    fee += tierFee * s.quantity;
+    standardFees.add(normalFee);
+    if (rule?.perTicketOff && s.tier.price > 0) {
+      perTicketDiscount += Math.min(rule.perTicketOff, s.tier.price) * s.quantity;
+      discountedTickets += s.quantity;
+    }
   }
 
-  const discountValue = discountCode && isValidDiscountCode(discountCode) ? DISCOUNT_CODES[normaliseCode(discountCode)] : 0;
-  const discount = Math.min(discountValue, subtotal);
+  const discount = Math.min(perTicketDiscount + (rule?.orderOff ?? 0), subtotal);
 
-  return { quantity, subtotal, discount, fee, total: subtotal - discount + fee };
+  return {
+    quantity,
+    subtotal,
+    discount,
+    fee,
+    standardFee,
+    standardFeePerTicket: standardFees.size === 1 ? [...standardFees][0] : null,
+    promo: code && rule ? { ...rule, code, discountedTickets } : null,
+    total: subtotal - discount + fee,
+  };
 };
+
+/**
+ * Price breakdown sent to the server when a promo code is applied, so the
+ * confirmation email / PDF can show the discount and reduced booking fee.
+ * Stored on the Stripe PaymentIntent (metadata.pricing). Null without a code.
+ */
+export interface PricingSummary {
+  code: string;
+  subtotal: number;
+  discount: number;
+  fee: number;
+  standardFee: number;
+  perTicketOff?: number;
+  discountedTickets: number;
+  feePerTicket?: number;
+  standardFeePerTicket: number | null;
+}
+
+export const pricingSummary = (totals: CheckoutTotals): PricingSummary | null =>
+  totals.promo
+    ? {
+        code: totals.promo.code,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        fee: totals.fee,
+        standardFee: totals.standardFee,
+        perTicketOff: totals.promo.perTicketOff,
+        discountedTickets: totals.promo.discountedTickets,
+        feePerTicket: totals.fee < totals.standardFee ? totals.promo.feePerTicket : undefined,
+        standardFeePerTicket: totals.standardFeePerTicket,
+      }
+    : null;
+
+/** All promo code names (admin uses these to work out which code an order used). */
+export const DISCOUNT_CODE_NAMES = Object.keys(DISCOUNT_CODES);
 
 export const analyticsItems = (selections: TicketSelection[], free = false) =>
   selections.map((s) => ({ tier: s.tier.name, price: free ? 0 : s.tier.price, quantity: s.quantity }));

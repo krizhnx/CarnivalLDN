@@ -4,7 +4,7 @@ import type { Event, Order } from '../../types';
 import { formatEventDateShort } from '../../lib/checkout';
 import { AdminDrawer } from './Modal';
 import { Avatar, Badge, Button, IconButton, KeyValue, orderStatusTone } from './ui';
-import { ageFrom, genderLabel, longDate, money, orderFees, scanState, shortDateTime, ticketCount, timeOnly } from './format';
+import { ageFrom, genderLabel, longDate, money, orderPricing, scanState, shortDateTime, ticketCount, timeOnly } from './format';
 
 const Section = ({ icon: Icon, title, children }: { icon: typeof User; title: string; children: React.ReactNode }) => (
   <section className="space-y-1">
@@ -30,6 +30,7 @@ const OrderDrawer = ({
   onDelete?: (order: Order) => void;
 }) => {
   const scan = order ? scanState(order) : null;
+  const pricing = order ? orderPricing(order, event?.ticketTiers) : { fees: 0, discount: 0, code: null, exact: false };
   const scanTone = scan?.state === 'in' ? 'green' : scan?.state === 'inout' ? 'blue' : scan?.state === 'out' ? 'orange' : 'neutral';
 
   const copy = (text: string) => {
@@ -117,9 +118,17 @@ const OrderDrawer = ({
                     </div>
                   );
                 })}
+                {pricing.code && pricing.discount > 0 && (
+                  <div className="flex items-center justify-between border-b border-zinc-100 bg-emerald-50/60 px-4 py-2.5 text-xs text-emerald-700">
+                    <span>
+                      Promo code <span className="font-semibold">{pricing.code}</span>
+                    </span>
+                    <span className="tabular-nums">−{money(pricing.discount)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between bg-zinc-50/80 px-4 py-2.5 text-xs text-zinc-500">
-                  <span>Booking fees included (est.)</span>
-                  <span className="tabular-nums">{money(orderFees(order))}</span>
+                  <span>Booking fees included{pricing.exact ? '' : ' (est.)'}</span>
+                  <span className="tabular-nums">{money(pricing.fees)}</span>
                 </div>
               </div>
             ) : (

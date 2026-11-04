@@ -139,7 +139,7 @@ module.exports = async function handler(req: any, res: any) {
     // Get event details for email
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, date, venue')
+      .select('title, date, time, venue, image, gradient')
       .eq('id', eventId)
       .single();
 
@@ -172,7 +172,10 @@ module.exports = async function handler(req: any, res: any) {
           orderId: order.id,
           eventName: event.title,
           eventDate: event.date,
+          eventTime: event.time,
           eventLocation: event.venue,
+          eventImage: event.image,
+          eventTheme: event.gradient,
           tickets: tickets.map((ticket: any) => {
             const tier = ticketTiers.find((tt: any) => tt.id === ticket.tierId);
             return {

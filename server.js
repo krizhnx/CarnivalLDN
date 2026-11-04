@@ -4,6 +4,7 @@ const compression = require('compression');
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const { v4: uuidv4 } = require('uuid');
+const { pricingToMetadata, pricingForEmail } = require('./src/lib/pricingMeta.js');
 // Note: Email service will be imported after we set up the environment
 let sendTicketConfirmationEmail = null;
 require('dotenv').config({ path: '.env.local' });
@@ -122,7 +123,7 @@ if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || proces
 // Create Payment Intent
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
-    const { eventId, tickets, customerInfo, totalAmount } = req.body;
+    const { eventId, tickets, customerInfo, totalAmount, pricing } = req.body;
 
     if (!eventId || !tickets || !customerInfo || !totalAmount) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -139,6 +140,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
         customerDateOfBirth: customerInfo.dateOfBirth,
         customerGender: customerInfo.gender,
         ticketCount: tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
+        ...pricingToMetadata(pricing),
       },
       automatic_payment_methods: {
         enabled: true,
@@ -295,7 +297,7 @@ app.post('/api/confirm-payment', async (req, res) => {
           // Get event details for email
           const { data: event, error: eventError } = await supabase
             .from('events')
-            .select('title, date, venue')
+            .select('title, date, time, venue, image, gradient')
             .eq('id', eventId)
             .single();
 
@@ -311,7 +313,10 @@ app.post('/api/confirm-payment', async (req, res) => {
               orderId: order.id,
               eventName: event.title,
               eventDate: event.date,
+              eventTime: event.time,
               eventLocation: event.venue,
+              eventImage: event.image,
+              eventTheme: event.gradient,
               tickets: tickets.map(ticket => ({
                 tierId: ticket.tier.id, // Add tierId for QR code generation
                 tierName: ticket.tier.name,
@@ -321,7 +326,8 @@ app.post('/api/confirm-payment', async (req, res) => {
                 lastEntryTime: ticket.tier.lastEntryTime || undefined
               })),
               totalAmount: totalAmount,
-              currency: 'gbp'
+              currency: 'gbp',
+              pricing: pricingForEmail(paymentIntent.metadata.pricing ?? req.body.pricing, totalAmount)
             };
 
             await sendTicketConfirmationEmail(emailData);
@@ -371,6 +377,7 @@ app.post('/api/test-email', async (req, res) => {
       orderId: 'test-order-123',
       eventName: 'Test Carnival Event',
       eventDate: '2024-12-25',
+      eventTime: '22:00 - TBC',
       eventLocation: 'Test Venue, London',
       tickets: [{
         tierId: 'test-tier-123', // Add tierId for QR code generation
@@ -409,7 +416,7 @@ app.post('/api/create-guestlist', async (req, res) => {
     // Verify event exists
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, date, venue')
+      .select('title, date, time, venue, image, gradient')
       .eq('id', eventId)
       .single();
 
@@ -464,7 +471,10 @@ app.post('/api/create-guestlist', async (req, res) => {
           eventId: eventId,
           eventName: event.title,
           eventDate: event.date,
+          eventTime: event.time,
           eventLocation: event.venue,
+          eventImage: event.image,
+          eventTheme: event.gradient,
           leadName: leadName,
           leadEmail: leadEmail,
           totalTickets: totalTickets,
@@ -577,7 +587,10 @@ app.post('/api/resend-guestlist-qr', async (req, res) => {
         events:event_id (
           title,
           date,
-          venue
+          time,
+          venue,
+          image,
+          gradient
         )
       `)
       .eq('id', guestlistId)
@@ -596,7 +609,10 @@ app.post('/api/resend-guestlist-qr', async (req, res) => {
           eventId: guestlist.event_id,
           eventName: guestlist.events.title,
           eventDate: guestlist.events.date,
+          eventTime: guestlist.events.time,
           eventLocation: guestlist.events.venue,
+          eventImage: guestlist.events.image,
+          eventTheme: guestlist.events.gradient,
           leadName: guestlist.lead_name,
           leadEmail: guestlist.lead_email,
           totalTickets: guestlist.total_tickets,
@@ -814,7 +830,7 @@ app.post('/api/create-free-order', async (req, res) => {
     // Get event details for email
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, date, venue')
+      .select('title, date, time, venue, image, gradient')
       .eq('id', eventId)
       .single();
 
@@ -847,7 +863,10 @@ app.post('/api/create-free-order', async (req, res) => {
           orderId: order.id,
           eventName: event.title,
           eventDate: event.date,
+          eventTime: event.time,
           eventLocation: event.venue,
+          eventImage: event.image,
+          eventTheme: event.gradient,
           tickets: tickets.map((ticket) => {
             const tier = ticketTiers.find((tt) => tt.id === ticket.tierId);
             return {

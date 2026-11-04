@@ -1,5 +1,5 @@
-import type { Event, Order } from '../../types';
-import { bookingFeePerTicket } from '../../lib/checkout';
+import type { Event, Order, TicketTier } from '../../types';
+import { BOOKING_FEE_LEVELS, bookingFeePerTicket, computeTotals, DISCOUNT_CODE_NAMES, type TicketSelection } from '../../lib/checkout';
 
 const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
 const gbpWhole = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 });
@@ -50,9 +50,55 @@ export const relativeTime = (value: unknown) => {
 export const ticketCount = (order: Order) =>
   (order.tickets || []).reduce((sum, t) => sum + (t.quantity || 0), 0);
 
-/** Booking fees included in an order total (same tiers as checkout). */
-export const orderFees = (order: Order) =>
-  (order.tickets || []).reduce((sum, t) => sum + bookingFeePerTicket(t.unitPrice || 0) * (t.quantity || 0), 0);
+export interface OrderPricing {
+  /** Booking fees included in the amount paid */
+  fees: number;
+  /** Promo discount taken off the tickets */
+  discount: number;
+  /** Promo code that reproduces the amount paid (null = none) */
+  code: string | null;
+  /** False when the price couldn't be rebuilt and `fees` is an estimate */
+  exact: boolean;
+}
+
+/**
+ * Rebuilds an order's booking fees from its ticket tiers, the same way the
+ * checkout priced it. Orders don't store which promo code was used, so we try
+ * "no code" and then each code, and take the one that adds up to the amount
+ * actually paid (e.g. DIWALI lowers the fee to £1 a ticket). If nothing
+ * matches (tier deleted / price edited since), it falls back to an estimate.
+ */
+export const orderPricing = (order: Order, tiers?: TicketTier[]): OrderPricing => {
+  const paid = order.totalAmount || 0;
+  if (paid <= 0) return { fees: 0, discount: 0, code: null, exact: true };
+
+  const lines = order.tickets || [];
+  const selections = lines.map((t) => {
+    const tier = tiers?.find((x) => x.id === t.ticketTierId);
+    return tier ? { tierId: tier.id, tier, quantity: t.quantity || 0 } : null;
+  });
+
+  if (lines.length > 0 && selections.every((s): s is TicketSelection => s !== null)) {
+    for (const code of [null, ...DISCOUNT_CODE_NAMES]) {
+      const t = computeTotals(selections, code);
+      if (t.total === paid) return { fees: t.fee, discount: t.discount, code, exact: true };
+    }
+  }
+
+  // Tier deleted or its price edited since: work the fee out from the amount paid
+  // per ticket (price + fee), i.e. the fee level whose price band fits.
+  const quantity = lines.reduce((sum, t) => sum + (t.quantity || 0), 0);
+  if (quantity > 0) {
+    const perTicket = paid / quantity;
+    const level = BOOKING_FEE_LEVELS.find((fee) => bookingFeePerTicket(perTicket - fee) === fee);
+    if (level !== undefined) return { fees: level * quantity, discount: 0, code: null, exact: false };
+  }
+  const estimate = lines.reduce((sum, t) => sum + bookingFeePerTicket(t.unitPrice || 0) * (t.quantity || 0), 0);
+  return { fees: Math.min(estimate, paid), discount: 0, code: null, exact: false };
+};
+
+/** Booking fees included in an order total. Pass the event's tiers for an exact figure. */
+export const orderFees = (order: Order, tiers?: TicketTier[]) => orderPricing(order, tiers).fees;
 
 export type ScanState = 'none' | 'in' | 'out' | 'inout';
 

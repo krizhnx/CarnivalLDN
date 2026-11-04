@@ -70,7 +70,7 @@ module.exports = async function handler(req: any, res: any) {
     console.log('🔍 Verifying event exists:', eventId);
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('title, date, venue')
+      .select('title, date, time, venue, image, gradient')
       .eq('id', eventId)
       .single();
 
@@ -146,7 +146,10 @@ module.exports = async function handler(req: any, res: any) {
           eventId: eventId,
           eventName: event.title,
           eventDate: event.date,
+          eventTime: event.time,
           eventLocation: event.venue,
+          eventImage: event.image,
+          eventTheme: event.gradient,
           leadName: leadName,
           leadEmail: leadEmail,
           totalTickets: totalTickets,
