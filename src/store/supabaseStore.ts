@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
+import { eventHasPassed } from '../lib/eventDates'
 import { Event, AuthState, EventFormData, Order, TicketValidationResult, TicketScan, TicketSearchResult, GuestlistScan, AffiliateSociety, AffiliateFormData, AffiliateLink, AffiliateStats, SocietyPerformance } from '../types'
 import toast from 'react-hot-toast'
 
@@ -804,9 +805,9 @@ export const useAppStore = create<AppState>()(
             };
           }
 
-          // Check if event date hasn't passed
+          // Check if event date hasn't passed (valid until noon the day after the event date)
           const eventDate = eventData.date;
-          if (eventDate && new Date(eventDate) < new Date()) {
+          if (eventHasPassed(eventDate)) {
             return {
               isValid: false,
               message: 'Event has passed',
@@ -1152,9 +1153,9 @@ export const useAppStore = create<AppState>()(
             };
           }
 
-          // Check if event date hasn't passed
+          // Check if event date hasn't passed (valid until noon the day after the event date)
           const eventDate = event.date;
-          if (eventDate && new Date(eventDate) < new Date()) {
+          if (eventHasPassed(eventDate)) {
             return {
               isValid: false,
               message: 'Event has passed',
