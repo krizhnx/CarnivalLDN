@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Link2, Plus } from 'lucide-react';
+import { Download, Link2, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAppStore } from '../store/supabaseStore';
 import { AffiliateFormData, AffiliateSociety, Event, Order, SocietyPerformance } from '../types';
@@ -11,6 +11,7 @@ import SocietyDetailsModal from './SocietyDetailsModal';
 import SocietyLinksModal from './SocietyLinksModal';
 import GuestlistModal from './GuestlistModal';
 import { exportCustomerData, exportEventData } from './dashboard/CSVExport';
+import { exportGuestlists } from './admin/exportGuestlists';
 import AdminLayout, { ADMIN_TABS, type AdminTab } from './admin/AdminLayout';
 import { ConfirmDialog } from './admin/Modal';
 import OrderDrawer from './admin/OrderDrawer';
@@ -172,6 +173,21 @@ const Dashboard = () => {
     toast.success('Customer data exported');
   };
 
+  const [exportingGuestlists, setExportingGuestlists] = useState(false);
+  const handleExportGuestlists = async () => {
+    setExportingGuestlists(true);
+    try {
+      const count = await exportGuestlists();
+      if (count) toast.success(`Exported ${count} guestlist${count === 1 ? '' : 's'}`);
+      else toast.error('No guestlists to export yet');
+    } catch (err) {
+      console.error('Guestlist export failed', err);
+      toast.error('Could not export guestlists. Try again.');
+    } finally {
+      setExportingGuestlists(false);
+    }
+  };
+
   const handleExportEventData = (eventId: string) => {
     const event = allEvents.find((e) => e.id === eventId);
     if (event) {
@@ -271,6 +287,11 @@ const Dashboard = () => {
     case 'guestlists':
       title = 'Guestlists';
       description = 'Group QR codes for free entry, GL and tables';
+      actions = (
+        <Button icon={Download} loading={exportingGuestlists} onClick={() => void handleExportGuestlists()}>
+          Export all guestlists
+        </Button>
+      );
       break;
     case 'affiliates':
       title = 'Affiliates';

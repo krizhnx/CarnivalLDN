@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ClipboardList, Mail, Phone, Plus, Send, Ticket, Trash2, UserCheck } from 'lucide-react';
+import { ClipboardList, Download, Mail, Phone, Plus, Send, Ticket, Trash2, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Event, Guestlist } from '../types';
 import { cn } from '../lib/utils';
 import { ConfirmDialog } from './admin/Modal';
 import { Avatar, Badge, Button, Card, EmptyState, IconButton, Progress, SearchInput, Segmented, Skeleton, Stat, td, th, type Tone } from './admin/ui';
 import { num, shortDate } from './admin/format';
+import { exportGuestlists } from './admin/exportGuestlists';
 
 type Category = 'free' | 'GL' | 'tables' | 'other';
 
@@ -33,6 +34,7 @@ const GuestlistManagement = ({ event, onCreateNew, refreshKey = 0 }: GuestlistMa
   const [resending, setResending] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Guestlist | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const fetchGuestlists = useCallback(async () => {
     setIsLoading(true);
@@ -84,6 +86,23 @@ const GuestlistManagement = ({ event, onCreateNew, refreshKey = 0 }: GuestlistMa
       toast.error(err instanceof Error ? err.message : 'Failed to delete guestlist');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  /** This event's guestlists as a CSV; follows the category tab (All exports everything). */
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const category = filter === 'all' ? undefined : filter;
+      const count = await exportGuestlists({ eventId: event.id, category });
+      const label = category ? `${CATEGORIES.find((c) => c.value === category)?.label} ` : '';
+      if (count) toast.success(`Exported ${count} ${label}guestlist${count === 1 ? '' : 's'}`);
+      else toast.error(`No ${label}guestlists to export`);
+    } catch (err) {
+      console.error('Guestlist export failed', err);
+      toast.error('Could not export guestlists. Try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -153,6 +172,9 @@ const GuestlistManagement = ({ event, onCreateNew, refreshKey = 0 }: GuestlistMa
           />
           <div className="ml-auto flex items-center gap-3">
             <SearchInput value={search} onChange={setSearch} placeholder="Search guests" className="w-60" />
+            <Button icon={Download} loading={exporting} disabled={isLoading || !guestlists.length} onClick={() => void exportCsv()}>
+              {filter === 'all' ? 'Export' : `Export ${CATEGORIES.find((c) => c.value === filter)?.label}`}
+            </Button>
             {onCreateNew && (
               <Button variant="primary" icon={Plus} onClick={onCreateNew}>
                 New guestlist

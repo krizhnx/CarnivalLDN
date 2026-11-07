@@ -174,14 +174,17 @@ export const initials = (name?: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-/** Turn a list of rows into a CSV download (values are quoted/escaped). */
-export const downloadCsv = (filename: string, headers: string[], rows: (string | number)[][]) => {
+/**
+ * Turn a list of rows into a CSV download (values are quoted/escaped).
+ * `bom` adds a byte-order mark so Excel reads emoji and accents as UTF-8.
+ */
+export const downloadCsv = (filename: string, headers: string[], rows: (string | number)[][], { bom = false }: { bom?: boolean } = {}) => {
   const esc = (v: string | number) => {
     const s = String(v ?? '');
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const csv = [headers, ...rows].map((r) => r.map(esc).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([bom ? '\uFEFF' : '', csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
